@@ -1,12 +1,17 @@
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Play } from 'lucide-react';
+import MapVisualization from './MapVisualization';
+
 const HeroSection = () => {
   const [isLoaded, setIsLoaded] = useState(false);
+  
   useEffect(() => {
     setIsLoaded(true);
   }, []);
+  
   return <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background elements */}
       <div className="absolute inset-0 bg-gradient-to-b from-sahel-sandLight via-white to-white z-0"></div>
@@ -88,7 +93,7 @@ const HeroSection = () => {
             </motion.div>
           </motion.div>
           
-          {/* Image/illustration */}
+          {/* Map visualization */}
           <motion.div className="flex-1 w-full max-w-lg" initial={{
           opacity: 0,
           scale: 0.9
@@ -106,15 +111,10 @@ const HeroSection = () => {
                 </div>
               </div>
               
-              {/* Map placeholder - will be replaced with actual map component */}
-              <div className="absolute inset-4 rounded-lg glass border border-white/30 shadow-lg flex items-center justify-center">
-                <span className="text-sm text-sahel-earth/60">Loading map visualization...</span>
+              {/* Map visualization component */}
+              <div className="absolute inset-4 rounded-lg glass border border-white/30 shadow-lg">
+                <MapVisualization className="w-full h-full" />
               </div>
-              
-              {/* Stats indicators */}
-              
-              
-              
             </div>
           </motion.div>
         </div>
@@ -141,4 +141,5 @@ const HeroSection = () => {
       </div>
     </section>;
 };
+
 export default HeroSection;

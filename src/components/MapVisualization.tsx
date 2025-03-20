@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
-import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info } from 'lucide-react';
+import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info, Image } from 'lucide-react';
 import { loadTIFF, renderTIFFToCanvas, interpolateData, landCoverColors, landCoverClasses, getAvailableYears, calculateLandCoverStats, calculatePrecipitationStats, calculateVegetationStats, calculatePopulationStats, precipitationColorScale, vegetationProductivityScale, populationDensityScale } from '@/lib/geospatialUtils';
 import { useToast } from '@/components/ui/use-toast';
+
 interface MapVisualizationProps {
   className?: string;
   year?: number;
@@ -10,6 +11,7 @@ interface MapVisualizationProps {
   expandedView?: boolean;
   dataType?: 'landCover' | 'vegetation' | 'precipitation' | 'population' | 'landCoverGradient' | 'vegetationGradient' | 'precipitationGradient';
 }
+
 const MapVisualization = ({
   className,
   year = 2023,
@@ -468,8 +470,15 @@ const MapVisualization = ({
       <div className={`absolute inset-0 overflow-hidden ${dataType === 'precipitation' ? 'bg-[#f8fcfc]' : dataType === 'vegetation' ? 'bg-[#18441c]' : 'bg-[#504c4c]'}`}>
         {isLoading ? <div className="absolute inset-0 flex items-center justify-center">
             <div className="flex flex-col items-center">
-              <Loader2 className="w-8 h-8 text-neutral-600 animate-spin mb-3" />
-              <p className="text-sm text-sahel-earth">Loading map data...</p>
+              <div className="relative">
+                <Loader2 className="w-8 h-8 text-neutral-600 animate-spin mb-3" />
+                <img 
+                  src="/lovable-uploads/925ff1dc-0217-422d-bcf2-90245d6f1d9d.png" 
+                  alt="Map visualization preview" 
+                  className="max-w-xs object-contain rounded-lg shadow-lg mt-2"
+                />
+              </div>
+              <p className="text-sm text-sahel-earth mt-4">Loading map data...</p>
             </div>
           </div> : <div className="absolute inset-0 flex items-center justify-center transition-transform duration-300 ease-out" style={{
         transform: `scale(${zoomLevel})`,
@@ -478,7 +487,7 @@ const MapVisualization = ({
         left: "5%",
         right: "5%"
       }}>
-            <canvas ref={canvasRef} className="max-w-full max-h-full object-contain this canvas is not rendering correctly\n" />
+            <canvas ref={canvasRef} className="max-w-full max-h-full object-contain" />
           </div>}
       </div>
       
@@ -506,4 +515,5 @@ const MapVisualization = ({
       {renderLegend()}
     </div>;
 };
+
 export default MapVisualization;
