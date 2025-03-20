@@ -1,3 +1,4 @@
+
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -292,7 +293,7 @@ export const getAccuratePrecipitationData = (year: number): Record<string, numbe
 };
 
 // Function to generate the full time series data for precipitation
-export const getPrecipitationTimeSeriesData = (): Array<Record<string, number>> => {
+export const getPrecipitationTimeSeriesData = (): Array<{ [key: string]: number; year: number }> => {
   return [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023].map(year => {
     const data = getAccuratePrecipitationData(year);
     return {
@@ -304,4 +305,55 @@ export const getPrecipitationTimeSeriesData = (): Array<Record<string, number>> 
       'Water Stress Index': data.waterStressIndex
     };
   });
+};
+
+// Function to load and parse the land cover CSV data
+export const loadLandCoverCSVData = async (): Promise<Array<{ year: number, [key: string]: number }>> => {
+  try {
+    const response = await fetch('/Datasets_Hackathon/Graph_data/land_cover_values.csv');
+    const csv = await response.text();
+    
+    // Parse CSV
+    const lines = csv.split('\n');
+    const headers = lines[0].split(',');
+    
+    // Skip header row and map data rows to objects
+    return lines.slice(1)
+      .filter(line => line.trim() !== '') // Skip empty lines
+      .map(line => {
+        const values = line.split(',');
+        const dataObj: { year: number, [key: string]: number } = { year: parseInt(values[0]) };
+        
+        // Map each value to its corresponding class
+        headers.slice(1).forEach((header, index) => {
+          // Extract the class number from the header (e.g., "Value_7" becomes 7)
+          const classNumber = parseInt(header.split('_')[1]);
+          // Use the land cover class name if available, otherwise use the class number
+          const className = landCoverClasses[classNumber as keyof typeof landCoverClasses] || `Class ${classNumber}`;
+          dataObj[className] = parseInt(values[index + 1]);
+        });
+        
+        return dataObj;
+      })
+      .sort((a, b) => a.year - b.year); // Sort by year ascending
+  } catch (error) {
+    console.error('Error loading land cover CSV data:', error);
+    return [];
+  }
+};
+
+// Function to generate time series data for land cover from CSV
+export const getLandCoverTimeSeriesData = async (): Promise<Array<{ year: number, [key: string]: number }>> => {
+  const rawData = await loadLandCoverCSVData();
+  
+  if (rawData.length === 0) {
+    // Return dummy data if CSV loading failed
+    return [
+      { year: 2010, Forests: 2561, Grasslands: 124304, Barren: 41332 },
+      { year: 2023, Forests: 522, Grasslands: 123142, Barren: 44540 }
+    ];
+  }
+  
+  // Return the parsed data with class names
+  return rawData;
 };

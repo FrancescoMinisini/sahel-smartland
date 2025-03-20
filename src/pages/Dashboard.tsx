@@ -26,7 +26,8 @@ import {
   landCoverClasses, 
   landCoverColors, 
   getAccuratePrecipitationData,
-  getPrecipitationTimeSeriesData 
+  getPrecipitationTimeSeriesData,
+  getLandCoverTimeSeriesData
 } from '@/lib/geospatialUtils';
 import ChartCarousel from '@/components/ChartCarousel';
 
@@ -36,6 +37,7 @@ const Dashboard = () => {
   const [selectedYear, setSelectedYear] = useState(2023);
   const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
   const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
+  const [timeSeriesData, setTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
   
   // Use the more accurate precipitation data from our utility function
   const accuratePrecipData = getAccuratePrecipitationData(selectedYear);
@@ -67,104 +69,19 @@ const Dashboard = () => {
   // Use our utility function to get the complete time series data
   const [precipTimeSeriesData] = useState(getPrecipitationTimeSeriesData());
   
-  const [timeSeriesData] = useState([
-    {
-      year: 2010,
-      Forests: 850,
-      Shrublands: 1200,
-      Grasslands: 1500,
-      Croplands: 900,
-      Urban: 350,
-      Barren: 700,
-      Water: 200,
-      Wetlands: 150
-    },
-    {
-      year: 2012,
-      Forests: 820,
-      Shrublands: 1180,
-      Grasslands: 1450,
-      Croplands: 950,
-      Urban: 380,
-      Barren: 720,
-      Water: 200,
-      Wetlands: 140
-    },
-    {
-      year: 2014,
-      Forests: 800,
-      Shrublands: 1150,
-      Grasslands: 1400,
-      Croplands: 1000,
-      Urban: 420,
-      Barren: 730,
-      Water: 195,
-      Wetlands: 135
-    },
-    {
-      year: 2016,
-      Forests: 780,
-      Shrublands: 1100,
-      Grasslands: 1350,
-      Croplands: 1050,
-      Urban: 460,
-      Barren: 750,
-      Water: 190,
-      Wetlands: 130
-    },
-    {
-      year: 2018,
-      Forests: 760,
-      Shrublands: 1050,
-      Grasslands: 1300,
-      Croplands: 1100,
-      Urban: 500,
-      Barren: 780,
-      Water: 185,
-      Wetlands: 125
-    },
-    {
-      year: 2020,
-      Forests: 740,
-      Shrublands: 1000,
-      Grasslands: 1250,
-      Croplands: 1150,
-      Urban: 540,
-      Barren: 810,
-      Water: 180,
-      Wetlands: 120
-    },
-    {
-      year: 2022,
-      Forests: 720,
-      Shrublands: 950,
-      Grasslands: 1200,
-      Croplands: 1200,
-      Urban: 580,
-      Barren: 840,
-      Water: 175,
-      Wetlands: 115
-    },
-    {
-      year: 2023,
-      Forests: 710,
-      Shrublands: 925,
-      Grasslands: 1175,
-      Croplands: 1225,
-      Urban: 600,
-      Barren: 855,
-      Water: 170,
-      Wetlands: 110
-    }
-  ]);
+  // Load land cover time series data from CSV
+  useEffect(() => {
+    const loadData = async () => {
+      const data = await getLandCoverTimeSeriesData();
+      setTimeSeriesData(data);
+      setIsLoading(false);
+    };
+    
+    loadData();
+  }, []);
   
   useEffect(() => {
     window.scrollTo(0, 0);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
   }, []);
 
   const handleTabChange = (tab: string) => {
@@ -220,13 +137,13 @@ const Dashboard = () => {
       .filter(d => d.Barren !== undefined)
       .map(d => ({ year: d.year, value: d.Barren }));
     
-    const urbanData = timeSeriesData
-      .filter(d => d.Urban !== undefined)
-      .map(d => ({ year: d.year, value: d.Urban }));
+    const grasslandsData = timeSeriesData
+      .filter(d => d.Grasslands !== undefined)
+      .map(d => ({ year: d.year, value: d.Grasslands }));
     
     let forestTrend = "stable";
     let barrenTrend = "stable";
-    let urbanTrend = "stable";
+    let grasslandsTrend = "stable";
     
     if (forestData.length >= 2) {
       const firstForest = forestData[0].value;
@@ -242,11 +159,11 @@ const Dashboard = () => {
       else if (lastBarren < firstBarren * 0.95) barrenTrend = "decreasing";
     }
     
-    if (urbanData.length >= 2) {
-      const firstUrban = urbanData[0].value;
-      const lastUrban = urbanData[urbanData.length - 1].value;
-      if (lastUrban > firstUrban * 1.05) urbanTrend = "increasing";
-      else if (lastUrban < firstUrban * 0.95) urbanTrend = "decreasing";
+    if (grasslandsData.length >= 2) {
+      const firstGrasslands = grasslandsData[0].value;
+      const lastGrasslands = grasslandsData[grasslandsData.length - 1].value;
+      if (lastGrasslands > firstGrasslands * 1.05) grasslandsTrend = "increasing";
+      else if (lastGrasslands < firstGrasslands * 0.95) grasslandsTrend = "decreasing";
     }
     
     let analysisText = `Based on the observed data from ${timeSeriesData[0].year} to ${timeSeriesData[timeSeriesData.length - 1].year}:\n\n`;
@@ -259,9 +176,9 @@ const Dashboard = () => {
     analysisText += barrenTrend === "increasing" ? ", which may indicate desertification processes.\n" : 
                     barrenTrend === "decreasing" ? ", suggesting land rehabilitation success.\n" : ".\n";
     
-    analysisText += `• Urban areas are ${urbanTrend === "stable" ? "relatively stable" : urbanTrend}`;
-    analysisText += urbanTrend === "increasing" ? ", indicating expansion of human settlements and infrastructure.\n" : 
-                    urbanTrend === "decreasing" ? ", which is unusual and may warrant verification.\n" : ".\n";
+    analysisText += `• Grasslands are ${grasslandsTrend === "stable" ? "relatively stable" : grasslandsTrend}`;
+    analysisText += grasslandsTrend === "increasing" ? ", which may indicate conversion from other land types.\n" : 
+                    grasslandsTrend === "decreasing" ? ", suggesting possible conversion to cropland or urban areas.\n" : ".\n";
     
     return analysisText;
   };
@@ -273,7 +190,6 @@ const Dashboard = () => {
     { id: 'population', name: 'Population', icon: <Users size={16} /> },
   ];
 
-  // Update enhanced precipitation data to use our more accurate values
   const enhancedPrecipitationData = [
     {
       name: 'Annual Rainfall',
