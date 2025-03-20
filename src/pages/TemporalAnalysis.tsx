@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -594,7 +593,7 @@ These demographic shifts have important implications for land use planning, reso
           <Card className="mb-6">
             <CardContent className="pt-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-1 aspect-[4/3] md:aspect-auto rounded-lg overflow-hidden">
+                <div className="md:col-span-2 aspect-[16/9] rounded-lg overflow-hidden">
                   <MapVisualization 
                     year={year} 
                     dataType={activeDataType}
@@ -603,7 +602,7 @@ These demographic shifts have important implications for land use planning, reso
                   />
                 </div>
                 
-                <div className="md:col-span-2 flex flex-col justify-between">
+                <div className="md:col-span-1 flex flex-col justify-between">
                   <div>
                     <h3 className="text-lg font-medium mb-2">
                       {activeDataType === 'landCover' && 'Land Cover Distribution'}
