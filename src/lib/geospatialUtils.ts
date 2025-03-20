@@ -64,30 +64,6 @@ export const vegetationProductivityScale = [
   '#00441b'  // Dark green - highest productivity
 ];
 
-// Population density color scale - from low (yellow) to high (red)
-export const populationDensityScale = [
-  '#ffffcc', // Very light yellow - lowest density
-  '#ffeda0',
-  '#fed976',
-  '#feb24c',
-  '#fd8d3c',
-  '#fc4e2a',
-  '#e31a1c',
-  '#bd0026',
-  '#800026'  // Dark red - highest density
-];
-
-// Transition color scale
-export const transitionColorScale = [
-  '#f7f7f7', // White - no change
-  '#d9d9d9',
-  '#bdbdbd',
-  '#969696',
-  '#737373',
-  '#525252',
-  '#252525', // Black - high change
-];
-
 // Load and process a GeoTIFF file
 export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{ 
   data: number[], 
@@ -105,10 +81,6 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
       filePath = `/Datasets_Hackathon/Climate_Precipitation_Data/${year}R.tif`;
     } else if (dataType === 'vegetation') {
       filePath = `/Datasets_Hackathon/MODIS_Gross_Primary_Production_GPP/${year}_GP.tif`;
-    } else if (dataType === 'population') {
-      // Population data is only available for specific years
-      const popYear = getClosestPopulationYear(year);
-      filePath = `/Datasets_Hackathon/Gridded_Population_Density_Data/Assaba_Pop_${popYear}.tif`;
     } else {
       // Default to land cover
       filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
@@ -125,23 +97,15 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
     // Convert the TypedArray to a regular Array
     const data = Array.from(values[0] as Uint8Array | Float32Array);
     
-    // For precipitation, vegetation, and population we need min/max to normalize values for color scale
-    if (dataType === 'precipitation' || dataType === 'vegetation' || dataType === 'population') {
+    // For precipitation and vegetation, we need min/max to normalize values for color scale
+    if (dataType === 'precipitation' || dataType === 'vegetation') {
       // Filter out no-data values (typically negative or very high values in GPP data)
-      let validData;
-      
-      if (dataType === 'vegetation') {
-        validData = data.filter(val => val > 0 && val < 3000);
-      } else if (dataType === 'population') {
-        validData = data.filter(val => val >= 0);
-      } else {
-        validData = data.filter(val => val > 0);
-      }
+      const validData = dataType === 'vegetation' 
+                      ? data.filter(val => val > 0 && val < 3000)
+                      : data.filter(val => val > 0);
       
       const min = validData.length > 0 ? Math.min(...validData) : 0;
-      const max = validData.length > 0 ? Math.max(...validData) : 
-                 (dataType === 'precipitation' ? 500 : 
-                  dataType === 'vegetation' ? 3000 : 500);
+      const max = validData.length > 0 ? Math.max(...validData) : 500;
       
       return { data, width, height, min, max };
     }
@@ -151,14 +115,6 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
     console.error(`Error loading TIFF for year ${year} and type ${dataType}:`, error);
     return { data: [], width: 0, height: 0 };
   }
-};
-
-// Get closest year for population data (which only exists for 2010, 2015, 2020)
-export const getClosestPopulationYear = (year: number): number => {
-  const popYears = [2010, 2015, 2020];
-  return popYears.reduce((prev, curr) => {
-    return (Math.abs(curr - year) < Math.abs(prev - year)) ? curr : prev;
-  });
 };
 
 // Improved interpolation between two years of data
@@ -210,17 +166,6 @@ export const getVegetationColor = (value: number, min: number, max: number): str
   return vegetationProductivityScale[index];
 };
 
-// Get color for population density value between min and max
-export const getPopulationDensityColor = (value: number, min: number, max: number): string => {
-  if (value < 0) return '#ffffff00'; // Transparent for no data
-  
-  const normalized = Math.max(0, Math.min(1, (value - min) / (max - min || 1)));
-  
-  // Map to color index
-  const index = Math.floor(normalized * (populationDensityScale.length - 1));
-  return populationDensityScale[index];
-};
-
 // Enhanced rendering function that handles land cover, precipitation, and vegetation data
 export const renderTIFFToCanvas = (
   ctx: CanvasRenderingContext2D,
@@ -249,7 +194,7 @@ export const renderTIFFToCanvas = (
 
   // Set image smoothing property based on the data type
   // For precipitation and vegetation we want smoothing, for land cover we don't
-  ctx.imageSmoothingEnabled = dataType === 'precipitation' || dataType === 'vegetation' || dataType === 'population' ? true : smoothing;
+  ctx.imageSmoothingEnabled = dataType === 'precipitation' || dataType === 'vegetation' ? true : smoothing;
   ctx.imageSmoothingQuality = 'high';
 
   // Create an ImageData object
@@ -270,8 +215,6 @@ export const renderTIFFToCanvas = (
       } else {
         color = getVegetationColor(value, min, max);
       }
-    } else if (dataType === 'population') {
-      color = getPopulationDensityColor(value, min, max);
     } else {
       // Land cover coloring
       color = landCoverColors[value as keyof typeof landCoverColors] || landCoverColors[0];
@@ -294,8 +237,8 @@ export const renderTIFFToCanvas = (
   // Put the ImageData onto the canvas
   ctx.putImageData(imageData, 0, 0);
   
-  // If we're rendering precipitation, vegetation or population, apply post-processing for smoother appearance
-  if (dataType === 'precipitation' || dataType === 'vegetation' || dataType === 'population') {
+  // If we're rendering precipitation or vegetation, apply post-processing for smoother appearance
+  if (dataType === 'precipitation' || dataType === 'vegetation') {
     // Create a temporary canvas for post-processing
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = width;
@@ -317,17 +260,9 @@ export const renderTIFFToCanvas = (
   }
 };
 
-// Get a list of available years for each data type
+// Get a list of available years for land cover data
 export const getAvailableYears = (dataType = 'landCover'): number[] => {
-  // All standard years available for most data types
-  const standardYears = Array.from({ length: 14 }, (_, i) => 2010 + i);
-  
-  // For population, only specific years are available
-  if (dataType === 'population') {
-    return [2010, 2015, 2020];
-  }
-  
-  return standardYears;
+  return Array.from({ length: 14 }, (_, i) => 2010 + i);
 };
 
 // Calculate statistics from land cover data
@@ -394,84 +329,6 @@ export const calculateVegetationStats = (data: number[]): Record<string, number>
     grasslandGPP: max * 0.6, // Grassland moderate GPP
     croplandGPP: max * 0.7, // Cropland relatively high GPP
     barrenGPP: min * 1.5 // Barren has lowest GPP
-  };
-};
-
-// Calculate population statistics
-export const calculatePopulationStats = (data: number[]): Record<string, number> => {
-  if (data.length === 0) return { 
-    totalPopulation: 0, 
-    averageDensity: 0, 
-    maxDensity: 0, 
-    urbanPopulation: 0, 
-    ruralPopulation: 0,
-    populationGrowthRate: 0,
-    populationUnder15: 0,
-    populationOver65: 0,
-    malePopulation: 0,
-    femalePopulation: 0
-  };
-  
-  // Filter out NoData values (negative or zero)
-  const validData = data.filter(value => value > 0);
-  
-  if (validData.length === 0) return { 
-    totalPopulation: 0, 
-    averageDensity: 0, 
-    maxDensity: 0,
-    urbanPopulation: 0, 
-    ruralPopulation: 0,
-    populationGrowthRate: 0,
-    populationUnder15: 0,
-    populationOver65: 0,
-    malePopulation: 0,
-    femalePopulation: 0
-  };
-  
-  const sum = validData.reduce((acc, val) => acc + val, 0);
-  const max = Math.max(...validData);
-  
-  // Calculate total population (assuming cell size of 1km²)
-  const totalPopulation = Math.round(sum * 0.1); // Scale factor for presentation
-  
-  // Estimate urban vs rural population based on density
-  const urbanDensityThreshold = max * 0.3; // 30% of max density is considered urban
-  const urbanPopulationTotal = validData.filter(val => val >= urbanDensityThreshold)
-    .reduce((acc, val) => acc + val, 0);
-  const urbanPopulation = Math.round(urbanPopulationTotal * 0.1); // Scale for presentation
-  const ruralPopulation = totalPopulation - urbanPopulation;
-  
-  // Demographic estimates based on typical Sahel region demographics
-  const populationUnder15 = Math.round(totalPopulation * 0.44); // 44% under 15
-  const populationOver65 = Math.round(totalPopulation * 0.03); // 3% over 65
-  const femalePopulation = Math.round(totalPopulation * 0.51); // 51% female
-  const malePopulation = totalPopulation - femalePopulation;
-  
-  // Regional growth rate is around 2.5-3.5% annually
-  const populationGrowthRate = 3.1;
-  
-  return {
-    totalPopulation,
-    averageDensity: sum / validData.length,
-    maxDensity: max,
-    urbanPopulation,
-    ruralPopulation,
-    populationGrowthRate,
-    populationUnder15,
-    populationOver65,
-    malePopulation,
-    femalePopulation
-  };
-};
-
-// Function to calculate transition statistics (to be updated based on your needs)
-export const calculateTransitionStats = (data: number[]): Record<string, number> => {
-  // This is a placeholder for transition statistics
-  return {
-    transitionIntensity: Math.random() * 10,
-    degradedArea: Math.random() * 1000,
-    improvedArea: Math.random() * 500,
-    stableArea: Math.random() * 2000
   };
 };
 
@@ -646,117 +503,6 @@ export const getVegetationTimeSeriesData = (): Array<{ year: number, [key: strin
       'Total': baseGPP + variation + 100,
       // Include productivity gains/losses by year
       'AnnualChange': 1.5 + Math.sin((year - 2010) * 0.5) * 1.2
-    };
-  });
-};
-
-// Generate population time series data
-export const getPopulationTimeSeriesData = (): Array<{ year: number, [key: string]: number }> => {
-  // Base population values (these are synthetic)
-  const baseValues = {
-    2010: {
-      totalPopulation: 321500,
-      urbanPopulation: 89000,
-      ruralPopulation: 232500,
-      populationDensity: 18.4,
-      populationUnder15: 141460,
-      populationOver65: 9645,
-      populationGrowthRate: 3.3
-    },
-    2015: {
-      totalPopulation: 378200,
-      urbanPopulation: 114000,
-      ruralPopulation: 264200,
-      populationDensity: 21.6,
-      populationUnder15: 166408,
-      populationOver65: 11346,
-      populationGrowthRate: 3.1
-    },
-    2020: {
-      totalPopulation: 442800,
-      urbanPopulation: 146000,
-      ruralPopulation: 296800,
-      populationDensity: 25.3,
-      populationUnder15: 194832,
-      populationOver65: 13284,
-      populationGrowthRate: 2.9
-    }
-  };
-  
-  // Generate data for each year we have actual data
-  const yearData = [2010, 2015, 2020].map(year => {
-    return {
-      year,
-      'Total Population': baseValues[year as keyof typeof baseValues].totalPopulation,
-      'Urban Population': baseValues[year as keyof typeof baseValues].urbanPopulation,
-      'Rural Population': baseValues[year as keyof typeof baseValues].ruralPopulation,
-      'Population Density': baseValues[year as keyof typeof baseValues].populationDensity,
-      'Population Under 15': baseValues[year as keyof typeof baseValues].populationUnder15,
-      'Population Over 65': baseValues[year as keyof typeof baseValues].populationOver65,
-      'Growth Rate': baseValues[year as keyof typeof baseValues].populationGrowthRate
-    };
-  });
-  
-  // For years in between, fill with estimates
-  const allYears = Array.from({ length: 14 }, (_, i) => 2010 + i);
-  
-  return allYears.map(year => {
-    // If we have actual data for this year, use it
-    const actualData = yearData.find(data => data.year === year);
-    if (actualData) return actualData;
-    
-    // Otherwise, estimate based on closest year with data
-    let closestYear = getClosestPopulationYear(year);
-    const closestData = yearData.find(data => data.year === closestYear)!;
-    
-    // Apply growth rate adjustment for interpolated years
-    const yearDiff = year - closestYear;
-    const growthRateAdjustment = yearDiff * (closestData['Growth Rate'] / 100);
-    
-    return {
-      year,
-      'Total Population': Math.round(closestData['Total Population'] * (1 + growthRateAdjustment)),
-      'Urban Population': Math.round(closestData['Urban Population'] * (1 + growthRateAdjustment * 1.2)), // Urban grows faster
-      'Rural Population': Math.round(closestData['Rural Population'] * (1 + growthRateAdjustment * 0.9)), // Rural grows slower
-      'Population Density': parseFloat((closestData['Population Density'] * (1 + growthRateAdjustment)).toFixed(1)),
-      'Population Under 15': Math.round(closestData['Population Under 15'] * (1 + growthRateAdjustment * 1.05)),
-      'Population Over 65': Math.round(closestData['Population Over 65'] * (1 + growthRateAdjustment * 0.8)),
-      'Growth Rate': parseFloat((closestData['Growth Rate'] - yearDiff * 0.03).toFixed(1)) // Gradual decline in growth rate
-    };
-  });
-};
-
-// Function to generate charts showing relationship between population and vegetation/precipitation
-export const getPopulationEnvironmentCorrelation = (): Array<{ 
-  year: number, 
-  populationDensity: number,
-  vegetationHealth: number,
-  precipitation: number 
-}> => {
-  // Generate correlation data to show how vegetation health and rainfall correlate with population
-  return [2010, 2015, 2020].map(year => {
-    const baseVegetation = 100; // Base value of vegetation health (100%)
-    const basePrecipitation = 100; // Base value of precipitation (100%)
-    
-    // Get the population data for this year
-    const popData = getPopulationTimeSeriesData().find(d => d.year === year)!;
-    const density = popData['Population Density'];
-    
-    // Vegetation health decreases slightly as population density increases
-    // This represents the impact of human activities on natural vegetation
-    const vegetationImpact = density * 0.8; // Higher population density, lower vegetation health
-    const vegetationHealth = baseVegetation - vegetationImpact;
-    
-    // In this simplified model, precipitation is treated as independent of population
-    // but we add some variability for visualization
-    const precipitationVariation = (Math.sin(year * 0.5) * 10);
-    const precipitation = basePrecipitation + precipitationVariation;
-    
-    return {
-      year,
-      populationDensity: density,
-      vegetationHealth,
-      precipitation
     };
   });
 };
