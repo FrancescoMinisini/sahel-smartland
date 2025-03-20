@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
@@ -17,6 +18,7 @@ type CarouselProps = {
   plugins?: CarouselPlugin
   orientation?: "horizontal" | "vertical"
   setApi?: (api: CarouselApi) => void
+  onSelect?: (index: number) => void
 }
 
 type CarouselContextProps = {
@@ -26,6 +28,7 @@ type CarouselContextProps = {
   scrollNext: () => void
   canScrollPrev: boolean
   canScrollNext: boolean
+  selectedIndex: number
 } & CarouselProps
 
 const CarouselContext = React.createContext<CarouselContextProps | null>(null)
@@ -52,6 +55,7 @@ const Carousel = React.forwardRef<
       plugins,
       className,
       children,
+      onSelect,
       ...props
     },
     ref
@@ -65,15 +69,22 @@ const Carousel = React.forwardRef<
     )
     const [canScrollPrev, setCanScrollPrev] = React.useState(false)
     const [canScrollNext, setCanScrollNext] = React.useState(false)
+    const [selectedIndex, setSelectedIndex] = React.useState(0)
 
-    const onSelect = React.useCallback((api: CarouselApi) => {
+    const handleSelect = React.useCallback((api: CarouselApi) => {
       if (!api) {
         return
       }
 
+      setSelectedIndex(api.selectedScrollSnap())
       setCanScrollPrev(api.canScrollPrev())
       setCanScrollNext(api.canScrollNext())
-    }, [])
+      
+      // Call the onSelect prop if provided
+      if (onSelect) {
+        onSelect(api.selectedScrollSnap())
+      }
+    }, [onSelect])
 
     const scrollPrev = React.useCallback(() => {
       api?.scrollPrev()
@@ -109,14 +120,14 @@ const Carousel = React.forwardRef<
         return
       }
 
-      onSelect(api)
-      api.on("reInit", onSelect)
-      api.on("select", onSelect)
+      handleSelect(api)
+      api.on("reInit", handleSelect)
+      api.on("select", handleSelect)
 
       return () => {
-        api?.off("select", onSelect)
+        api?.off("select", handleSelect)
       }
-    }, [api, onSelect])
+    }, [api, handleSelect])
 
     return (
       <CarouselContext.Provider
@@ -130,6 +141,7 @@ const Carousel = React.forwardRef<
           scrollNext,
           canScrollPrev,
           canScrollNext,
+          selectedIndex,
         }}
       >
         <div
