@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
 import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2 } from 'lucide-react';
@@ -25,7 +26,6 @@ const MapVisualization = ({
 }: MapVisualizationProps) => {
   const { toast } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeLayer, setActiveLayer] = useState('landCover');
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -101,94 +101,6 @@ const MapVisualization = ({
     };
   }, []);
 
-  // Adjust canvas size when container size changes
-  useEffect(() => {
-    const resizeObserver = new ResizeObserver(() => {
-      if (canvasRef.current && containerRef.current && !isLoading) {
-        const containerWidth = containerRef.current.clientWidth;
-        const containerHeight = containerRef.current.clientHeight;
-        
-        if (containerWidth > 0 && containerHeight > 0) {
-          const dataYear = prevYear;
-          const dataObject = mapData[dataYear];
-          
-          if (dataObject && dataObject.width > 0 && dataObject.height > 0) {
-            // Calculate the ratio to keep aspect ratio but fill the container
-            const dataAspect = dataObject.width / dataObject.height;
-            const containerAspect = containerWidth / containerHeight;
-            
-            if (dataAspect > containerAspect) {
-              // Data is wider than container, match width
-              canvasRef.current.width = containerWidth;
-              canvasRef.current.height = containerWidth / dataAspect;
-            } else {
-              // Data is taller than container, match height
-              canvasRef.current.height = containerHeight;
-              canvasRef.current.width = containerHeight * dataAspect;
-            }
-            
-            // Re-render with new size
-            renderMap();
-          }
-        }
-      }
-    });
-    
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
-    }
-    
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [mapData, prevYear, isLoading]);
-
-  // Render map function to avoid code duplication
-  const renderMap = () => {
-    if (isLoading || !canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    const prevYearData = mapData[prevYear];
-    const nextYearData = mapData[nextYear];
-    
-    if (!prevYearData || prevYearData.data.length === 0) return;
-    
-    // Handle regular render
-    if (nextYearData && prevYear !== nextYear) {
-      const interpolatedData = interpolateData(
-        prevYearData.data,
-        nextYearData.data,
-        progress
-      );
-      
-      renderTIFFToCanvas(
-        ctx, 
-        interpolatedData, 
-        canvas.width, 
-        canvas.height
-      );
-      
-      // Update statistics
-      const stats = calculateLandCoverStats(interpolatedData);
-      setCurrentStats(stats);
-    } else {
-      // Just render the previous year's data
-      renderTIFFToCanvas(
-        ctx, 
-        prevYearData.data, 
-        canvas.width, 
-        canvas.height
-      );
-      
-      // Update statistics
-      const stats = calculateLandCoverStats(prevYearData.data);
-      setCurrentStats(stats);
-    }
-  };
-
   // Render the map with smooth transitions when the year changes
   useEffect(() => {
     if (isLoading || !canvasRef.current) return;
@@ -201,6 +113,12 @@ const MapVisualization = ({
     const nextYearData = mapData[nextYear];
     
     if (!prevYearData || prevYearData.data.length === 0) return;
+    
+    // Set canvas dimensions if not already set
+    if (canvas.width !== prevYearData.width || canvas.height !== prevYearData.height) {
+      canvas.width = prevYearData.width;
+      canvas.height = prevYearData.height;
+    }
     
     // Handle smooth transition when year changes
     if (previousYearRef.current !== null && previousYearRef.current !== year) {
@@ -254,8 +172,8 @@ const MapVisualization = ({
           renderTIFFToCanvas(
             ctx, 
             transitionData, 
-            canvas.width, 
-            canvas.height
+            prevYearData.width, 
+            prevYearData.height
           );
           
           // Continue animation if not complete
@@ -275,7 +193,36 @@ const MapVisualization = ({
       }
     } else {
       // Regular render without transition animation
-      renderMap();
+      if (nextYearData && prevYear !== nextYear) {
+        const interpolatedData = interpolateData(
+          prevYearData.data,
+          nextYearData.data,
+          progress
+        );
+        
+        renderTIFFToCanvas(
+          ctx, 
+          interpolatedData, 
+          prevYearData.width, 
+          prevYearData.height
+        );
+        
+        // Update statistics
+        const stats = calculateLandCoverStats(interpolatedData);
+        setCurrentStats(stats);
+      } else {
+        // Just render the previous year's data
+        renderTIFFToCanvas(
+          ctx, 
+          prevYearData.data, 
+          prevYearData.width, 
+          prevYearData.height
+        );
+        
+        // Update statistics
+        const stats = calculateLandCoverStats(prevYearData.data);
+        setCurrentStats(stats);
+      }
     }
     
     // Update the previous year ref
@@ -313,10 +260,7 @@ const MapVisualization = ({
       </div>
       
       {/* Map Container */}
-      <div 
-        ref={containerRef}
-        className="w-full aspect-[4/3] bg-sahel-sandLight overflow-hidden relative"
-      >
+      <div className="w-full aspect-[4/3] bg-sahel-sandLight overflow-hidden relative">
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="flex flex-col items-center">
@@ -331,7 +275,7 @@ const MapVisualization = ({
           >
             <canvas 
               ref={canvasRef} 
-              className="w-full h-full object-cover"
+              className="max-w-full max-h-full object-contain"
             />
           </div>
         )}

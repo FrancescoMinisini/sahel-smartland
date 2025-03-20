@@ -1,4 +1,3 @@
-
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -83,86 +82,38 @@ export const interpolateData = (
   });
 };
 
-// Enhanced rendering function with better color blending and scaling
+// Enhanced rendering function with better color blending
 export const renderTIFFToCanvas = (
   ctx: CanvasRenderingContext2D,
   data: number[],
-  canvasWidth: number,
-  canvasHeight: number,
+  width: number,
+  height: number,
   opacity: number = 1
 ): void => {
-  if (!ctx || data.length === 0) {
-    console.error("Invalid context or empty data in renderTIFFToCanvas");
+  if (!ctx || data.length === 0 || width === 0 || height === 0) {
     return;
   }
 
-  // Calculate the data dimensions based on the square root of the length
-  // This assumes the data is a square grid, which is a simplification
-  const dataSize = Math.sqrt(data.length);
-  const dataWidth = Math.floor(dataSize);
-  const dataHeight = Math.floor(dataSize);
-
-  if (dataWidth === 0 || dataHeight === 0) {
-    console.error("Invalid data dimensions in renderTIFFToCanvas");
-    return;
-  }
-
-  // Create an ImageData object for the canvas dimensions
-  const imageData = ctx.createImageData(canvasWidth, canvasHeight);
+  // Create an ImageData object
+  const imageData = ctx.createImageData(width, height);
   const pixels = imageData.data;
 
-  // Clear the canvas first with background color
-  ctx.fillStyle = '#f8f7f4'; // Match the site background color
-  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-  // Calculate scaling factors to map data to canvas
-  const scaleX = canvasWidth / dataWidth;
-  const scaleY = canvasHeight / dataHeight;
-
   // Map the data values to RGBA values with improved color mapping
-  for (let y = 0; y < canvasHeight; y++) {
-    for (let x = 0; x < canvasWidth; x++) {
-      // Calculate the corresponding position in the data array
-      const dataX = Math.floor(x / scaleX);
-      const dataY = Math.floor(y / scaleY);
-      
-      // Bounds check to prevent out-of-range access
-      if (dataX >= dataWidth || dataY >= dataHeight) {
-        continue;
-      }
-      
-      const dataIndex = dataY * dataWidth + dataX;
-      
-      // Bounds check for data array
-      if (dataIndex >= data.length) {
-        continue;
-      }
-      
-      const value = data[dataIndex];
-      const color = landCoverColors[value as keyof typeof landCoverColors];
-      
-      // Canvas pixel position
-      const pixelIndex = (y * canvasWidth + x) * 4;
-      
-      if (color) {
-        // Convert hex color to RGB
-        const r = parseInt(color.slice(1, 3), 16);
-        const g = parseInt(color.slice(3, 5), 16);
-        const b = parseInt(color.slice(5, 7), 16);
-        
-        // Set RGBA values in the ImageData
-        pixels[pixelIndex] = r;
-        pixels[pixelIndex + 1] = g;
-        pixels[pixelIndex + 2] = b;
-        pixels[pixelIndex + 3] = opacity * 255; // Alpha channel
-      } else {
-        // Use a distinctive color for debugging missing values
-        pixels[pixelIndex] = 255; // R
-        pixels[pixelIndex + 1] = 0;   // G
-        pixels[pixelIndex + 2] = 255; // B (magenta for debugging)
-        pixels[pixelIndex + 3] = opacity * 255;
-      }
-    }
+  for (let i = 0; i < data.length; i++) {
+    const value = data[i];
+    const color = landCoverColors[value as keyof typeof landCoverColors] || landCoverColors[0];
+    
+    // Convert hex color to RGB
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    
+    // Set RGBA values in the ImageData
+    const pixelIndex = i * 4;
+    pixels[pixelIndex] = r;
+    pixels[pixelIndex + 1] = g;
+    pixels[pixelIndex + 2] = b;
+    pixels[pixelIndex + 3] = opacity * 255; // Alpha channel
   }
 
   // Put the ImageData onto the canvas
