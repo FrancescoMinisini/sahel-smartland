@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from "@/components/ui/card";
@@ -6,7 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import YearSlider from '@/components/YearSlider';
 import MapVisualization from '@/components/MapVisualization';
 import Navbar from '@/components/Navbar';
-import { Calendar, Map, BarChartHorizontal, TrendingUp, TrendingDown, HelpCircle, Info } from 'lucide-react';
+import { Info, Calendar, Map, BarChartHorizontal, TrendingUp, TrendingDown, HelpCircle } from 'lucide-react';
 import { landCoverClasses, landCoverColors } from '@/lib/geospatialUtils';
 import { 
   BarChart, 
@@ -264,7 +263,7 @@ const TemporalAnalysis = () => {
               <h2 className="text-xl font-semibold">Time Period</h2>
             </div>
             <p className="text-muted-foreground mb-6">
-              Adjust the slider to see land use changes from 2010 to 2023
+              Adjust the slider to see land use changes from 1985 to 2023
             </p>
             <YearSlider 
               minYear={2010} 
