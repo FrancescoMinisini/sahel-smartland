@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -18,13 +19,34 @@ import {
   Clock,
   Filter,
   Layers,
-  ZoomIn
+  ZoomIn,
+  HelpCircle,
+  Info
 } from 'lucide-react';
+import { landCoverClasses, landCoverColors } from '@/lib/geospatialUtils';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  Cell,
+  Line,
+  LineChart,
+  Area,
+  AreaChart
+} from 'recharts';
 
 const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('landCover');
   const [selectedYear, setSelectedYear] = useState(2023);
+  const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
+  const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
+  const [timeSeriesData, setTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
   
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -45,6 +67,8 @@ const Dashboard = () => {
   };
 
   const handleYearChange = (year: number) => {
+    // Store the previous year's stats before updating to the new year
+    setPreviousYearStats({...landCoverStats});
     setIsLoading(true);
     setSelectedYear(year);
     
@@ -52,6 +76,116 @@ const Dashboard = () => {
     setTimeout(() => {
       setIsLoading(false);
     }, 500);
+  };
+
+  const handleStatsChange = (stats: Record<string, number>) => {
+    setLandCoverStats(stats);
+    
+    // Update time series data for historical tracking
+    setTimeSeriesData(prevData => {
+      // Check if we already have data for this year
+      const existingIndex = prevData.findIndex(item => item.year === selectedYear);
+      
+      // Create new data point with converted values (thousand pixels)
+      const newDataPoint = { year: selectedYear };
+      
+      // Add each land cover class as a separate data point
+      Object.entries(stats)
+        .filter(([key]) => key !== '0') // Filter out "No Data" class
+        .forEach(([key, value]) => {
+          const className = landCoverClasses[Number(key) as keyof typeof landCoverClasses] || `Class ${key}`;
+          newDataPoint[className] = Math.round(value / 1000); // Convert to 1000s of pixels
+        });
+      
+      if (existingIndex >= 0) {
+        // Replace existing data for this year
+        const newData = [...prevData];
+        newData[existingIndex] = newDataPoint;
+        return newData;
+      } else {
+        // Add new data point for this year
+        return [...prevData, newDataPoint].sort((a, b) => a.year - b.year);
+      }
+    });
+  };
+
+  // Transform the statistics into chart-compatible data
+  const chartData = Object.entries(landCoverStats)
+    .filter(([key]) => key !== '0') // Filter out "No Data" class
+    .map(([key, value]) => {
+      const landCoverKey = Number(key);
+      const previousValue = previousYearStats[key] || value;
+      const changeValue = value - previousValue;
+      
+      return {
+        name: landCoverClasses[landCoverKey as keyof typeof landCoverClasses] || `Class ${key}`,
+        value: Math.round(value / 1000), // Convert to 1000s of pixels (approximate km²)
+        color: landCoverColors[landCoverKey as keyof typeof landCoverColors] || '#cccccc',
+        change: Math.round((changeValue / (previousValue || 1)) * 100), // Percent change
+        rawChange: changeValue
+      };
+    })
+    .sort((a, b) => b.value - a.value); // Sort by descending value
+
+  // Generate trend analysis text based on time series data
+  const getTrendAnalysis = () => {
+    if (timeSeriesData.length < 2) {
+      return "Insufficient data to analyze trends. Please select multiple years to build trend data.";
+    }
+    
+    const forestData = timeSeriesData
+      .filter(d => d.Forests !== undefined)
+      .map(d => ({ year: d.year, value: d.Forests }));
+      
+    const barrenData = timeSeriesData
+      .filter(d => d.Barren !== undefined)
+      .map(d => ({ year: d.year, value: d.Barren }));
+    
+    const urbanData = timeSeriesData
+      .filter(d => d.Urban !== undefined)
+      .map(d => ({ year: d.year, value: d.Urban }));
+    
+    // Simple linear trend analysis
+    let forestTrend = "stable";
+    let barrenTrend = "stable";
+    let urbanTrend = "stable";
+    
+    if (forestData.length >= 2) {
+      const firstForest = forestData[0].value;
+      const lastForest = forestData[forestData.length - 1].value;
+      if (lastForest > firstForest * 1.05) forestTrend = "increasing";
+      else if (lastForest < firstForest * 0.95) forestTrend = "decreasing";
+    }
+    
+    if (barrenData.length >= 2) {
+      const firstBarren = barrenData[0].value;
+      const lastBarren = barrenData[barrenData.length - 1].value;
+      if (lastBarren > firstBarren * 1.05) barrenTrend = "increasing";
+      else if (lastBarren < firstBarren * 0.95) barrenTrend = "decreasing";
+    }
+    
+    if (urbanData.length >= 2) {
+      const firstUrban = urbanData[0].value;
+      const lastUrban = urbanData[urbanData.length - 1].value;
+      if (lastUrban > firstUrban * 1.05) urbanTrend = "increasing";
+      else if (lastUrban < firstUrban * 0.95) urbanTrend = "decreasing";
+    }
+    
+    let analysisText = `Based on the observed data from ${timeSeriesData[0].year} to ${timeSeriesData[timeSeriesData.length - 1].year}:\n\n`;
+    
+    analysisText += `• Forest coverage is ${forestTrend === "stable" ? "relatively stable" : forestTrend}`;
+    analysisText += forestTrend === "decreasing" ? ", indicating potential deforestation concerns.\n" : 
+                    forestTrend === "increasing" ? ", suggesting successful conservation efforts.\n" : ".\n";
+    
+    analysisText += `• Barren land is ${barrenTrend === "stable" ? "relatively stable" : barrenTrend}`;
+    analysisText += barrenTrend === "increasing" ? ", which may indicate desertification processes.\n" : 
+                    barrenTrend === "decreasing" ? ", suggesting land rehabilitation success.\n" : ".\n";
+    
+    analysisText += `• Urban areas are ${urbanTrend === "stable" ? "relatively stable" : urbanTrend}`;
+    analysisText += urbanTrend === "increasing" ? ", indicating expansion of human settlements and infrastructure.\n" : 
+                    urbanTrend === "decreasing" ? ", which is unusual and may warrant verification.\n" : ".\n";
+    
+    return analysisText;
   };
 
   const dataTabs = [
@@ -253,79 +387,193 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <div>
-                  {/* Two-column layout with land coverage charts on left and map on right */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Land coverage charts - 2/3 width on larger screens */}
-                    <div className="lg:col-span-2 bg-muted/30 rounded-lg p-4">
-                      {activeTab === 'landCover' && (
-                        <div className="text-center p-8">
-                          <h3 className="text-xl font-semibold mb-4">Land Cover Change (2010-2023)</h3>
-                          <p className="text-muted-foreground mb-6">
-                            Visualization of land cover changes in the Sahel region over the past decade.
-                          </p>
-                          <div className="h-48 bg-sahel-sandLight rounded-lg flex items-center justify-center">
-                            <BarChart2 size={48} className="text-sahel-earth/30" />
+                  {activeTab === 'landCover' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                      {/* Charts - 2/3 width on larger screens */}
+                      <div className="lg:col-span-2 space-y-6">
+                        {/* Land Cover Distribution Chart */}
+                        <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
+                          <h3 className="text-lg font-medium mb-4">Land Cover Distribution ({selectedYear})</h3>
+                          <div className="h-[400px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart
+                                data={chartData}
+                                margin={{
+                                  top: 20,
+                                  right: 30,
+                                  left: 20,
+                                  bottom: 60,
+                                }}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis 
+                                  dataKey="name" 
+                                  angle={-45} 
+                                  textAnchor="end" 
+                                  height={60} 
+                                />
+                                <YAxis 
+                                  label={{ 
+                                    value: 'Area (thousand pixels)', 
+                                    angle: -90, 
+                                    position: 'insideLeft',
+                                    style: { textAnchor: 'middle' }
+                                  }} 
+                                />
+                                <Tooltip 
+                                  formatter={(value, name, props) => {
+                                    if (name === "Area (thousand pixels)") {
+                                      const change = props.payload.change;
+                                      return [
+                                        `${value} thousand pixels ${change !== 0 ? `(${change > 0 ? '+' : ''}${change}%)` : ''}`, 
+                                        name
+                                      ];
+                                    }
+                                    return [value, name];
+                                  }}
+                                />
+                                <Legend verticalAlign="top" height={36} />
+                                <Bar 
+                                  dataKey="value" 
+                                  name="Area (thousand pixels)" 
+                                  fill="#8884d8"
+                                >
+                                  {chartData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="mt-4 text-sm text-muted-foreground">
+                            <div className="flex items-start gap-2 mb-2">
+                              <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                              <p>
+                                The chart displays the distribution of land cover types measured in thousands of pixels. Each pixel represents approximately 500m², with colors matching the map visualization.
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      )}
-                      
-                      {activeTab === 'vegetation' && (
-                        <div className="text-center p-8">
-                          <h3 className="text-xl font-semibold mb-4">Vegetation Productivity (2010-2023)</h3>
-                          <p className="text-muted-foreground mb-6">
-                            Analysis of gross primary production trends across the Sahel region.
-                          </p>
-                          <div className="h-48 bg-sahel-greenLight/10 rounded-lg flex items-center justify-center">
-                            <Leaf size={48} className="text-sahel-green/30" />
+
+                        {/* Historical Trend Chart */}
+                        <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
+                          <h3 className="text-lg font-medium mb-4">Land Cover Change Over Time</h3>
+                          <div className="h-[400px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <AreaChart
+                                data={timeSeriesData}
+                                margin={{
+                                  top: 20,
+                                  right: 30,
+                                  left: 20,
+                                  bottom: 20,
+                                }}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis 
+                                  dataKey="year" 
+                                  label={{ 
+                                    value: 'Year', 
+                                    position: 'insideBottom',
+                                    offset: -10
+                                  }}
+                                />
+                                <YAxis 
+                                  label={{ 
+                                    value: 'Area (thousand pixels)', 
+                                    angle: -90, 
+                                    position: 'insideLeft',
+                                    style: { textAnchor: 'middle' }
+                                  }} 
+                                />
+                                <Tooltip />
+                                <Legend />
+                                
+                                {/* Show the key land cover types only to avoid overcrowding */}
+                                <Area type="monotone" dataKey="Forests" stackId="1" stroke="#1a9850" fill="#1a9850" fillOpacity={0.7} />
+                                <Area type="monotone" dataKey="Shrublands" stackId="1" stroke="#91cf60" fill="#91cf60" fillOpacity={0.7} />
+                                <Area type="monotone" dataKey="Grasslands" stackId="1" stroke="#fee08b" fill="#fee08b" fillOpacity={0.7} />
+                                <Area type="monotone" dataKey="Croplands" stackId="1" stroke="#fc8d59" fill="#fc8d59" fillOpacity={0.7} />
+                                <Area type="monotone" dataKey="Urban" stackId="1" stroke="#d73027" fill="#d73027" fillOpacity={0.7} />
+                                <Area type="monotone" dataKey="Barren" stackId="1" stroke="#bababa" fill="#bababa" fillOpacity={0.7} />
+                              </AreaChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="mt-4 text-sm text-muted-foreground">
+                            <div className="flex items-start gap-2 mb-2">
+                              <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                              <p>
+                                This chart accumulates data as you explore different years. The stacked area chart shows how the proportion of each land cover type changes over time, which can reveal patterns of land conversion, urbanization, or environmental recovery.
+                              </p>
+                            </div>
+                            <div className="mt-3 p-3 bg-muted rounded-md">
+                              <h4 className="font-medium mb-2">Trend Analysis:</h4>
+                              <p className="whitespace-pre-line">
+                                {getTrendAnalysis()}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      )}
-                      
-                      {activeTab === 'precipitation' && (
-                        <div className="text-center p-8">
-                          <h3 className="text-xl font-semibold mb-4">Precipitation Patterns (2010-2023)</h3>
-                          <p className="text-muted-foreground mb-6">
-                            Visualization of annual rainfall data across the Sahel region.
-                          </p>
-                          <div className="h-48 bg-sahel-blue/10 rounded-lg flex items-center justify-center">
-                            <CloudRain size={48} className="text-sahel-blue/30" />
-                          </div>
-                        </div>
-                      )}
-                      
-                      {activeTab === 'population' && (
-                        <div className="text-center p-8">
-                          <h3 className="text-xl font-semibold mb-4">Population Density (2010-2023)</h3>
-                          <p className="text-muted-foreground mb-6">
-                            Analysis of population growth and distribution in the Sahel region.
-                          </p>
-                          <div className="h-48 bg-sahel-earth/10 rounded-lg flex items-center justify-center">
-                            <Users size={48} className="text-sahel-earth/30" />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Map visualization - 1/3 width on larger screens */}
-                    <div className="lg:col-span-1 h-full">
-                      <div className="h-[400px]">
-                        <MapVisualization 
-                          className="w-full h-full" 
-                          year={selectedYear}
-                          expandedView={true} 
-                        />
                       </div>
-                      <div className="text-center mt-3">
-                        <Link 
-                          to="/map" 
-                          className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
-                        >
-                          <ZoomIn size={14} className="mr-1" /> 
-                          Open full map view
-                        </Link>
+
+                      {/* Map visualization - 1/3 width on larger screens */}
+                      <div className="lg:col-span-1 h-full">
+                        <div className="h-[400px]">
+                          <MapVisualization 
+                            className="w-full h-full" 
+                            year={selectedYear}
+                            expandedView={true}
+                            onStatsChange={handleStatsChange}
+                          />
+                        </div>
+                        <div className="text-center mt-3">
+                          <Link 
+                            to="/map" 
+                            className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
+                          >
+                            <ZoomIn size={14} className="mr-1" /> 
+                            Open full map view
+                          </Link>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
+                  
+                  {activeTab === 'vegetation' && (
+                    <div className="text-center p-8">
+                      <h3 className="text-xl font-semibold mb-4">Vegetation Productivity (2010-2023)</h3>
+                      <p className="text-muted-foreground mb-6">
+                        Analysis of gross primary production trends across the Sahel region.
+                      </p>
+                      <div className="h-48 bg-sahel-greenLight/10 rounded-lg flex items-center justify-center">
+                        <Leaf size={48} className="text-sahel-green/30" />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {activeTab === 'precipitation' && (
+                    <div className="text-center p-8">
+                      <h3 className="text-xl font-semibold mb-4">Precipitation Patterns (2010-2023)</h3>
+                      <p className="text-muted-foreground mb-6">
+                        Visualization of annual rainfall data across the Sahel region.
+                      </p>
+                      <div className="h-48 bg-sahel-blue/10 rounded-lg flex items-center justify-center">
+                        <CloudRain size={48} className="text-sahel-blue/30" />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {activeTab === 'population' && (
+                    <div className="text-center p-8">
+                      <h3 className="text-xl font-semibold mb-4">Population Density (2010-2023)</h3>
+                      <p className="text-muted-foreground mb-6">
+                        Analysis of population growth and distribution in the Sahel region.
+                      </p>
+                      <div className="h-48 bg-sahel-earth/10 rounded-lg flex items-center justify-center">
+                        <Users size={48} className="text-sahel-earth/30" />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
