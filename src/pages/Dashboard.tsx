@@ -528,22 +528,6 @@ This regional analysis is essential for targeted water resource management and c
             />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {keyStats.map((stat, index) => (
-              <DataCard
-                key={index}
-                title={stat.title}
-                value={stat.value}
-                description={stat.description}
-                icon={stat.icon}
-                trend={stat.trend}
-                analyticsData={stat.analyticsData}
-                correlations={stat.correlations}
-                year={selectedYear}
-              />
-            ))}
-          </div>
-          
           <div className="bg-white dark:bg-muted rounded-xl shadow-sm border border-border/40 overflow-hidden mb-8">
             <div className="flex flex-wrap border-b border-border/40">
               {dataTabs.map((tab) => (
@@ -633,13 +617,15 @@ This regional analysis is essential for targeted water resource management and c
                           />
                         </div>
                         <div className="text-center mt-3">
-                          <Link 
-                            to="/map" 
+                          <a 
+                            href="/sahel_map.html" 
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
                           >
                             <ZoomIn size={14} className="mr-1" /> 
                             Open full map view
-                          </Link>
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -684,13 +670,15 @@ This regional analysis is essential for targeted water resource management and c
                           />
                         </div>
                         <div className="text-center mt-3">
-                          <Link 
-                            to="/map" 
+                          <a 
+                            href="/sahel_map.html" 
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
                           >
                             <ZoomIn size={14} className="mr-1" /> 
                             Open full map view
-                          </Link>
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -735,13 +723,15 @@ This regional analysis is essential for targeted water resource management and c
                           />
                         </div>
                         <div className="text-center mt-3">
-                          <Link 
-                            to="/map" 
+                          <a 
+                            href="/sahel_map.html" 
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
                           >
                             <ZoomIn size={14} className="mr-1" /> 
                             Open full map view
-                          </Link>
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -791,13 +781,15 @@ This regional analysis is essential for targeted water resource management and c
                           />
                         </div>
                         <div className="text-center mt-3">
-                          <Link 
-                            to="/map" 
+                          <a 
+                            href="/sahel_map.html" 
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
                           >
                             <ZoomIn size={14} className="mr-1" /> 
                             Open full map view
-                          </Link>
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -805,6 +797,22 @@ This regional analysis is essential for targeted water resource management and c
                 </div>
               )}
             </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {keyStats.map((stat, index) => (
+              <DataCard
+                key={index}
+                title={stat.title}
+                value={stat.value}
+                description={stat.description}
+                icon={stat.icon}
+                trend={stat.trend}
+                analyticsData={stat.analyticsData}
+                correlations={stat.correlations}
+                year={selectedYear}
+              />
+            ))}
           </div>
         </div>
       </main>
