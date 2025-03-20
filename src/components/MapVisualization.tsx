@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
 import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2 } from 'lucide-react';
@@ -16,14 +17,14 @@ interface MapVisualizationProps {
   className?: string;
   year?: number;
   onStatsChange?: (stats: Record<string, number>) => void;
-  expandedView?: boolean; // New prop to control expanded view mode
+  expandedView?: boolean;
 }
 
 const MapVisualization = ({ 
   className, 
   year = 2023, 
   onStatsChange,
-  expandedView = false // Default to false for backwards compatibility
+  expandedView = false
 }: MapVisualizationProps) => {
   const { toast } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -279,57 +280,57 @@ const MapVisualization = ({
           >
             <canvas 
               ref={canvasRef} 
-              className="w-full h-full object-contain"
+              className="max-w-full max-h-full object-contain"
             />
           </div>
         )}
       </div>
       
       {/* Map Controls */}
-      <div className="absolute top-4 right-4 flex flex-col gap-2">
+      <div className="absolute top-3 right-3 flex flex-col gap-1.5">
         <button 
           onClick={handleZoomIn} 
-          className="w-8 h-8 bg-white rounded-lg shadow-md flex items-center justify-center text-sahel-earth hover:bg-sahel-green hover:text-white transition-colors"
+          className="w-7 h-7 bg-white rounded-lg shadow-md flex items-center justify-center text-sahel-earth hover:bg-sahel-green hover:text-white transition-colors"
           aria-label="Zoom in"
         >
-          <ZoomIn size={16} />
+          <ZoomIn size={14} />
         </button>
         <button 
           onClick={handleZoomOut} 
-          className="w-8 h-8 bg-white rounded-lg shadow-md flex items-center justify-center text-sahel-earth hover:bg-sahel-green hover:text-white transition-colors"
+          className="w-7 h-7 bg-white rounded-lg shadow-md flex items-center justify-center text-sahel-earth hover:bg-sahel-green hover:text-white transition-colors"
           aria-label="Zoom out"
         >
-          <ZoomOut size={16} />
+          <ZoomOut size={14} />
         </button>
         <button 
           onClick={handleResetView} 
-          className="w-8 h-8 bg-white rounded-lg shadow-md flex items-center justify-center text-sahel-earth hover:bg-sahel-green hover:text-white transition-colors"
+          className="w-7 h-7 bg-white rounded-lg shadow-md flex items-center justify-center text-sahel-earth hover:bg-sahel-green hover:text-white transition-colors"
           aria-label="Reset view"
         >
-          <RotateCcw size={16} />
+          <RotateCcw size={14} />
         </button>
       </div>
       
-      {/* Layer Selector - Always show regardless of view mode */}
-      <div className="absolute top-4 left-4">
-        <div className="bg-white rounded-lg shadow-md p-2">
-          <div className="flex items-center gap-2 mb-2 px-2">
-            <Layers size={14} className="text-sahel-earth" />
+      {/* Layer Selector - Smaller version */}
+      <div className="absolute top-3 left-3">
+        <div className="bg-white rounded-lg shadow-md p-1.5">
+          <div className="flex items-center gap-1 mb-1 px-1.5">
+            <Layers size={12} className="text-sahel-earth" />
             <span className="text-xs font-medium">Layers</span>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {mapLayers.map(layer => (
               <button
                 key={layer.id}
                 onClick={() => handleLayerChange(layer.id)}
                 className={cn(
-                  "w-full text-left px-3 py-1.5 text-xs rounded-md flex items-center gap-2 transition-colors",
+                  "w-full text-left px-2 py-1 text-xs rounded-md flex items-center gap-1.5 transition-colors",
                   activeLayer === layer.id ? "bg-sahel-green/10 text-sahel-green" : "text-sahel-earth hover:bg-muted"
                 )}
               >
-                <span className={cn("w-2 h-2 rounded-full", layer.color)}></span>
+                <span className={cn("w-1.5 h-1.5 rounded-full", layer.color)}></span>
                 {layer.name}
-                {activeLayer === layer.id && <Eye size={12} className="ml-auto" />}
+                {activeLayer === layer.id && <Eye size={10} className="ml-auto" />}
               </button>
             ))}
           </div>
