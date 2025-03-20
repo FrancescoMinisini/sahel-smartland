@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -6,6 +5,7 @@ import Footer from '@/components/Footer';
 import DataCard from '@/components/DataCard';
 import MapVisualization from '@/components/MapVisualization';
 import YearSlider from '@/components/YearSlider';
+import PopulationInsightsCharts from '@/components/PopulationInsightsCharts';
 import { 
   Calendar, 
   FileText, 
@@ -673,13 +673,33 @@ This regional analysis is essential for targeted water resource management and c
                   )}
                   
                   {activeTab === 'population' && (
-                    <div className="text-center p-8">
-                      <h3 className="text-xl font-semibold mb-4">Population Density (2010-2023)</h3>
-                      <p className="text-muted-foreground mb-6">
-                        Analysis of population growth and distribution in the Sahel region.
-                      </p>
-                      <div className="h-48 bg-sahel-earth/10 rounded-lg flex items-center justify-center">
-                        <Users size={48} className="text-sahel-earth/30" />
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                      <div className="lg:col-span-2 space-y-6">
+                        <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
+                          <h3 className="text-lg font-medium mb-4">Population Demographics ({selectedYear})</h3>
+                          <PopulationInsightsCharts />
+                        </div>
+                      </div>
+
+                      <div className="lg:col-span-1 h-full">
+                        <div className="h-[400px]">
+                          <MapVisualization 
+                            className="w-full h-full" 
+                            year={selectedYear}
+                            expandedView={true}
+                            onStatsChange={handleStatsChange}
+                            dataType="population"
+                          />
+                        </div>
+                        <div className="text-center mt-3">
+                          <Link 
+                            to="/map" 
+                            className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
+                          >
+                            <ZoomIn size={14} className="mr-1" /> 
+                            Open full map view
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -689,25 +709,4 @@ This regional analysis is essential for targeted water resource management and c
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm border border-border/40 p-6">
-              <div className="w-10 h-10 rounded-lg bg-sahel-green/10 flex items-center justify-center mb-4">
-                <FileText size={20} className="text-sahel-green" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">Reports & Analysis</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Download detailed reports or browse through interactive analysis dashboards.
-              </p>
-              <button className="text-sm text-sahel-green flex items-center hover:underline">
-                View reports <ArrowRight size={14} className="ml-1" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </main>
-      
-      <Footer />
-    </div>
-  );
-};
-
-export default Dashboard;
+            <div className="bg-white rounded-xl shadow-sm border border-border/40 p
