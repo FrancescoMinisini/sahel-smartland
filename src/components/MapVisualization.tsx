@@ -1,7 +1,7 @@
 
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
-import { Layers, ZoomIn, ZoomOut, RotateCcw, Loader2, Info } from 'lucide-react';
+import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info } from 'lucide-react';
 import { 
   loadTIFF, 
   renderTIFFToCanvas, 
@@ -95,22 +95,14 @@ const MapVisualization = ({
         
         for (const yearToLoad of availableYears) {
           if (!mapData[dataType]?.[yearToLoad]) {
-            try {
-              const data = await loadTIFF(yearToLoad, dataType);
-              if (data && data.data && data.data.length > 0) {
-                setMapData(prev => ({
-                  ...prev,
-                  [dataType]: {
-                    ...(prev[dataType] || {}),
-                    [yearToLoad]: data
-                  }
-                }));
-              } else {
-                console.error(`Empty or invalid data loaded for ${dataType} year ${yearToLoad}`);
+            const data = await loadTIFF(yearToLoad, dataType);
+            setMapData(prev => ({
+              ...prev,
+              [dataType]: {
+                ...(prev[dataType] || {}),
+                [yearToLoad]: data
               }
-            } catch (err) {
-              console.error(`Error loading ${dataType} data for year ${yearToLoad}:`, err);
-            }
+            }));
           }
         }
       } catch (error) {
@@ -136,7 +128,7 @@ const MapVisualization = ({
         cancelAnimationFrame(transitionAnimationId);
       }
     };
-  }, [dataType, mapData, toast]);
+  }, [dataType]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -156,10 +148,7 @@ const MapVisualization = ({
     const dataForType = mapData[dataType] || {};
     const prevYearData = dataForType[prevYear];
     
-    if (!prevYearData) {
-      console.error(`No data available for ${dataType} in year ${prevYear}`);
-      return;
-    }
+    if (!prevYearData) return;
     
     const containerWidth = container.clientWidth;
     const containerHeight = container.clientHeight;
@@ -178,14 +167,7 @@ const MapVisualization = ({
     canvas.style.width = `${displayWidth}px`;
     canvas.style.height = `${displayHeight}px`;
     
-    // Use a higher scale factor for precipitation to improve resolution
-    let scaleFactor = 1;
-    if (dataType === 'precipitation') {
-      scaleFactor = 2; // Back to 2 since 4 might be causing performance issues
-    } else if (dataType === 'vegetation') {
-      scaleFactor = 2;
-    }
-    
+    const scaleFactor = dataType === 'precipitation' || dataType === 'vegetation' ? 2 : 1;
     canvas.width = prevYearData.width * scaleFactor; 
     canvas.height = prevYearData.height * scaleFactor;
     
@@ -224,7 +206,7 @@ const MapVisualization = ({
 
   const renderCurrentData = () => {
     if (!canvasRef.current) return;
-    const ctx = canvasRef.current.getContext('2d', { alpha: true, willReadFrequently: true });
+    const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
     
     const dataForType = mapData[dataType] || {};
@@ -276,46 +258,20 @@ const MapVisualization = ({
       }
     }
     
-    // Always clear canvas first
-    ctx.clearRect(0, 0, prevYearData.width, prevYearData.height);
+    renderTIFFToCanvas(
+      ctx, 
+      renderData, 
+      prevYearData.width, 
+      prevYearData.height,
+      {
+        opacity: 1,
+        dataType,
+        min,
+        max,
+        smoothing: dataType === 'precipitation' || dataType === 'vegetation'
+      }
+    );
     
-    if (dataType === 'precipitation') {
-      // Special handling for precipitation data - simpler approach
-      ctx.fillStyle = '#f7fbff20'; // Very light blue with some transparency
-      ctx.fillRect(0, 0, prevYearData.width, prevYearData.height);
-      
-      renderTIFFToCanvas(
-        ctx, 
-        renderData, 
-        prevYearData.width, 
-        prevYearData.height,
-        {
-          opacity: 1,
-          dataType,
-          min,
-          max,
-          smoothing: true,
-          highQuality: false // Disable high quality rendering temporarily
-        }
-      );
-    } else {
-      // Regular rendering for other data types
-      renderTIFFToCanvas(
-        ctx, 
-        renderData, 
-        prevYearData.width, 
-        prevYearData.height,
-        {
-          opacity: 1,
-          dataType,
-          min,
-          max,
-          smoothing: dataType === 'vegetation'
-        }
-      );
-    }
-    
-    // Calculate and update stats based on data type
     if (dataType === 'landCover') {
       const stats = calculateLandCoverStats(renderData);
       setCurrentStats(stats);
@@ -372,43 +328,19 @@ const MapVisualization = ({
         max = 3000;
       }
       
-      // Clear canvas before rendering
-      ctx.clearRect(0, 0, prevYearData.width, prevYearData.height);
-      
-      // Special handling for precipitation during transition
-      if (dataType === 'precipitation') {
-        ctx.fillStyle = '#f7fbff20'; // Light blue background
-        ctx.fillRect(0, 0, prevYearData.width, prevYearData.height);
-        
-        renderTIFFToCanvas(
-          ctx, 
-          transitionData, 
-          prevYearData.width, 
-          prevYearData.height,
-          {
-            opacity: 1,
-            dataType,
-            min,
-            max,
-            smoothing: true,
-            highQuality: false // Disable high quality rendering temporarily
-          }
-        );
-      } else {
-        renderTIFFToCanvas(
-          ctx, 
-          transitionData, 
-          prevYearData.width, 
-          prevYearData.height,
-          {
-            opacity: 1,
-            dataType,
-            min,
-            max,
-            smoothing: dataType === 'vegetation'
-          }
-        );
-      }
+      renderTIFFToCanvas(
+        ctx, 
+        transitionData, 
+        prevYearData.width, 
+        prevYearData.height,
+        {
+          opacity: 1,
+          dataType,
+          min,
+          max,
+          smoothing: dataType === 'precipitation' || dataType === 'vegetation'
+        }
+      );
       
       if (animationProgress < 1) {
         const newAnimationId = requestAnimationFrame(animateTransition);
