@@ -23,11 +23,12 @@ const YearSlider = ({
   className,
   showLabels = true,
   autoPlay = false,
-  autoPlayInterval = 2000
+  autoPlayInterval = 1200
 }: YearSliderProps) => {
   const [currentYear, setCurrentYear] = useState<number>(initialValue || minYear);
   const [isPlaying, setIsPlaying] = useState<boolean>(autoPlay);
   const autoPlayTimerRef = useRef<number | null>(null);
+  const isDraggingRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (initialValue && initialValue >= minYear && initialValue <= maxYear) {
@@ -37,7 +38,7 @@ const YearSlider = ({
 
   // Handle auto-play functionality
   useEffect(() => {
-    if (isPlaying) {
+    if (isPlaying && !isDraggingRef.current) {
       // Clear any existing timer
       if (autoPlayTimerRef.current) {
         window.clearInterval(autoPlayTimerRef.current);
@@ -76,6 +77,34 @@ const YearSlider = ({
     }
   };
 
+  const handleDragStart = () => {
+    isDraggingRef.current = true;
+    // Pause autoplay during dragging
+    if (isPlaying && autoPlayTimerRef.current) {
+      window.clearInterval(autoPlayTimerRef.current);
+      autoPlayTimerRef.current = null;
+    }
+  };
+
+  const handleDragEnd = () => {
+    isDraggingRef.current = false;
+    // Resume autoplay if it was playing
+    if (isPlaying) {
+      if (autoPlayTimerRef.current) {
+        window.clearInterval(autoPlayTimerRef.current);
+      }
+      autoPlayTimerRef.current = window.setInterval(() => {
+        setCurrentYear((prevYear) => {
+          const nextYear = prevYear >= maxYear ? minYear : prevYear + 1;
+          if (onChange) {
+            onChange(nextYear);
+          }
+          return nextYear;
+        });
+      }, autoPlayInterval);
+    }
+  };
+
   const togglePlayPause = () => {
     setIsPlaying(!isPlaying);
   };
@@ -87,7 +116,7 @@ const YearSlider = ({
     <div className={cn("relative pt-6 pb-8 px-1", className)}>
       {/* Year Display */}
       <div 
-        className="absolute text-sm font-semibold bg-primary text-primary-foreground px-2 py-0.5 rounded-md transform -translate-x-1/2 -top-1 transition-all duration-200"
+        className="absolute text-sm font-semibold bg-primary text-primary-foreground px-2 py-0.5 rounded-md transform -translate-x-1/2 -top-1 transition-all duration-150"
         style={{ left: `${yearPercentage}%` }}
       >
         {currentYear}
@@ -112,6 +141,9 @@ const YearSlider = ({
         step={1}
         value={[currentYear]}
         onValueChange={handleSliderChange}
+        onValueCommit={() => handleDragEnd()}
+        onPointerDown={handleDragStart}
+        className="transition-all"
       />
       
       {showLabels && (

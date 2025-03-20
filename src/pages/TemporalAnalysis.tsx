@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from "@/components/ui/card";
@@ -79,7 +80,7 @@ const TemporalAnalysis = () => {
               initialValue={selectedYear}
               onChange={handleYearChange}
               autoPlay={true}
-              autoPlayInterval={3000}
+              autoPlayInterval={1200}
               className="max-w-4xl mx-auto"
             />
           </Card>
