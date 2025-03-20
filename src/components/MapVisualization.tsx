@@ -16,9 +16,14 @@ import { useToast } from '@/components/ui/use-toast';
 interface MapVisualizationProps {
   className?: string;
   year?: number;
+  onStatsChange?: (stats: Record<string, number>) => void;
 }
 
-const MapVisualization = ({ className, year = 2023 }: MapVisualizationProps) => {
+const MapVisualization = ({ 
+  className, 
+  year = 2023, 
+  onStatsChange 
+}: MapVisualizationProps) => {
   const { toast } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,6 +54,13 @@ const MapVisualization = ({ className, year = 2023 }: MapVisualizationProps) => 
     
     return { prevYear, nextYear, progress };
   }, [year]);
+
+  // Notify parent component when stats change
+  useEffect(() => {
+    if (onStatsChange && Object.keys(currentStats).length > 0) {
+      onStatsChange(currentStats);
+    }
+  }, [currentStats, onStatsChange]);
 
   // Preload data for all years when the component mounts
   useEffect(() => {
@@ -196,7 +208,8 @@ const MapVisualization = ({ className, year = 2023 }: MapVisualizationProps) => 
         );
         
         // Update statistics
-        setCurrentStats(calculateLandCoverStats(interpolatedData));
+        const stats = calculateLandCoverStats(interpolatedData);
+        setCurrentStats(stats);
       } else {
         // Just render the previous year's data
         renderTIFFToCanvas(
@@ -207,7 +220,8 @@ const MapVisualization = ({ className, year = 2023 }: MapVisualizationProps) => 
         );
         
         // Update statistics
-        setCurrentStats(calculateLandCoverStats(prevYearData.data));
+        const stats = calculateLandCoverStats(prevYearData.data);
+        setCurrentStats(stats);
       }
     }
     

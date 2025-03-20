@@ -7,7 +7,7 @@ import YearSlider from '@/components/YearSlider';
 import MapVisualization from '@/components/MapVisualization';
 import Navbar from '@/components/Navbar';
 import { Info, Calendar, Map, BarChartHorizontal } from 'lucide-react';
-import { landCoverClasses, landCoverColors, getAvailableYears } from '@/lib/geospatialUtils';
+import { landCoverClasses, landCoverColors } from '@/lib/geospatialUtils';
 import { 
   BarChart, 
   Bar, 
@@ -23,7 +23,7 @@ import {
 const TemporalAnalysis = () => {
   const [selectedYear, setSelectedYear] = useState(2010);
   const [activeTab, setActiveTab] = useState("map");
-  const availableYears = getAvailableYears();
+  const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
   
   // Page transition animation
   const pageVariants = {
@@ -36,14 +36,22 @@ const TemporalAnalysis = () => {
     setSelectedYear(year);
   };
 
-  // Sample chart data
-  const chartData = Object.entries(landCoverClasses)
+  const handleStatsChange = (stats: Record<string, number>) => {
+    setLandCoverStats(stats);
+  };
+
+  // Transform the statistics into chart-compatible data
+  const chartData = Object.entries(landCoverStats)
     .filter(([key]) => key !== '0') // Filter out "No Data" class
-    .map(([key, label]) => ({
-      name: label,
-      value: Math.floor(Math.random() * 1000) + 100, // Random data for demonstration
-      color: landCoverColors[Number(key) as keyof typeof landCoverColors]
-    }));
+    .map(([key, value]) => {
+      const landCoverKey = Number(key);
+      return {
+        name: landCoverClasses[landCoverKey as keyof typeof landCoverClasses] || `Class ${key}`,
+        value: Math.round(value / 1000), // Convert to 1000s of pixels (approximate km²)
+        color: landCoverColors[landCoverKey as keyof typeof landCoverColors] || '#cccccc'
+      };
+    })
+    .sort((a, b) => b.value - a.value); // Sort by descending value
 
   return (
     <div className="min-h-screen bg-background">
@@ -106,14 +114,18 @@ const TemporalAnalysis = () => {
               {/* Map View */}
               <TabsContent value="map" className="mt-0">
                 <Card className="overflow-hidden">
-                  <MapVisualization className="w-full" year={selectedYear} />
+                  <MapVisualization 
+                    className="w-full" 
+                    year={selectedYear} 
+                    onStatsChange={handleStatsChange}
+                  />
                 </Card>
               </TabsContent>
               
               {/* Charts View */}
               <TabsContent value="charts" className="mt-0">
                 <Card className="p-6">
-                  <h3 className="text-lg font-medium mb-4">Land Cover Changes ({selectedYear})</h3>
+                  <h3 className="text-lg font-medium mb-4">Land Cover Distribution ({selectedYear})</h3>
                   <div className="h-[400px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
@@ -132,17 +144,24 @@ const TemporalAnalysis = () => {
                           textAnchor="end" 
                           height={60} 
                         />
-                        <YAxis />
+                        <YAxis 
+                          label={{ 
+                            value: 'Area (thousand pixels)', 
+                            angle: -90, 
+                            position: 'insideLeft',
+                            style: { textAnchor: 'middle' }
+                          }} 
+                        />
                         <Tooltip 
                           formatter={(value) => [
-                            `${value} km²`, 
+                            `${value} thousand pixels`, 
                             "Area"
                           ]}
                         />
-                        <Legend />
+                        <Legend verticalAlign="top" height={36} />
                         <Bar 
                           dataKey="value" 
-                          name="Area (km²)" 
+                          name="Area (thousand pixels)" 
                           fill="#8884d8"
                         >
                           {chartData.map((entry, index) => (
