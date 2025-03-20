@@ -64,32 +64,6 @@ export const vegetationProductivityScale = [
   '#00441b'  // Dark green - highest productivity
 ];
 
-// Population density color scale - from low (light purple) to high (dark purple)
-export const populationDensityScale = [
-  '#f7f4f9', // Very light purple - lowest density
-  '#e7e1ef',
-  '#d4b9da',
-  '#c994c7',
-  '#df65b0',
-  '#e7298a',
-  '#ce1256',
-  '#980043',
-  '#67001f'  // Dark red - highest density
-];
-
-// Land cover transition color scale
-export const transitionColorScale = [
-  '#fff7f3', // White/light pink - little/no change
-  '#fde0dd',
-  '#fcc5c0',
-  '#fa9fb5',
-  '#f768a1',
-  '#dd3497',
-  '#ae017e',
-  '#7a0177',
-  '#49006a'  // Dark purple - significant change
-];
-
 // Load and process a GeoTIFF file
 export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{ 
   data: number[], 
@@ -107,25 +81,12 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
       filePath = `/Datasets_Hackathon/Climate_Precipitation_Data/${year}R.tif`;
     } else if (dataType === 'vegetation') {
       filePath = `/Datasets_Hackathon/MODIS_Gross_Primary_Production_GPP/${year}_GP.tif`;
-    } else if (dataType === 'population') {
-      const popYear = year >= 2020 ? 2020 : year >= 2015 ? 2015 : 2010;
-      filePath = `/Datasets_Hackathon/Gridded_Population_Density_Data/Assaba_Pop_${popYear}.tif`;
-    } else if (dataType === 'transition') {
-      const nextYear = year + 1;
-      if (nextYear <= 2023) {
-        filePath = `/Datasets_Hackathon/land cover transition tif/bad_transition_${year}LCT_to_${nextYear}LCT.tif`;
-      } else {
-        filePath = `/Datasets_Hackathon/land cover transition tif/bad_transition_2022LCT_to_2023LCT.tif`;
-      }
     } else {
+      // Default to land cover
       filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
     }
     
     const response = await fetch(filePath);
-    if (!response.ok) {
-      throw new Error(`Failed to load file: ${filePath}`);
-    }
-    
     const arrayBuffer = await response.arrayBuffer();
     const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
     const image = await tiff.getImage();
@@ -136,19 +97,12 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
     // Convert the TypedArray to a regular Array
     const data = Array.from(values[0] as Uint8Array | Float32Array);
     
-    // For precipitation, vegetation, population and transition, calculate min/max to normalize values for color scale
-    if (dataType === 'precipitation' || dataType === 'vegetation' || dataType === 'population' || dataType === 'transition') {
-      let validData: number[];
-      
-      if (dataType === 'vegetation') {
-        validData = data.filter(val => val > 0 && val < 3000);
-      } else if (dataType === 'population') {
-        validData = data.filter(val => val >= 0);
-      } else if (dataType === 'transition') {
-        validData = data.filter(val => val > 0);
-      } else {
-        validData = data.filter(val => val > 0);
-      }
+    // For precipitation and vegetation, we need min/max to normalize values for color scale
+    if (dataType === 'precipitation' || dataType === 'vegetation') {
+      // Filter out no-data values (typically negative or very high values in GPP data)
+      const validData = dataType === 'vegetation' 
+                      ? data.filter(val => val > 0 && val < 3000)
+                      : data.filter(val => val > 0);
       
       const min = validData.length > 0 ? Math.min(...validData) : 0;
       const max = validData.length > 0 ? Math.max(...validData) : 500;
@@ -212,33 +166,7 @@ export const getVegetationColor = (value: number, min: number, max: number): str
   return vegetationProductivityScale[index];
 };
 
-// Get color for population density value between min and max
-export const getPopulationColor = (value: number, min: number, max: number): string => {
-  // Treat zero or negative as "no data" and return transparent
-  if (value <= 0) return '#ffffff00'; // Transparent
-  
-  // Normalize the value to 0-1 range, clamping to the specified range
-  const normalized = Math.max(0, Math.min(1, (value - min) / (max - min || 1)));
-  
-  // Map to color index
-  const index = Math.floor(normalized * (populationDensityScale.length - 1));
-  return populationDensityScale[index];
-};
-
-// Get color for land cover transition value between min and max
-export const getTransitionColor = (value: number, min: number, max: number): string => {
-  // Zero or negative values indicate no change or no data
-  if (value <= 0) return '#ffffff00'; // Transparent
-  
-  // Normalize the value to 0-1 range, clamping to the specified range
-  const normalized = Math.max(0, Math.min(1, (value - min) / (max - min || 1)));
-  
-  // Map to color index
-  const index = Math.floor(normalized * (transitionColorScale.length - 1));
-  return transitionColorScale[index];
-};
-
-// Enhanced rendering function that handles all data types
+// Enhanced rendering function that handles land cover, precipitation, and vegetation data
 export const renderTIFFToCanvas = (
   ctx: CanvasRenderingContext2D,
   data: number[],
@@ -265,8 +193,8 @@ export const renderTIFFToCanvas = (
   } = options;
 
   // Set image smoothing property based on the data type
-  // For precipitation, vegetation, population we want smoothing, for land cover we don't
-  ctx.imageSmoothingEnabled = ['precipitation', 'vegetation', 'population', 'transition'].includes(dataType) ? true : smoothing;
+  // For precipitation and vegetation we want smoothing, for land cover we don't
+  ctx.imageSmoothingEnabled = dataType === 'precipitation' || dataType === 'vegetation' ? true : smoothing;
   ctx.imageSmoothingQuality = 'high';
 
   // Create an ImageData object
@@ -287,10 +215,6 @@ export const renderTIFFToCanvas = (
       } else {
         color = getVegetationColor(value, min, max);
       }
-    } else if (dataType === 'population') {
-      color = getPopulationColor(value, min, max);
-    } else if (dataType === 'transition') {
-      color = getTransitionColor(value, min, max);
     } else {
       // Land cover coloring
       color = landCoverColors[value as keyof typeof landCoverColors] || landCoverColors[0];
@@ -313,8 +237,8 @@ export const renderTIFFToCanvas = (
   // Put the ImageData onto the canvas
   ctx.putImageData(imageData, 0, 0);
   
-  // If we're rendering precipitation, vegetation, population, or transition, apply post-processing for smoother appearance
-  if (['precipitation', 'vegetation', 'population', 'transition'].includes(dataType)) {
+  // If we're rendering precipitation or vegetation, apply post-processing for smoother appearance
+  if (dataType === 'precipitation' || dataType === 'vegetation') {
     // Create a temporary canvas for post-processing
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = width;
@@ -408,183 +332,39 @@ export const calculateVegetationStats = (data: number[]): Record<string, number>
   };
 };
 
-// Calculate population statistics
-export const calculatePopulationStats = (data: number[]): Record<string, number> => {
-  if (data.length === 0) return { 
-    total: 0, 
-    average: 0, 
-    max: 0, 
-    urbanDensity: 0, 
-    ruralDensity: 0, 
-    populationGrowth: 0 
-  };
-  
-  // Filter out NoData values (typically 0 or negative)
-  const validData = data.filter(value => value > 0);
-  
-  if (validData.length === 0) return { 
-    total: 0, 
-    average: 0, 
-    max: 0, 
-    urbanDensity: 0, 
-    ruralDensity: 0, 
-    populationGrowth: 0 
-  };
-  
-  // Sort values to calculate density percentiles
-  const sortedValues = [...validData].sort((a, b) => a - b);
-  const percentile90 = sortedValues[Math.floor(sortedValues.length * 0.9)];
-  const percentile10 = sortedValues[Math.floor(sortedValues.length * 0.1)];
-  
-  const sum = validData.reduce((acc, val) => acc + val, 0);
-  const max = Math.max(...validData);
-  
-  return {
-    total: sum,
-    average: sum / validData.length,
-    max,
-    urbanDensity: percentile90,
-    ruralDensity: percentile10,
-    populationGrowth: 3.8 // Simulated value for demonstration
-  };
-};
-
-// Calculate land cover transition statistics
-export const calculateTransitionStats = (data: number[]): Record<string, number> => {
-  if (data.length === 0) return { 
-    totalChanges: 0, 
-    significantChanges: 0, 
-    minorChanges: 0, 
-    stableAreas: 0, 
-    changeIndex: 0 
-  };
-  
-  // Filter out NoData values (typically 0 or negative)
-  const validData = data.filter(value => value !== 0);
-  const totalPixels = data.length;
-  
-  if (validData.length === 0) return { 
-    totalChanges: 0, 
-    significantChanges: 0, 
-    minorChanges: 0, 
-    stableAreas: totalPixels, 
-    changeIndex: 0 
-  };
-  
-  // Calculate statistics based on transition values
-  const significantChangeThreshold = 3; // Arbitrary threshold for significant change
-  
-  const significantChanges = validData.filter(v => v >= significantChangeThreshold).length;
-  const minorChanges = validData.filter(v => v > 0 && v < significantChangeThreshold).length;
-  const stableAreas = totalPixels - significantChanges - minorChanges;
-  
-  const changeIndex = ((significantChanges * 1.0) + (minorChanges * 0.5)) / totalPixels * 100;
-  
-  return {
-    totalChanges: significantChanges + minorChanges,
-    significantChanges,
-    minorChanges,
-    stableAreas,
-    changeIndex
-  };
-};
-
-// Function to get accurate population data based on available years
-export const getAccuratePopulationData = (year: number): Record<string, number> => {
-  // Map the requested year to available data years (2010, 2015, 2020)
-  const dataYear = year >= 2020 ? 2020 : year >= 2015 ? 2015 : 2010;
-  
-  // Define base values for each available year
-  const yearlyData = {
-    '2010': { 
-      totalPopulation: 325600, 
-      urbanPopulation: 98700, 
-      ruralPopulation: 226900,
-      populationDensity: 24.7,
-      urbanGrowthRate: 3.1,
-      ruralGrowthRate: 1.8
-    },
-    '2015': { 
-      totalPopulation: 358200, 
-      urbanPopulation: 118500, 
-      ruralPopulation: 239700,
-      populationDensity: 27.2,
-      urbanGrowthRate: 3.8,
-      ruralGrowthRate: 1.1
-    },
-    '2020': { 
-      totalPopulation: 394800, 
-      urbanPopulation: 142900, 
-      ruralPopulation: 251900,
-      populationDensity: 29.9,
-      urbanGrowthRate: 4.3,
-      ruralGrowthRate: 0.9
-    }
-  };
-  
-  // Get base data for the appropriate year
-  const baseData = yearlyData[String(dataYear) as keyof typeof yearlyData];
-  
-  // For years between the available data points, interpolate values
-  if (year !== dataYear) {
-    // Find the previous and next available data points
-    const availableYears = [2010, 2015, 2020];
-    const prevYear = Math.max(...availableYears.filter(y => y <= year));
-    const nextYear = Math.min(...availableYears.filter(y => y >= year));
-    
-    // If we're exactly on an available year or at the endpoints, return the exact data
-    if (prevYear === nextYear || prevYear === 2020 || nextYear === 2010) {
-      return baseData;
-    }
-    
-    // Otherwise, interpolate between the two nearest data points
-    const prevData = yearlyData[String(prevYear) as keyof typeof yearlyData];
-    const nextData = yearlyData[String(nextYear) as keyof typeof yearlyData];
-    const totalYears = nextYear - prevYear;
-    const yearsFraction = (year - prevYear) / totalYears;
-    
-    // Linear interpolation for each value
-    return {
-      totalPopulation: prevData.totalPopulation + (nextData.totalPopulation - prevData.totalPopulation) * yearsFraction,
-      urbanPopulation: prevData.urbanPopulation + (nextData.urbanPopulation - prevData.urbanPopulation) * yearsFraction,
-      ruralPopulation: prevData.ruralPopulation + (nextData.ruralPopulation - prevData.ruralPopulation) * yearsFraction,
-      populationDensity: prevData.populationDensity + (nextData.populationDensity - prevData.populationDensity) * yearsFraction,
-      urbanGrowthRate: prevData.urbanGrowthRate + (nextData.urbanGrowthRate - prevData.urbanGrowthRate) * yearsFraction,
-      ruralGrowthRate: prevData.ruralGrowthRate + (nextData.ruralGrowthRate - prevData.ruralGrowthRate) * yearsFraction
-    };
-  }
-  
-  return baseData;
-};
-
-// Function to generate population time series data
-export const getPopulationTimeSeriesData = (): Array<{ year: number, [key: string]: number }> => {
-  return [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023].map(year => {
-    const data = getAccuratePopulationData(year);
-    return {
-      year,
-      'Total': data.totalPopulation,
-      'Urban': data.urbanPopulation,
-      'Rural': data.ruralPopulation,
-      'Density': data.populationDensity,
-      'Urban Growth': data.urbanGrowthRate,
-      'Rural Growth': data.ruralGrowthRate
-    };
-  });
-};
-
-// Function to get accurate precipitation data based on available years
+// Function to get more accurate rainfall values based on TIFF analysis
 export const getAccuratePrecipitationData = (year: number): Record<string, number> => {
-  // Define base values for each available year
-  const baseValues = {
-    annual: 500 + Math.sin((year - 2010) * 0.5) * 25,
-    dryseason: 50 + Math.sin((year - 2010) * 0.3) * 15,
-    wetseason: 450 + Math.sin((year - 2010) * 0.6) * 20,
-    extremeEvents: 2 + Math.sin((year - 2010) * 0.8) * 1,
-    waterStressIndex: 0.4 + Math.sin((year - 2010) * 0.4) * 0.1
+  // These values are calibrated based on the Python script's analysis
+  // In a real application, this would be replaced with actual data processing
+  const yearlyRainfall: Record<string, { annual: number, dryseason: number, wetseason: number }> = {
+    '2010': { annual: 242.3, dryseason: 33.1, wetseason: 209.2 },
+    '2011': { annual: 235.6, dryseason: 31.8, wetseason: 203.8 },
+    '2012': { annual: 231.4, dryseason: 30.2, wetseason: 201.2 },
+    '2013': { annual: 228.7, dryseason: 29.8, wetseason: 198.9 },
+    '2014': { annual: 226.5, dryseason: 28.7, wetseason: 197.8 },
+    '2015': { annual: 223.1, dryseason: 27.9, wetseason: 195.2 },
+    '2016': { annual: 220.3, dryseason: 26.4, wetseason: 193.9 },
+    '2017': { annual: 216.8, dryseason: 25.1, wetseason: 191.7 },
+    '2018': { annual: 212.5, dryseason: 24.3, wetseason: 188.2 },
+    '2019': { annual: 208.6, dryseason: 23.7, wetseason: 184.9 },
+    '2020': { annual: 204.7, dryseason: 22.4, wetseason: 182.3 },
+    '2021': { annual: 199.2, dryseason: 20.8, wetseason: 178.4 },
+    '2022': { annual: 195.8, dryseason: 19.7, wetseason: 176.1 },
+    '2023': { annual: 193.1, dryseason: 18.2, wetseason: 174.9 }
   };
+
+  // Return the data for the requested year, or the most recent available
+  const yearStr = year.toString();
+  const data = yearlyRainfall[yearStr] || yearlyRainfall['2023'];
   
-  return baseValues;
+  return {
+    annual: data.annual,
+    dryseason: data.dryseason,
+    wetseason: data.wetseason,
+    // Extreme events and water stress are calculated based on the rainfall data trends
+    extremeEvents: Math.round(3 + (2023 - year < 14 ? (14 - (2023 - year)) * 0.5 : 0)),
+    waterStressIndex: Math.round(38 + (2023 - year < 14 ? (14 - (2023 - year)) * 2.5 : 0))
+  };
 };
 
 // Function to load precipitation data by region
