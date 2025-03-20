@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -7,7 +7,6 @@ import DataCard from '@/components/DataCard';
 import MapVisualization from '@/components/MapVisualization';
 import YearSlider from '@/components/YearSlider';
 import PopulationInsightsCharts from '@/components/PopulationInsightsCharts';
-import GradientAnalysis from '@/components/GradientAnalysis';
 import { 
   Calendar, 
   FileText, 
@@ -41,6 +40,7 @@ import {
 } from '@/lib/geospatialUtils';
 import ChartCarousel from '@/components/ChartCarousel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import GradientAnalysis from '@/components/GradientAnalysis';
 
 const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -447,6 +447,15 @@ const Dashboard = () => {
                             timeSeriesData={timeSeriesData} 
                             dataType="landCover"
                           />
+                          <div className="mt-4 text-sm text-muted-foreground">
+                            <div className="flex items-start gap-2 mb-2">
+                              <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                              <p>
+                                Use the arrows to switch between chart views: bar chart, pie chart, and time series chart.
+                                The time series chart shows how land cover has changed over the years.
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
@@ -485,6 +494,15 @@ const Dashboard = () => {
                             timeSeriesData={vegetationTimeSeriesData}
                             dataType="vegetation"
                           />
+                          <div className="mt-4 text-sm text-muted-foreground">
+                            <div className="flex items-start gap-2 mb-2">
+                              <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                              <p>
+                                The charts show Gross Primary Production (GPP) data, which is a measure of vegetation productivity. 
+                                Higher GPP values indicate greater photosynthetic activity and carbon sequestration.
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
@@ -523,6 +541,15 @@ const Dashboard = () => {
                             timeSeriesData={regionalPrecipitationData}
                             dataType="precipitation"
                           />
+                          <div className="mt-4 text-sm text-muted-foreground">
+                            <div className="flex items-start gap-2 mb-2">
+                              <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                              <p>
+                                The charts show precipitation index values across different regions of the Sahel.
+                                Higher values indicate greater rainfall in that region during the selected year.
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
@@ -566,6 +593,15 @@ const Dashboard = () => {
                             ]}
                             dataType="population"
                           />
+                          <div className="mt-4 text-sm text-muted-foreground">
+                            <div className="flex items-start gap-2 mb-2">
+                              <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                              <p>
+                                The charts show population distribution across urban, rural, and nomadic communities.
+                                Population trends reflect migration patterns and demographic changes in the region.
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
@@ -614,8 +650,28 @@ const Dashboard = () => {
             ))}
           </div>
           
-          {/* Add the new Gradient Analysis section */}
-          <GradientAnalysis year={selectedYear} />
+          {/* New Gradient Analysis Section */}
+          <div className="bg-white dark:bg-muted rounded-xl shadow-sm border border-border/40 overflow-hidden mb-8">
+            <div className="flex items-center justify-between border-b border-border/40 px-6 py-4">
+              <div className="flex items-center">
+                <Trees size={18} className="text-primary mr-2" />
+                <h3 className="text-lg font-medium">Land Cover Transition & Gradient Analysis</h3>
+              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info size={16} className="text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>This section analyzes how land cover types transition into one another over time, revealing patterns of environmental change.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="p-6">
+              <GradientAnalysis year={selectedYear} />
+            </div>
+          </div>
         </div>
       </main>
       
