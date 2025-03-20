@@ -406,13 +406,11 @@ const MapVisualization = ({
 
   const renderLegend = () => {
     if (dataType === 'landCover') {
-      const nonZeroLandCoverValues = [7, 10, 12, 13, 16];
-      
       return (
         <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 max-w-xs max-h-36 overflow-auto text-xs shadow-md">
           <div className="grid grid-cols-2 gap-1">
             {Object.entries(landCoverClasses)
-              .filter(([key]) => nonZeroLandCoverValues.includes(Number(key)))
+              .filter(([key]) => key !== '0')
               .map(([key, name]) => (
                 <div key={key} className="flex items-center">
                   <div 
@@ -520,8 +518,10 @@ const MapVisualization = ({
             className="absolute inset-0 flex items-center justify-center transition-transform duration-300 ease-out" 
             style={{ 
               transform: `scale(${zoomLevel})`,
-              maxWidth: "100%", 
-              margin: "0 auto"
+              maxWidth: "90%", 
+              margin: "0 auto", 
+              left: "5%", 
+              right: "5%" 
             }}
           >
             <canvas 
