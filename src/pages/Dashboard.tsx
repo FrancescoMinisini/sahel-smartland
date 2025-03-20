@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -24,6 +23,21 @@ import {
   Info
 } from 'lucide-react';
 import { landCoverClasses, landCoverColors } from '@/lib/geospatialUtils';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  Cell,
+  Line,
+  LineChart,
+  Area,
+  AreaChart
+} from 'recharts';
 import ChartCarousel from '@/components/ChartCarousel';
 
 const Dashboard = () => {
@@ -32,98 +46,7 @@ const Dashboard = () => {
   const [selectedYear, setSelectedYear] = useState(2023);
   const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
   const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
-  
-  // Create a complete time series dataset that doesn't need to be updated
-  const [timeSeriesData] = useState([
-    {
-      year: 2010,
-      Forests: 850,
-      Shrublands: 1200,
-      Grasslands: 1500,
-      Croplands: 900,
-      Urban: 350,
-      Barren: 700,
-      Water: 200,
-      Wetlands: 150
-    },
-    {
-      year: 2012,
-      Forests: 820,
-      Shrublands: 1180,
-      Grasslands: 1450,
-      Croplands: 950,
-      Urban: 380,
-      Barren: 720,
-      Water: 200,
-      Wetlands: 140
-    },
-    {
-      year: 2014,
-      Forests: 800,
-      Shrublands: 1150,
-      Grasslands: 1400,
-      Croplands: 1000,
-      Urban: 420,
-      Barren: 730,
-      Water: 195,
-      Wetlands: 135
-    },
-    {
-      year: 2016,
-      Forests: 780,
-      Shrublands: 1100,
-      Grasslands: 1350,
-      Croplands: 1050,
-      Urban: 460,
-      Barren: 750,
-      Water: 190,
-      Wetlands: 130
-    },
-    {
-      year: 2018,
-      Forests: 760,
-      Shrublands: 1050,
-      Grasslands: 1300,
-      Croplands: 1100,
-      Urban: 500,
-      Barren: 780,
-      Water: 185,
-      Wetlands: 125
-    },
-    {
-      year: 2020,
-      Forests: 740,
-      Shrublands: 1000,
-      Grasslands: 1250,
-      Croplands: 1150,
-      Urban: 540,
-      Barren: 810,
-      Water: 180,
-      Wetlands: 120
-    },
-    {
-      year: 2022,
-      Forests: 720,
-      Shrublands: 950,
-      Grasslands: 1200,
-      Croplands: 1200,
-      Urban: 580,
-      Barren: 840,
-      Water: 175,
-      Wetlands: 115
-    },
-    {
-      year: 2023,
-      Forests: 710,
-      Shrublands: 925,
-      Grasslands: 1175,
-      Croplands: 1225,
-      Urban: 600,
-      Barren: 855,
-      Water: 170,
-      Wetlands: 110
-    }
-  ]);
+  const [timeSeriesData, setTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
   
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -155,6 +78,27 @@ const Dashboard = () => {
 
   const handleStatsChange = (stats: Record<string, number>) => {
     setLandCoverStats(stats);
+    
+    setTimeSeriesData(prevData => {
+      const existingIndex = prevData.findIndex(item => item.year === selectedYear);
+      
+      const newDataPoint = { year: selectedYear };
+      
+      Object.entries(stats)
+        .filter(([key]) => key !== '0')
+        .forEach(([key, value]) => {
+          const className = landCoverClasses[Number(key) as keyof typeof landCoverClasses] || `Class ${key}`;
+          newDataPoint[className] = Math.round(value / 1000);
+        });
+      
+      if (existingIndex >= 0) {
+        const newData = [...prevData];
+        newData[existingIndex] = newDataPoint;
+        return newData;
+      } else {
+        return [...prevData, newDataPoint].sort((a, b) => a.year - b.year);
+      }
+    });
   };
 
   const chartData = Object.entries(landCoverStats)
@@ -657,60 +601,6 @@ const Dashboard = () => {
                           </svg>
                         </div>
                         <span className="ml-3 text-sm">Overall increase in gross primary production by 8.2% since 2010</span>
-                      </li>
-                    </ul>
-                  </div>
-                )}
-                
-                {activeTab === 'precipitation' && (
-                  <div>
-                    <p className="mb-4">Analysis of precipitation data reveals:</p>
-                    <ul className="space-y-2 mb-4">
-                      <li className="flex items-start">
-                        <div className="w-5 h-5 rounded-full bg-sahel-blue/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-sahel-blue"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        </div>
-                        <span className="ml-3 text-sm">A decrease in average annual rainfall by 5% since 2010</span>
-                      </li>
-                    </ul>
-                  </div>
-                )}
-                
-                {activeTab === 'population' && (
-                  <div>
-                    <p className="mb-4">Analysis of population data reveals:</p>
-                    <ul className="space-y-2 mb-4">
-                      <li className="flex items-start">
-                        <div className="w-5 h-5 rounded-full bg-sahel-earth/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-sahel-earth"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        </div>
-                        <span className="ml-3 text-sm">A steady increase in population density, particularly in urban areas</span>
                       </li>
                     </ul>
                   </div>
