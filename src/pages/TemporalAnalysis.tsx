@@ -116,6 +116,83 @@ const TemporalAnalysis = () => {
     })
     .sort((a, b) => b.value - a.value);
 
+  const getAnalysisInsights = () => {
+    if (Object.keys(landCoverStats).length === 0) {
+      return {
+        majorChanges: [],
+        environmentalImpact: "No data available for analysis. Please select a year and explore the map to generate insights.",
+        recommendedActions: []
+      };
+    }
+
+    const majorChanges = Object.entries(landCoverStats)
+      .filter(([key]) => key !== '0' && previousYearStats[key] !== undefined)
+      .map(([key, value]) => {
+        const previousValue = previousYearStats[key] || value;
+        const change = previousValue > 0 ? Math.round((value - previousValue) / previousValue * 100) : 0;
+        const landCoverKey = Number(key);
+        
+        return {
+          name: landCoverClasses[landCoverKey as keyof typeof landCoverClasses] || `Class ${key}`,
+          color: landCoverColors[landCoverKey as keyof typeof landCoverColors] || '#cccccc',
+          change,
+          value: Math.round(value / 1000)
+        };
+      })
+      .filter(item => Math.abs(item.change) >= 5)
+      .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
+      .slice(0, 3);
+
+    let environmentalImpact = "";
+    
+    const forestChange = majorChanges.find(change => change.name === 'Forests');
+    const urbanChange = majorChanges.find(change => change.name === 'Urban');
+    const barrenChange = majorChanges.find(change => change.name === 'Barren');
+    
+    if (forestChange && forestChange.change < 0) {
+      environmentalImpact += `Deforestation detected: Forest cover decreased by ${Math.abs(forestChange.change)}%. `;
+    } else if (forestChange && forestChange.change > 0) {
+      environmentalImpact += `Forest recovery observed: Forest cover increased by ${forestChange.change}%. `;
+    }
+    
+    if (urbanChange && urbanChange.change > 0) {
+      environmentalImpact += `Urbanization detected: Urban areas expanded by ${urbanChange.change}%. `;
+    }
+    
+    if (barrenChange && barrenChange.change > 0) {
+      environmentalImpact += `Potential desertification: Barren land increased by ${barrenChange.change}%. `;
+    } else if (barrenChange && barrenChange.change < 0) {
+      environmentalImpact += `Land rehabilitation: Barren land decreased by ${Math.abs(barrenChange.change)}%. `;
+    }
+    
+    if (!environmentalImpact) {
+      environmentalImpact = "No significant environmental impact detected in the current period.";
+    }
+    
+    const recommendedActions = [];
+    
+    if (forestChange && forestChange.change < -5) {
+      recommendedActions.push("Implement stricter deforestation controls and reforestation programs");
+      recommendedActions.push("Monitor logging activities more closely in affected areas");
+    }
+    
+    if (urbanChange && urbanChange.change > 10) {
+      recommendedActions.push("Develop sustainable urban planning policies for rapidly expanding areas");
+      recommendedActions.push("Ensure green spaces are incorporated into new urban developments");
+    }
+    
+    if (barrenChange && barrenChange.change > 8) {
+      recommendedActions.push("Implement soil conservation and anti-desertification measures");
+      recommendedActions.push("Consider drought-resistant vegetation planting programs");
+    }
+    
+    return {
+      majorChanges,
+      environmentalImpact,
+      recommendedActions
+    };
+  };
+
   const insights = getAnalysisInsights();
 
   const getTrendAnalysis = () => {
