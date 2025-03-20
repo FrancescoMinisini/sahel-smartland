@@ -1,3 +1,4 @@
+
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -42,6 +43,173 @@ export const precipitationColorScale = [
   '#08519c',
   '#08306b'  // Dark blue - highest precipitation
 ];
+
+// Vector layer styles
+export const vectorLayerStyles = {
+  region: {
+    lineColor: '#ff4151',
+    lineWidth: 2,
+    fillColor: 'rgba(255, 65, 81, 0.1)'
+  },
+  district: {
+    lineColor: '#8e57ff',
+    lineWidth: 1.5,
+    fillColor: 'rgba(142, 87, 255, 0.05)'
+  },
+  road: {
+    lineColor: '#ff9900',
+    lineWidth: 1.5,
+    fillColor: 'transparent'
+  },
+  stream: {
+    lineColor: '#00bcd4',
+    lineWidth: 1.5,
+    fillColor: 'transparent'
+  }
+};
+
+// Mock vector layer data for Assaba region - this would be replaced with actual data loading
+export const vectorLayerData = {
+  region: [
+    { 
+      type: 'polygon',
+      coordinates: [
+        [36.3, 17.1], [36.8, 17.2], [37.2, 17.0], [37.1, 16.5], [36.7, 16.2], [36.2, 16.4], [36.3, 17.1]
+      ]
+    }
+  ],
+  district: [
+    { 
+      type: 'polygon',
+      coordinates: [
+        [36.4, 16.9], [36.7, 17.0], [36.9, 16.8], [36.8, 16.6], [36.5, 16.5], [36.4, 16.9]
+      ]
+    },
+    { 
+      type: 'polygon',
+      coordinates: [
+        [36.7, 16.8], [37.0, 16.9], [37.1, 16.7], [36.9, 16.5], [36.7, 16.8]
+      ]
+    }
+  ],
+  road: [
+    { 
+      type: 'line',
+      coordinates: [
+        [36.4, 16.7], [36.6, 16.7], [36.8, 16.6], [37.0, 16.7], [37.1, 16.8]
+      ]
+    },
+    { 
+      type: 'line',
+      coordinates: [
+        [36.5, 17.0], [36.6, 16.8], [36.8, 16.7], [37.0, 16.5]
+      ]
+    }
+  ],
+  stream: [
+    { 
+      type: 'line',
+      coordinates: [
+        [36.5, 16.8], [36.6, 16.6], [36.8, 16.5], [37.0, 16.4]
+      ]
+    },
+    { 
+      type: 'line',
+      coordinates: [
+        [36.7, 17.0], [36.7, 16.7], [36.9, 16.5]
+      ]
+    }
+  ]
+};
+
+// Function to render vector layers on the canvas
+export const renderVectorLayer = (
+  ctx: CanvasRenderingContext2D,
+  data: any[],
+  layerType: string,
+  width: number,
+  height: number,
+  opacity: number = 1
+): void => {
+  if (!ctx || !data || data.length === 0) return;
+  
+  const style = vectorLayerStyles[layerType as keyof typeof vectorLayerStyles];
+  if (!style) return;
+  
+  // Set line style
+  ctx.lineWidth = style.lineWidth;
+  ctx.strokeStyle = style.lineColor;
+  
+  // Set fill style if applicable
+  if (style.fillColor) {
+    ctx.fillStyle = style.fillColor;
+  }
+  
+  // Apply opacity
+  ctx.globalAlpha = opacity;
+  
+  // Calculate scale factors to map coordinates to canvas
+  // This is a simplification - actual implementation would depend on the projection
+  const xScale = width / 2;
+  const yScale = height / 2;
+  const xOffset = width / 2;
+  const yOffset = height / 2;
+  
+  data.forEach(feature => {
+    ctx.beginPath();
+    
+    if (feature.type === 'polygon') {
+      // Move to first point
+      const firstPoint = feature.coordinates[0];
+      ctx.moveTo(
+        (firstPoint[0] - 36) * xScale + xOffset,
+        (17 - firstPoint[1]) * yScale + yOffset
+      );
+      
+      // Draw lines to subsequent points
+      for (let i = 1; i < feature.coordinates.length; i++) {
+        const point = feature.coordinates[i];
+        ctx.lineTo(
+          (point[0] - 36) * xScale + xOffset,
+          (17 - point[1]) * yScale + yOffset
+        );
+      }
+      
+      ctx.closePath();
+      
+      // Fill if applicable
+      if (style.fillColor) {
+        ctx.fill();
+      }
+      
+      // Stroke the outline
+      ctx.stroke();
+    } 
+    else if (feature.type === 'line') {
+      // Move to first point
+      const firstPoint = feature.coordinates[0];
+      ctx.moveTo(
+        (firstPoint[0] - 36) * xScale + xOffset,
+        (17 - firstPoint[1]) * yScale + yOffset
+      );
+      
+      // Draw lines to subsequent points
+      for (let i = 1; i < feature.coordinates.length; i++) {
+        const point = feature.coordinates[i];
+        ctx.lineTo(
+          (point[0] - 36) * xScale + xOffset,
+          (17 - point[1]) * yScale + yOffset
+        );
+      }
+      
+      // Stroke the line
+      ctx.stroke();
+    }
+  });
+  
+  // Reset opacity
+  ctx.globalAlpha = 1;
+};
 
 // Load and process a GeoTIFF file
 export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{ 
