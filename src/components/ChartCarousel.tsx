@@ -130,7 +130,7 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
             </div>
           </CarouselItem>
 
-          {/* Area Chart for Time Series Data */}
+          {/* Area Chart for Time Series Data - Updated to match TemporalAnalysis */}
           <CarouselItem className="md:basis-full">
             <div className="h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -163,18 +163,15 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
                   <Tooltip />
                   <Legend />
                   
-                  {/* Dynamically render all land cover types with non-zero values */}
-                  {landCoverTypes.map((type, index) => (
-                    <Area 
-                      key={type}
-                      type="monotone" 
-                      dataKey={type} 
-                      stackId="1" 
-                      stroke={getColorForType(type)} 
-                      fill={getColorForType(type)} 
-                      fillOpacity={0.7} 
-                    />
-                  ))}
+                  {/* Show the key land cover types with stacked area like in TemporalAnalysis */}
+                  <Area type="monotone" dataKey="Forests" stackId="1" stroke="#1a9850" fill="#1a9850" fillOpacity={0.7} />
+                  <Area type="monotone" dataKey="Shrublands" stackId="1" stroke="#91cf60" fill="#91cf60" fillOpacity={0.7} />
+                  <Area type="monotone" dataKey="Grasslands" stackId="1" stroke="#fee08b" fill="#fee08b" fillOpacity={0.7} />
+                  <Area type="monotone" dataKey="Croplands" stackId="1" stroke="#fc8d59" fill="#fc8d59" fillOpacity={0.7} />
+                  <Area type="monotone" dataKey="Urban" stackId="1" stroke="#d73027" fill="#d73027" fillOpacity={0.7} />
+                  <Area type="monotone" dataKey="Barren" stackId="1" stroke="#bababa" fill="#bababa" fillOpacity={0.7} />
+                  <Area type="monotone" dataKey="Water" stackId="1" stroke="#4575b4" fill="#4575b4" fillOpacity={0.7} />
+                  <Area type="monotone" dataKey="Wetlands" stackId="1" stroke="#74add1" fill="#74add1" fillOpacity={0.7} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
