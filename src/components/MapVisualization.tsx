@@ -284,7 +284,7 @@ const MapVisualization = ({
           >
             <canvas 
               ref={canvasRef} 
-              className="max-w-full max-h-full object-contain"
+              className="w-full h-full object-contain"
             />
           </div>
         )}
