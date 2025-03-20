@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -68,28 +67,92 @@ const Dashboard = () => {
       value: selectedYear > 2020 ? '27.3M ha' : selectedYear > 2015 ? '23.6M ha' : '18.9M ha', 
       description: 'Area affected by land cover change in the past 20 years',
       icon: <Leaf size={20} />,
-      trend: { value: selectedYear > 2020 ? 15 : selectedYear > 2015 ? 12 : 8, isPositive: false }
+      trend: { value: selectedYear > 2020 ? 15 : selectedYear > 2015 ? 12 : 8, isPositive: false },
+      analyticsData: [
+        { year: 2010, value: 8.2 },
+        { year: 2012, value: 10.4 },
+        { year: 2014, value: 12.7 },
+        { year: 2016, value: 16.1 },
+        { year: 2018, value: 19.5 },
+        { year: 2020, value: 23.6 },
+        { year: 2022, value: 25.8 },
+        { year: 2023, value: 27.3 }
+      ],
+      correlations: [
+        { name: "Deforestation", value: 82, correlation: 0.89 },
+        { name: "Urban Expansion", value: 65, correlation: 0.78 },
+        { name: "Agricultural Activity", value: 71, correlation: 0.67 },
+        { name: "Precipitation Decline", value: 55, correlation: -0.45 }
+      ]
     },
     { 
       title: 'Vegetation Production', 
       value: selectedYear > 2020 ? '+8.2%' : selectedYear > 2015 ? '+6.7%' : '+4.2%', 
       description: 'Average increase in gross primary production since 2010',
       icon: <BarChart2 size={20} />,
-      trend: { value: selectedYear > 2020 ? 8.2 : selectedYear > 2015 ? 6.7 : 4.2, isPositive: true }
+      trend: { value: selectedYear > 2020 ? 8.2 : selectedYear > 2015 ? 6.7 : 4.2, isPositive: true },
+      analyticsData: [
+        { year: 2010, value: 1.5 },
+        { year: 2012, value: 2.1 },
+        { year: 2014, value: 2.9 },
+        { year: 2016, value: 3.8 },
+        { year: 2018, value: 5.2 },
+        { year: 2020, value: 6.7 },
+        { year: 2022, value: 7.5 },
+        { year: 2023, value: 8.2 }
+      ],
+      correlations: [
+        { name: "Rainfall", value: 78, correlation: 0.82 },
+        { name: "Temperature", value: 68, correlation: -0.58 },
+        { name: "Soil Quality", value: 72, correlation: 0.76 },
+        { name: "Conservation Efforts", value: 63, correlation: 0.92 }
+      ]
     },
     { 
       title: 'Annual Precipitation', 
       value: selectedYear > 2020 ? '685 mm' : selectedYear > 2015 ? '710 mm' : '745 mm', 
       description: 'Average annual rainfall across the Sahel region',
       icon: <CloudRain size={20} />,
-      trend: { value: selectedYear > 2020 ? 3.5 : selectedYear > 2015 ? 2.1 : 1.2, isPositive: false }
+      trend: { value: selectedYear > 2020 ? 3.5 : selectedYear > 2015 ? 2.1 : 1.2, isPositive: false },
+      analyticsData: [
+        { year: 2010, value: 780 },
+        { year: 2012, value: 765 },
+        { year: 2014, value: 752 },
+        { year: 2016, value: 740 },
+        { year: 2018, value: 725 },
+        { year: 2020, value: 710 },
+        { year: 2022, value: 695 },
+        { year: 2023, value: 685 }
+      ],
+      correlations: [
+        { name: "Temperature", value: 75, correlation: -0.65 },
+        { name: "Vegetation Cover", value: 82, correlation: 0.78 },
+        { name: "Drought Frequency", value: 68, correlation: -0.88 },
+        { name: "Water Table Level", value: 59, correlation: 0.72 }
+      ]
     },
     { 
       title: 'Population Growth', 
       value: selectedYear > 2020 ? '4.3%' : selectedYear > 2015 ? '3.8%' : '3.1%', 
       description: 'Annual population growth rate in urban centers',
       icon: <Users size={20} />,
-      trend: { value: selectedYear > 2020 ? 4.3 : selectedYear > 2015 ? 3.8 : 3.1, isPositive: true }
+      trend: { value: selectedYear > 2020 ? 4.3 : selectedYear > 2015 ? 3.8 : 3.1, isPositive: true },
+      analyticsData: [
+        { year: 2010, value: 2.3 },
+        { year: 2012, value: 2.5 },
+        { year: 2014, value: 2.8 },
+        { year: 2016, value: 3.2 },
+        { year: 2018, value: 3.5 },
+        { year: 2020, value: 3.8 },
+        { year: 2022, value: 4.1 },
+        { year: 2023, value: 4.3 }
+      ],
+      correlations: [
+        { name: "Urban Expansion", value: 85, correlation: 0.92 },
+        { name: "Rural Migration", value: 78, correlation: 0.84 },
+        { name: "Agricultural Land Loss", value: 65, correlation: 0.58 },
+        { name: "Water Stress", value: 72, correlation: 0.62 }
+      ]
     }
   ];
 
@@ -135,6 +198,9 @@ const Dashboard = () => {
                 description={stat.description}
                 icon={stat.icon}
                 trend={stat.trend}
+                analyticsData={stat.analyticsData}
+                correlations={stat.correlations}
+                year={selectedYear}
               />
             ))}
           </div>
