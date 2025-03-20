@@ -55,14 +55,6 @@ export const loadTIFF = async (year: number): Promise<{
   }
 };
 
-// Interface for render options
-export interface RenderOptions {
-  opacity?: number;
-  enhanceContrast?: boolean;
-  highlightChanges?: boolean;
-  scaleIntensity?: number;
-}
-
 // Improved interpolation between two years of data
 export const interpolateData = (
   startData: number[], 
@@ -96,23 +88,10 @@ export const renderTIFFToCanvas = (
   data: number[],
   width: number,
   height: number,
-  options: number | RenderOptions = 1
+  opacity: number = 1
 ): void => {
   if (!ctx || data.length === 0 || width === 0 || height === 0) {
     return;
-  }
-
-  // Parse options
-  let opacity = 1;
-  let enhanceContrast = false;
-  let scaleIntensity = 1;
-  
-  if (typeof options === 'number') {
-    opacity = options;
-  } else {
-    opacity = options.opacity ?? 1;
-    enhanceContrast = options.enhanceContrast ?? false;
-    scaleIntensity = options.scaleIntensity ?? 1;
   }
 
   // Create an ImageData object
@@ -129,23 +108,11 @@ export const renderTIFFToCanvas = (
     const g = parseInt(color.slice(3, 5), 16);
     const b = parseInt(color.slice(5, 7), 16);
     
-    // Apply enhancements if requested
-    let finalR = r;
-    let finalG = g;
-    let finalB = b;
-    
-    if (enhanceContrast) {
-      // Enhance contrast by scaling the intensity
-      finalR = Math.min(255, Math.floor(r * scaleIntensity));
-      finalG = Math.min(255, Math.floor(g * scaleIntensity));
-      finalB = Math.min(255, Math.floor(b * scaleIntensity));
-    }
-    
     // Set RGBA values in the ImageData
     const pixelIndex = i * 4;
-    pixels[pixelIndex] = finalR;
-    pixels[pixelIndex + 1] = finalG;
-    pixels[pixelIndex + 2] = finalB;
+    pixels[pixelIndex] = r;
+    pixels[pixelIndex + 1] = g;
+    pixels[pixelIndex + 2] = b;
     pixels[pixelIndex + 3] = opacity * 255; // Alpha channel
   }
 
