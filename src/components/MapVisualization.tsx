@@ -26,7 +26,6 @@ const MapVisualization = ({
 }: MapVisualizationProps) => {
   const { toast } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeLayer, setActiveLayer] = useState('landCover');
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -63,63 +62,6 @@ const MapVisualization = ({
     }
   }, [currentStats, onStatsChange]);
 
-  // Handle window resize and container size changes
-  useEffect(() => {
-    const handleResize = () => {
-      if (canvasRef.current && containerRef.current) {
-        // Update canvas size based on container dimensions
-        const { width, height } = containerRef.current.getBoundingClientRect();
-        adjustCanvasSize();
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const adjustCanvasSize = () => {
-    if (!canvasRef.current || !containerRef.current) return;
-    
-    const container = containerRef.current;
-    const canvas = canvasRef.current;
-    const { width, height } = container.getBoundingClientRect();
-    
-    // Save current transformation
-    const currentData = mapData[prevYear];
-    if (!currentData) return;
-    
-    // Set canvas size to match container
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    canvas.width = width;
-    canvas.height = height;
-    
-    // Redraw at new size
-    if (currentData && currentData.data.length > 0) {
-      renderMapToCanvas(currentData.data, width, height);
-    }
-  };
-
-  // Enhanced render function with better visual contrast
-  const renderMapToCanvas = (data: number[], width: number, height: number) => {
-    if (!canvasRef.current) return;
-    const ctx = canvasRef.current.getContext('2d');
-    if (!ctx) return;
-    
-    // Apply enhanced visualization
-    renderTIFFToCanvas(
-      ctx, 
-      data, 
-      width, 
-      height,
-      {
-        enhanceContrast: true,
-        highlightChanges: true,
-        scaleIntensity: 1.2  // Boost color intensity
-      }
-    );
-  };
-
   // Preload data for all years when the component mounts
   useEffect(() => {
     const preloadAllYears = async () => {
@@ -137,9 +79,6 @@ const MapVisualization = ({
             setMapData(prev => ({ ...prev, [yearToLoad]: data }));
           }
         }
-        
-        // Adjust canvas size after data is loaded
-        setTimeout(adjustCanvasSize, 100);
       } catch (error) {
         console.error('Error preloading TIFF data:', error);
         toast({
@@ -175,11 +114,10 @@ const MapVisualization = ({
     
     if (!prevYearData || prevYearData.data.length === 0) return;
     
-    // Set canvas dimensions based on container
-    if (containerRef.current) {
-      const { width, height } = containerRef.current.getBoundingClientRect();
-      canvas.width = width;
-      canvas.height = height;
+    // Set canvas dimensions if not already set
+    if (canvas.width !== prevYearData.width || canvas.height !== prevYearData.height) {
+      canvas.width = prevYearData.width;
+      canvas.height = prevYearData.height;
     }
     
     // Handle smooth transition when year changes
@@ -220,21 +158,23 @@ const MapVisualization = ({
           // Calculate progress for the animation
           animationProgress = Math.min((time - startTime) / animationDuration, 1);
           
-          // Interpolate between the start and end states with enhanced visualization
+          // Interpolate between the start and end states
           const transitionData = startInterpolatedData.map((startValue, index) => {
             if (animationProgress >= 1) {
               return endInterpolatedData[index];
             }
             
-            // Use progress to determine which value to show with visual emphasis on changes
+            // Use progress to determine which value to show
             return Math.random() < animationProgress ? endInterpolatedData[index] : startValue;
           });
           
-          // Render the transitional state with enhanced visualization
-          if (canvasRef.current) {
-            const { width, height } = canvasRef.current;
-            renderMapToCanvas(transitionData, width, height);
-          }
+          // Render the transitional state
+          renderTIFFToCanvas(
+            ctx, 
+            transitionData, 
+            prevYearData.width, 
+            prevYearData.height
+          );
           
           // Continue animation if not complete
           if (animationProgress < 1) {
@@ -260,20 +200,24 @@ const MapVisualization = ({
           progress
         );
         
-        if (canvasRef.current) {
-          const { width, height } = canvasRef.current;
-          renderMapToCanvas(interpolatedData, width, height);
-        }
+        renderTIFFToCanvas(
+          ctx, 
+          interpolatedData, 
+          prevYearData.width, 
+          prevYearData.height
+        );
         
         // Update statistics
         const stats = calculateLandCoverStats(interpolatedData);
         setCurrentStats(stats);
       } else {
         // Just render the previous year's data
-        if (canvasRef.current) {
-          const { width, height } = canvasRef.current;
-          renderMapToCanvas(prevYearData.data, width, height);
-        }
+        renderTIFFToCanvas(
+          ctx, 
+          prevYearData.data, 
+          prevYearData.width, 
+          prevYearData.height
+        );
         
         // Update statistics
         const stats = calculateLandCoverStats(prevYearData.data);
@@ -316,10 +260,7 @@ const MapVisualization = ({
       </div>
       
       {/* Map Container */}
-      <div 
-        ref={containerRef}
-        className="w-full aspect-[4/3] bg-background overflow-hidden relative"
-      >
+      <div className="w-full aspect-[4/3] bg-sahel-sandLight overflow-hidden relative">
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="flex flex-col items-center">
@@ -329,12 +270,12 @@ const MapVisualization = ({
           </div>
         ) : (
           <div 
-            className="absolute inset-0 flex items-center justify-center w-full h-full transition-transform duration-300 ease-out" 
+            className="absolute inset-0 flex items-center justify-center transition-transform duration-300 ease-out" 
             style={{ transform: `scale(${zoomLevel})` }}
           >
             <canvas 
               ref={canvasRef} 
-              className="w-full h-full"
+              className="max-w-full max-h-full object-contain"
             />
           </div>
         )}
