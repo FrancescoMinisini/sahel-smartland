@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
 import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2 } from 'lucide-react';
@@ -256,7 +255,7 @@ const MapVisualization = ({
 
   return (
     <div className={cn(
-      "relative rounded-xl overflow-hidden shadow-lg w-full h-full", 
+      "relative rounded-xl overflow-hidden w-full h-full flex items-center justify-center", 
       className
     )}>
       {/* Year indicator */}
@@ -265,7 +264,7 @@ const MapVisualization = ({
       </div>
       
       {/* Map Container - Take full size of parent container */}
-      <div className="w-full h-full bg-sahel-sandLight overflow-hidden relative">
+      <div className="absolute inset-0 bg-sahel-sandLight overflow-hidden">
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="flex flex-col items-center">

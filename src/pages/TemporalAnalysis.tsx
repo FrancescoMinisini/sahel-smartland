@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from "@/components/ui/card";
@@ -298,11 +297,13 @@ const TemporalAnalysis = () => {
               {/* Map View */}
               <TabsContent value="map" className="mt-0">
                 <Card className="overflow-hidden">
-                  <MapVisualization 
-                    className="w-full" 
-                    year={selectedYear} 
-                    onStatsChange={handleStatsChange}
-                  />
+                  <div className="h-[500px] w-full">
+                    <MapVisualization 
+                      className="w-full h-full" 
+                      year={selectedYear} 
+                      onStatsChange={handleStatsChange}
+                    />
+                  </div>
                 </Card>
               </TabsContent>
               
