@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from "@/lib/utils";
-import { Menu, X, Map, BarChart2, FileText, Home, ChevronRight } from 'lucide-react';
+import { Menu, X, Map, BarChart2, FileText, Home, ChevronRight, Clock } from 'lucide-react';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -21,6 +20,7 @@ const Navbar = () => {
   const navLinks = [
     { name: 'Home', path: '/', icon: Home },
     { name: 'Dashboard', path: '/dashboard', icon: BarChart2 },
+    { name: 'Temporal Analysis', path: '/temporal-analysis', icon: Clock },
     { name: 'Map', path: '/map', icon: Map },
     { name: 'Reports', path: '/reports', icon: FileText },
   ];
