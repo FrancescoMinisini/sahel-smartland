@@ -141,7 +141,7 @@ const DataCard = ({
             </DrawerDescription>
           </DrawerHeader>
           
-          <div className="p-6 grid gap-8">
+          <div className="p-6 grid gap-8 overflow-y-auto">
             {/* Key Metrics Section */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Key Metrics</h3>
@@ -213,7 +213,7 @@ const DataCard = ({
                       <BarChart
                         data={correlationData}
                         layout="vertical"
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                        margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis type="number" domain={[-1, 1]} />
