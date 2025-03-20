@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -103,15 +102,19 @@ const Dashboard = () => {
   };
 
   const handleYearChange = (year: number) => {
-    setPreviousYearStats({...landCoverStats});
-    setPreviousVegetationStats({...vegetationStats});
-    setPreviousPopulationStats({...populationStats});
-    setIsLoading(true);
-    setSelectedYear(year);
-    
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
+    // Only update previous stats if the year has actually changed
+    if (year !== selectedYear) {
+      setPreviousYearStats({...landCoverStats});
+      setPreviousVegetationStats({...vegetationStats});
+      setPreviousPopulationStats({...populationStats});
+      setIsLoading(true);
+      setSelectedYear(year);
+      
+      // Shorter loading time for smoother animation
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 200);
+    }
   };
 
   const handleStatsChange = (stats: Record<string, number>) => {
@@ -614,7 +617,6 @@ const Dashboard = () => {
             ))}
           </div>
           
-          {/* Add the new Gradient Analysis section */}
           <GradientAnalysis year={selectedYear} />
         </div>
       </main>

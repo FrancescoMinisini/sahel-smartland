@@ -39,6 +39,7 @@ const YearSlider = ({
   const [isPlaying, setIsPlaying] = useState<boolean>(autoPlay);
   const autoPlayTimerRef = useRef<number | null>(null);
   const isDraggingRef = useRef<boolean>(false);
+  const previousYearRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (initialValue && initialValue >= actualMinYear && initialValue <= actualMaxYear) {
@@ -46,7 +47,7 @@ const YearSlider = ({
     }
   }, [initialValue, actualMinYear, actualMaxYear]);
 
-  // Handle auto-play functionality
+  // Handle auto-play functionality with optimization to prevent unnecessary data reloading
   useEffect(() => {
     if (isPlaying && !isDraggingRef.current) {
       // Clear any existing timer
@@ -58,8 +59,11 @@ const YearSlider = ({
       autoPlayTimerRef.current = window.setInterval(() => {
         setCurrentYear((prevYear) => {
           const nextYear = prevYear >= actualMaxYear ? actualMinYear : prevYear + step;
-          if (onChange) {
+          
+          // Only trigger onChange when the year actually changes and is different from previous
+          if (onChange && nextYear !== previousYearRef.current) {
             onChange(nextYear);
+            previousYearRef.current = nextYear;
           }
           return nextYear;
         });
@@ -69,6 +73,9 @@ const YearSlider = ({
       window.clearInterval(autoPlayTimerRef.current);
       autoPlayTimerRef.current = null;
     }
+
+    // Reset previousYearRef when play/pause state changes
+    previousYearRef.current = null;
 
     // Clean up the timer when component unmounts
     return () => {
@@ -81,9 +88,12 @@ const YearSlider = ({
 
   const handleSliderChange = (value: number[]) => {
     const year = value[0];
-    setCurrentYear(year);
-    if (onChange) {
-      onChange(year);
+    if (year !== currentYear) {
+      setCurrentYear(year);
+      if (onChange) {
+        onChange(year);
+        previousYearRef.current = year;
+      }
     }
   };
 
@@ -100,14 +110,20 @@ const YearSlider = ({
     isDraggingRef.current = false;
     // Resume autoplay if it was playing
     if (isPlaying) {
+      previousYearRef.current = currentYear; // Set current year as previous to avoid immediate retriggering
+      
       if (autoPlayTimerRef.current) {
         window.clearInterval(autoPlayTimerRef.current);
       }
+      
       autoPlayTimerRef.current = window.setInterval(() => {
         setCurrentYear((prevYear) => {
           const nextYear = prevYear >= actualMaxYear ? actualMinYear : prevYear + step;
-          if (onChange) {
+          
+          // Only trigger onChange when the year actually changes and is different from previous
+          if (onChange && nextYear !== previousYearRef.current) {
             onChange(nextYear);
+            previousYearRef.current = nextYear;
           }
           return nextYear;
         });
@@ -117,6 +133,8 @@ const YearSlider = ({
 
   const togglePlayPause = () => {
     setIsPlaying(!isPlaying);
+    // Reset previousYearRef when toggling play/pause
+    previousYearRef.current = null;
   };
 
   // Calculate percentage position for the year label
