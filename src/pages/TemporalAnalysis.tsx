@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -582,33 +581,23 @@ These demographic shifts have important implications for land use planning, reso
                 <span>Population</span>
               </TabsTrigger>
             </TabsList>
-            
-            <div className="hidden md:flex items-center gap-2">
-              <CalendarDays size={16} className="text-muted-foreground" />
-              <YearSlider 
-                initialValue={year}
-                onChange={handleYearChange}
-                min={2010}
-                max={2023}
-                step={1}
-              />
-            </div>
           </div>
           
-          <div className="md:hidden mb-4">
+          <div className="mb-4 w-full">
             <YearSlider 
               initialValue={year}
               onChange={handleYearChange}
               min={2010}
               max={2023}
               step={1}
+              className="w-full"
             />
           </div>
           
           <Card className="mb-6">
             <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-1 md:h-[400px] aspect-square md:aspect-auto rounded-lg overflow-hidden">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                <div className="md:col-span-2 h-[450px] aspect-[4/3] md:aspect-auto rounded-lg overflow-hidden">
                   <MapVisualization 
                     year={year} 
                     dataType={activeDataType}
@@ -617,7 +606,7 @@ These demographic shifts have important implications for land use planning, reso
                   />
                 </div>
                 
-                <div className="md:col-span-2 flex flex-col justify-between">
+                <div className="md:col-span-3 flex flex-col justify-between">
                   <div>
                     <h3 className="text-lg font-medium mb-2">
                       {activeDataType === 'landCover' && 'Land Cover Distribution'}

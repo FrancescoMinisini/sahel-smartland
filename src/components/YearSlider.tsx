@@ -123,7 +123,7 @@ const YearSlider = ({
   const yearPercentage = ((currentYear - actualMinYear) / (actualMaxYear - actualMinYear)) * 100;
 
   return (
-    <div className={cn("relative pt-6 pb-8 px-1", className)}>
+    <div className={cn("relative pt-6 pb-8 px-1 w-full", className)}>
       {/* Year Display */}
       <div 
         className="absolute text-sm font-semibold bg-primary text-primary-foreground px-2 py-0.5 rounded-md transform -translate-x-1/2 -top-1 transition-all duration-150"
@@ -153,7 +153,7 @@ const YearSlider = ({
         onValueChange={handleSliderChange}
         onValueCommit={() => handleDragEnd()}
         onPointerDown={handleDragStart}
-        className="transition-all"
+        className="transition-all w-full"
       />
       
       {showLabels && (
