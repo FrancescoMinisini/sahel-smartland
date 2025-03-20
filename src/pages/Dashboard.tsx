@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -23,7 +22,12 @@ import {
   HelpCircle,
   Info
 } from 'lucide-react';
-import { landCoverClasses, landCoverColors } from '@/lib/geospatialUtils';
+import { 
+  landCoverClasses, 
+  landCoverColors, 
+  getAccuratePrecipitationData,
+  getPrecipitationTimeSeriesData 
+} from '@/lib/geospatialUtils';
 import ChartCarousel from '@/components/ChartCarousel';
 
 const Dashboard = () => {
@@ -33,96 +37,35 @@ const Dashboard = () => {
   const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
   const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
   
+  // Use the more accurate precipitation data from our utility function
+  const accuratePrecipData = getAccuratePrecipitationData(selectedYear);
+  
   const [precipitationData] = useState([
     {
       name: 'Annual Rainfall',
-      value: selectedYear > 2020 ? 685 : selectedYear > 2015 ? 710 : 745,
+      value: accuratePrecipData.annual,
       color: '#4575b4',
       change: selectedYear > 2020 ? -3.5 : selectedYear > 2015 ? -2.1 : -1.2,
-      rawChange: selectedYear > 2020 ? -25 : selectedYear > 2015 ? -15 : -10
+      rawChange: selectedYear > 2020 ? -5.7 : selectedYear > 2015 ? -3.8 : -2.2
     },
     {
       name: 'Dry Season',
-      value: selectedYear > 2020 ? 85 : selectedYear > 2015 ? 95 : 110,
+      value: accuratePrecipData.dryseason,
       color: '#74add1',
-      change: selectedYear > 2020 ? -10.5 : selectedYear > 2015 ? -7.5 : -4.5,
-      rawChange: selectedYear > 2020 ? -10 : selectedYear > 2015 ? -5 : -3
+      change: selectedYear > 2020 ? -9.8 : selectedYear > 2015 ? -7.2 : -4.8,
+      rawChange: selectedYear > 2020 ? -2.2 : selectedYear > 2015 ? -1.6 : -1.1
     },
     {
       name: 'Wet Season',
-      value: selectedYear > 2020 ? 600 : selectedYear > 2015 ? 615 : 635,
+      value: accuratePrecipData.wetseason,
       color: '#91bfdb',
-      change: selectedYear > 2020 ? -2.4 : selectedYear > 2015 ? -1.6 : -0.8,
-      rawChange: selectedYear > 2020 ? -15 : selectedYear > 2015 ? -10 : -5
+      change: selectedYear > 2020 ? -4.1 : selectedYear > 2015 ? -2.6 : -1.4,
+      rawChange: selectedYear > 2020 ? -7.5 : selectedYear > 2015 ? -4.8 : -2.6
     }
   ]);
   
-  const [precipTimeSeriesData] = useState([
-    {
-      year: 2010,
-      Annual: 780,
-      'Dry Season': 110,
-      'Wet Season': 670,
-      'Extreme Events': 3,
-      'Water Stress Index': 38
-    },
-    {
-      year: 2012,
-      Annual: 765,
-      'Dry Season': 105,
-      'Wet Season': 660,
-      'Extreme Events': 4,
-      'Water Stress Index': 42
-    },
-    {
-      year: 2014,
-      Annual: 752,
-      'Dry Season': 102,
-      'Wet Season': 650,
-      'Extreme Events': 4,
-      'Water Stress Index': 45
-    },
-    {
-      year: 2016,
-      Annual: 740,
-      'Dry Season': 100,
-      'Wet Season': 640,
-      'Extreme Events': 5,
-      'Water Stress Index': 48
-    },
-    {
-      year: 2018,
-      Annual: 725,
-      'Dry Season': 98,
-      'Wet Season': 627,
-      'Extreme Events': 6,
-      'Water Stress Index': 52
-    },
-    {
-      year: 2020,
-      Annual: 710,
-      'Dry Season': 95,
-      'Wet Season': 615,
-      'Extreme Events': 7,
-      'Water Stress Index': 58
-    },
-    {
-      year: 2022,
-      Annual: 695,
-      'Dry Season': 90,
-      'Wet Season': 605,
-      'Extreme Events': 8,
-      'Water Stress Index': 63
-    },
-    {
-      year: 2023,
-      Annual: 685,
-      'Dry Season': 85,
-      'Wet Season': 600,
-      'Extreme Events': 9,
-      'Water Stress Index': 68
-    }
-  ]);
+  // Use our utility function to get the complete time series data
+  const [precipTimeSeriesData] = useState(getPrecipitationTimeSeriesData());
   
   const [timeSeriesData] = useState([
     {
@@ -330,52 +273,61 @@ const Dashboard = () => {
     { id: 'population', name: 'Population', icon: <Users size={16} /> },
   ];
 
+  // Update enhanced precipitation data to use our more accurate values
   const enhancedPrecipitationData = [
     {
       name: 'Annual Rainfall',
-      value: selectedYear > 2020 ? 685 : selectedYear > 2015 ? 710 : 745,
+      value: accuratePrecipData.annual,
       color: '#4575b4',
       change: selectedYear > 2020 ? -3.5 : selectedYear > 2015 ? -2.1 : -1.2,
-      rawChange: selectedYear > 2020 ? -25 : selectedYear > 2015 ? -15 : -10
+      rawChange: selectedYear > 2020 ? -5.7 : selectedYear > 2015 ? -3.8 : -2.2
     },
     {
       name: 'Dry Season',
-      value: selectedYear > 2020 ? 85 : selectedYear > 2015 ? 95 : 110,
+      value: accuratePrecipData.dryseason,
       color: '#74add1',
-      change: selectedYear > 2020 ? -10.5 : selectedYear > 2015 ? -7.5 : -4.5,
-      rawChange: selectedYear > 2020 ? -10 : selectedYear > 2015 ? -5 : -3
+      change: selectedYear > 2020 ? -9.8 : selectedYear > 2015 ? -7.2 : -4.8,
+      rawChange: selectedYear > 2020 ? -2.2 : selectedYear > 2015 ? -1.6 : -1.1
     },
     {
       name: 'Wet Season',
-      value: selectedYear > 2020 ? 600 : selectedYear > 2015 ? 615 : 635,
+      value: accuratePrecipData.wetseason,
       color: '#91bfdb',
-      change: selectedYear > 2020 ? -2.4 : selectedYear > 2015 ? -1.6 : -0.8,
-      rawChange: selectedYear > 2020 ? -15 : selectedYear > 2015 ? -10 : -5
+      change: selectedYear > 2020 ? -4.1 : selectedYear > 2015 ? -2.6 : -1.4,
+      rawChange: selectedYear > 2020 ? -7.5 : selectedYear > 2015 ? -4.8 : -2.6
     },
     {
       name: 'Extreme Events',
-      value: selectedYear > 2020 ? 9 : selectedYear > 2015 ? 7 : 5,
+      value: accuratePrecipData.extremeEvents,
       color: '#d73027',
-      change: selectedYear > 2020 ? 28.6 : selectedYear > 2015 ? 40 : 25,
-      rawChange: selectedYear > 2020 ? 2 : selectedYear > 2015 ? 2 : 1
+      change: selectedYear > 2020 ? 14.3 : selectedYear > 2015 ? 25.0 : 11.1,
+      rawChange: selectedYear > 2020 ? 1 : selectedYear > 2015 ? 1 : 0.5
     },
     {
       name: 'Water Stress Index',
-      value: selectedYear > 2020 ? 68 : selectedYear > 2015 ? 58 : 48,
+      value: accuratePrecipData.waterStressIndex,
       color: '#fc8d59',
-      change: selectedYear > 2020 ? 17.2 : selectedYear > 2015 ? 20.8 : 14.3,
-      rawChange: selectedYear > 2020 ? 10 : selectedYear > 2015 ? 10 : 6
+      change: selectedYear > 2020 ? 7.9 : selectedYear > 2015 ? 12.5 : 6.5,
+      rawChange: selectedYear > 2020 ? 5 : selectedYear > 2015 ? 5 : 3
     }
   ];
 
   const getPrecipitationTrends = () => {
+    const firstYearData = precipTimeSeriesData[0];
+    const lastYearData = precipTimeSeriesData[precipTimeSeriesData.length - 1];
+    
+    const annualChange = ((lastYearData.Annual - firstYearData.Annual) / firstYearData.Annual) * 100;
+    const drySeasonChange = ((lastYearData['Dry Season'] - firstYearData['Dry Season']) / firstYearData['Dry Season']) * 100;
+    const eventsChange = ((lastYearData['Extreme Events'] - firstYearData['Extreme Events']) / firstYearData['Extreme Events']) * 100;
+    const stressChange = ((lastYearData['Water Stress Index'] - firstYearData['Water Stress Index']) / firstYearData['Water Stress Index']) * 100;
+    
     return `Based on the precipitation data from 2010 to 2023:
     
-• Annual rainfall has decreased by approximately 12.2% (95mm) over the past 13 years.
-• Dry season precipitation shows the most significant decline at -22.7% (25mm).
-• The frequency of extreme weather events (droughts, flash floods) has tripled from 3 to 9 annually.
-• The Water Stress Index has increased by 78.9%, indicating growing water scarcity concerns.
-• Areas with over 500mm annual rainfall have decreased by approximately 18% in spatial coverage.
+• Annual rainfall has decreased by approximately ${Math.abs(annualChange).toFixed(1)}% (${(firstYearData.Annual - lastYearData.Annual).toFixed(1)}mm) over the past 13 years.
+• Dry season precipitation shows the most significant decline at ${Math.abs(drySeasonChange).toFixed(1)}% (${(firstYearData['Dry Season'] - lastYearData['Dry Season']).toFixed(1)}mm).
+• The frequency of extreme weather events (droughts, flash floods) has increased from ${firstYearData['Extreme Events']} to ${lastYearData['Extreme Events']} annually (${eventsChange.toFixed(0)}% increase).
+• The Water Stress Index has increased by ${stressChange.toFixed(1)}%, indicating growing water scarcity concerns.
+• Areas with over 200mm annual rainfall have decreased by approximately 18% in spatial coverage.
 
 This trend correlates with observed changes in vegetation patterns and may contribute to desertification processes in vulnerable areas, particularly in the northern regions.`;
   };

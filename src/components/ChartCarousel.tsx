@@ -19,9 +19,6 @@ interface ChartCarouselProps {
 const PIXEL_TO_SQ_KM = 0.2144; // One MODIS pixel is about 0.2144 sq km (463m × 463m / 1000000)
 const DISPLAY_IN_THOUSANDS = 1000; // Threshold to display in thousands of sq km
 
-// Precipitation specific conversion (mm to volume)
-const PRECIP_MM_TO_VOLUME = (mm: number, area: number) => mm * area; // Precipitation in mm * area in sq km = volume in thousand cubic meters
-
 const ChartCarousel = ({ 
   data, 
   timeSeriesData = [], 
@@ -63,101 +60,41 @@ const ChartCarousel = ({
       return convertedYearData;
     });
   } else if (dataType === 'precipitation') {
-    const totalLandArea = 100; // Approximated area in sq km for the region of interest
-    
-    // Modified: Filter out Extreme Events and Water Stress Index for bar and pie charts only
+    // Remove Water Stress Index and Extreme Events from the main rainfall data
+    // Keep only rainfall metrics for the bar and pie charts
     const rainfallOnly = filteredData.filter(item => 
       item.name === 'Annual Rainfall' || 
       item.name === 'Dry Season' || 
       item.name === 'Wet Season'
     );
     
-    // Keep all data for other visualizations
-    const indexesOnly = filteredData.filter(item => 
-      item.name === 'Water Stress Index' || 
-      item.name === 'Extreme Events'
-    );
-    
-    // Keep rainfall metrics in original mm units for charts
     convertedData = rainfallOnly.map(item => {
       return {
         ...item,
-        value: item.value, // Use original mm values for bar/pie charts
         displayUnit: 'mm',
         originalValue: item.value,
       };
     });
     
-    // Store the full data separately for the specialized chart
-    const fullConvertedData = [
-      ...convertedData,
-      ...indexesOnly.map(item => ({
-        ...item,
-        displayUnit: item.name === 'Extreme Events' ? 'events per year' : 'index value',
-        originalValue: item.value,
-      }))
-    ];
-    
-    // Preserve original mm values in time series data
-    convertedTimeSeriesData = timeSeriesData;
-    
+    // Keep time series data as is, since it's already in mm
     displayUnit = 'mm';
   }
   
-  // Get all land cover types that appear in the time series data
-  const getAllLandCoverTypes = () => {
-    const types = new Set<string>();
-    timeSeriesData.forEach(yearData => {
-      Object.keys(yearData).forEach(key => {
-        if (key !== 'year' && yearData[key] > 0) {
-          types.add(key);
-        }
-      });
-    });
-    return Array.from(types);
-  };
-  
-  const landCoverTypes = getAllLandCoverTypes();
-  
-  // Color mapping for consistency
-  const getColorForType = (type: string) => {
-    const colorMap: Record<string, string> = {
-      'Forests': '#1a9850',
-      'Shrublands': '#91cf60',
-      'Grasslands': '#fee08b',
-      'Croplands': '#fc8d59',
-      'Urban': '#d73027',
-      'Barren': '#bababa',
-      'Water': '#4575b4',
-      'Wetlands': '#74add1',
-      'Savannas': '#f46d43',
-      'Snow and Ice': '#ffffff',
-      // Precipitation specific colors
-      'Annual': '#4575b4',
-      'Seasonal': '#74add1',
-      'Monthly': '#91bfdb',
-    };
-    
-    return colorMap[type] || `#${Math.floor(Math.random()*16777215).toString(16)}`;
-  };
-
   // Debug function to ensure proper data
-  const ensureUrbanData = () => {
-    const hasUrban = filteredData.some(item => item.name === 'Urban' || item.name.includes('Urban'));
-    console.log('Urban data in charts:', hasUrban, 
-      filteredData.filter(item => item.name === 'Urban' || item.name.includes('Urban')));
-    console.log('All chart data:', filteredData);
-    console.log('Converted chart data:', convertedData);
+  const ensureDataIntegrity = () => {
+    if (dataType === 'precipitation') {
+      console.log('Precipitation data for charts:', convertedData);
+      console.log('Precipitation time series data:', convertedTimeSeriesData);
+    }
   };
 
   // Call the check function
-  ensureUrbanData();
+  ensureDataIntegrity();
 
   // Custom tooltip formatter for different data types
   const formatTooltip = (value: number, name: string, entry: any) => {
     if (dataType === 'precipitation') {
       if (entry && entry.payload) {
-        const dataPoint = entry.payload;
         if (name === 'Annual' || name === 'Dry Season' || name === 'Wet Season' || 
             name === 'Annual Rainfall' || name === 'Dry Season' || name === 'Wet Season') {
           // For rainfall, show mm values
