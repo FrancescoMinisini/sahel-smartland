@@ -1,7 +1,7 @@
 
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
-import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info } from 'lucide-react';
+import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info, Globe, MapPin, Droplets } from 'lucide-react';
 import { 
   loadTIFF, 
   renderTIFFToCanvas, 

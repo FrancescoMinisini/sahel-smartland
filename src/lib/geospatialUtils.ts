@@ -1,4 +1,3 @@
-
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -44,7 +43,7 @@ export const precipitationColorScale = [
   '#08306b'  // Dark blue - highest precipitation
 ];
 
-// Vector layer styling
+// Vector layer styling - updated to ensure all types have fillColor property
 export const vectorLayerStyles = {
   region: {
     lineColor: '#6366f1', // indigo
@@ -54,15 +53,17 @@ export const vectorLayerStyles = {
   district: {
     lineColor: '#6366f1', // indigo
     lineWidth: 1,
-    fillColor: 'transparent',
+    fillColor: 'rgba(99, 102, 241, 0.02)',
   },
   road: {
     lineColor: '#dc2626', // red
     lineWidth: 1.5,
+    fillColor: 'transparent', // Added fillColor property
   },
   stream: {
     lineColor: '#0ea5e9', // sky blue
     lineWidth: 1.5,
+    fillColor: 'transparent', // Added fillColor property
   }
 };
 
@@ -167,7 +168,7 @@ export const renderVectorLayer = (
   // Set context properties
   ctx.strokeStyle = style.lineColor;
   ctx.lineWidth = style.lineWidth;
-  if (style.fillColor) {
+  if (style.fillColor && style.fillColor !== 'transparent') {
     ctx.fillStyle = style.fillColor;
   }
   ctx.globalAlpha = opacity;
@@ -200,7 +201,7 @@ export const renderVectorLayer = (
       }
       
       ctx.closePath();
-      if (style.fillColor) {
+      if (style.fillColor && style.fillColor !== 'transparent') {
         ctx.fill();
       }
       ctx.stroke();
