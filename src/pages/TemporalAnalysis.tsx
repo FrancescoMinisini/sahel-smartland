@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,18 +37,14 @@ const TemporalAnalysis = () => {
   const [landCoverData, setLandCoverData] = useState<any[]>([]);
   const [vegetationData, setVegetationData] = useState<any[]>([]);
   
-  // Load time series data
   useEffect(() => {
     const loadData = async () => {
-      // Load precipitation data
       const precipData = getPrecipitationTimeSeriesData();
       setPrecipitationData(precipData);
       
-      // Load land cover data
       const lcData = await getLandCoverTimeSeriesData();
       setLandCoverData(lcData);
       
-      // Load vegetation data
       const vegData = getVegetationTimeSeriesData();
       setVegetationData(vegData);
     };
@@ -84,14 +79,13 @@ const TemporalAnalysis = () => {
     setStats(newStats);
   };
   
-  // Format statistics for display based on data type
   const getFormattedStats = () => {
     if (activeDataType === 'landCover') {
       return (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-xs">
           {Object.entries(stats)
-            .filter(([key]) => key !== '0' && key !== '15') // Filter out 'No Data' and 'Snow and Ice'
-            .sort(([, a], [, b]) => b - a) // Sort by value (highest first)
+            .filter(([key]) => key !== '0' && key !== '15')
+            .sort(([, a], [, b]) => b - a)
             .map(([key, value]) => {
               const landCoverClass = {
                 '7': 'Forests',
@@ -497,9 +491,15 @@ const TemporalAnalysis = () => {
                           <Legend />
                           <Bar 
                             dataKey="AnnualChange" 
-                            fill={(data) => (data > 0 ? "#4CAF50" : "#F44336")} 
-                            name="Annual Productivity Change (%)" 
-                          />
+                            name="Annual Productivity Change (%)"
+                          >
+                            {vegetationData.map((entry, index) => (
+                              <Cell 
+                                key={`cell-${index}`} 
+                                fill={entry.AnnualChange > 0 ? "#4CAF50" : "#F44336"}
+                              />
+                            ))}
+                          </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     </div>

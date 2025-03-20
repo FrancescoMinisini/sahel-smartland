@@ -5,36 +5,46 @@ import { cn } from "@/lib/utils";
 import { Play, Pause } from "lucide-react";
 
 interface YearSliderProps {
-  minYear: number;
-  maxYear: number;
+  minYear?: number;
+  maxYear?: number;
+  min?: number; // Add support for both naming conventions
+  max?: number; // Add support for both naming conventions
   initialValue?: number;
   onChange?: (year: number) => void;
   className?: string;
   showLabels?: boolean;
   autoPlay?: boolean;
   autoPlayInterval?: number;
+  step?: number; // Add step property
 }
 
 const YearSlider = ({
   minYear,
   maxYear,
+  min,
+  max,
   initialValue,
   onChange,
   className,
   showLabels = true,
   autoPlay = false,
-  autoPlayInterval = 1200
+  autoPlayInterval = 1200,
+  step = 1
 }: YearSliderProps) => {
-  const [currentYear, setCurrentYear] = useState<number>(initialValue || minYear);
+  // Use either minYear/maxYear or min/max
+  const actualMinYear = minYear !== undefined ? minYear : (min !== undefined ? min : 2010);
+  const actualMaxYear = maxYear !== undefined ? maxYear : (max !== undefined ? max : 2023);
+  
+  const [currentYear, setCurrentYear] = useState<number>(initialValue || actualMinYear);
   const [isPlaying, setIsPlaying] = useState<boolean>(autoPlay);
   const autoPlayTimerRef = useRef<number | null>(null);
   const isDraggingRef = useRef<boolean>(false);
 
   useEffect(() => {
-    if (initialValue && initialValue >= minYear && initialValue <= maxYear) {
+    if (initialValue && initialValue >= actualMinYear && initialValue <= actualMaxYear) {
       setCurrentYear(initialValue);
     }
-  }, [initialValue, minYear, maxYear]);
+  }, [initialValue, actualMinYear, actualMaxYear]);
 
   // Handle auto-play functionality
   useEffect(() => {
@@ -47,7 +57,7 @@ const YearSlider = ({
       // Set up a new timer
       autoPlayTimerRef.current = window.setInterval(() => {
         setCurrentYear((prevYear) => {
-          const nextYear = prevYear >= maxYear ? minYear : prevYear + 1;
+          const nextYear = prevYear >= actualMaxYear ? actualMinYear : prevYear + step;
           if (onChange) {
             onChange(nextYear);
           }
@@ -67,7 +77,7 @@ const YearSlider = ({
         autoPlayTimerRef.current = null;
       }
     };
-  }, [isPlaying, minYear, maxYear, onChange, autoPlayInterval]);
+  }, [isPlaying, actualMinYear, actualMaxYear, onChange, autoPlayInterval, step]);
 
   const handleSliderChange = (value: number[]) => {
     const year = value[0];
@@ -95,7 +105,7 @@ const YearSlider = ({
       }
       autoPlayTimerRef.current = window.setInterval(() => {
         setCurrentYear((prevYear) => {
-          const nextYear = prevYear >= maxYear ? minYear : prevYear + 1;
+          const nextYear = prevYear >= actualMaxYear ? actualMinYear : prevYear + step;
           if (onChange) {
             onChange(nextYear);
           }
@@ -110,7 +120,7 @@ const YearSlider = ({
   };
 
   // Calculate percentage position for the year label
-  const yearPercentage = ((currentYear - minYear) / (maxYear - minYear)) * 100;
+  const yearPercentage = ((currentYear - actualMinYear) / (actualMaxYear - actualMinYear)) * 100;
 
   return (
     <div className={cn("relative pt-6 pb-8 px-1", className)}>
@@ -136,9 +146,9 @@ const YearSlider = ({
       </button>
       
       <Slider
-        min={minYear}
-        max={maxYear}
-        step={1}
+        min={actualMinYear}
+        max={actualMaxYear}
+        step={step}
         value={[currentYear]}
         onValueChange={handleSliderChange}
         onValueCommit={() => handleDragEnd()}
@@ -148,8 +158,8 @@ const YearSlider = ({
       
       {showLabels && (
         <div className="flex justify-between mt-2">
-          <span className="text-xs text-muted-foreground">{minYear}</span>
-          <span className="text-xs text-muted-foreground">{maxYear}</span>
+          <span className="text-xs text-muted-foreground">{actualMinYear}</span>
+          <span className="text-xs text-muted-foreground">{actualMaxYear}</span>
         </div>
       )}
     </div>
