@@ -472,8 +472,8 @@ These rainfall gradients correlate strongly with vegetation changes and suggest 
       ];
     } else if (activeTab === 'precipitation') {
       return [
-        { name: 'Significant Increase', color: '#0ea5e9' },
-        { name: 'Moderate Increase', color: '#22c55e' },
+        { name: 'Significant Increase', color: '#22c55e' },
+        { name: 'Moderate Increase', color: '#84cc16' },
         { name: 'Stable Rainfall', color: '#3b82f6' },
         { name: 'Moderate Decrease', color: '#f97316' },
         { name: 'Significant Decrease', color: '#ef4444' }
