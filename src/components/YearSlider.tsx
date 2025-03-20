@@ -62,8 +62,8 @@ const YearSlider = ({
           
           // Only trigger onChange when the year actually changes and is different from previous
           if (onChange && nextYear !== previousYearRef.current) {
+            previousYearRef.current = nextYear; // Set the previous year reference before triggering onChange
             onChange(nextYear);
-            previousYearRef.current = nextYear;
           }
           return nextYear;
         });
@@ -75,7 +75,9 @@ const YearSlider = ({
     }
 
     // Reset previousYearRef when play/pause state changes
-    previousYearRef.current = null;
+    if (!isPlaying) {
+      previousYearRef.current = null;
+    }
 
     // Clean up the timer when component unmounts
     return () => {
@@ -90,9 +92,9 @@ const YearSlider = ({
     const year = value[0];
     if (year !== currentYear) {
       setCurrentYear(year);
+      previousYearRef.current = year; // Set the previous year reference before triggering onChange
       if (onChange) {
         onChange(year);
-        previousYearRef.current = year;
       }
     }
   };
@@ -122,8 +124,8 @@ const YearSlider = ({
           
           // Only trigger onChange when the year actually changes and is different from previous
           if (onChange && nextYear !== previousYearRef.current) {
+            previousYearRef.current = nextYear; // Set before triggering onChange
             onChange(nextYear);
-            previousYearRef.current = nextYear;
           }
           return nextYear;
         });

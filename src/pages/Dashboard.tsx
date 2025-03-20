@@ -65,19 +65,29 @@ const Dashboard = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load land cover data
-        const landCoverData = await getLandCoverTimeSeriesData();
-        setTimeSeriesData(landCoverData);
+        try {
+          const landCoverData = await getLandCoverTimeSeriesData();
+          console.log("Loaded land cover data:", landCoverData);
+          setTimeSeriesData(landCoverData);
+        } catch (landCoverError) {
+          console.error("Error loading land cover data:", landCoverError);
+        }
         
-        // Load precipitation data
-        const precipData = await loadPrecipitationByRegion();
-        console.log("Loaded precipitation by region:", precipData);
-        setRegionalPrecipitationData(precipData);
+        try {
+          const precipData = await loadPrecipitationByRegion();
+          console.log("Loaded precipitation by region:", precipData);
+          setRegionalPrecipitationData(precipData);
+        } catch (precipError) {
+          console.error("Error loading precipitation data:", precipError);
+        }
         
-        // Load vegetation productivity data
-        const vegetationData = getVegetationTimeSeriesData();
-        console.log("Loaded vegetation productivity data:", vegetationData);
-        setVegetationTimeSeriesData(vegetationData);
+        try {
+          const vegetationData = getVegetationTimeSeriesData();
+          console.log("Loaded vegetation productivity data:", vegetationData);
+          setVegetationTimeSeriesData(vegetationData);
+        } catch (vegError) {
+          console.error("Error loading vegetation data:", vegError);
+        }
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
@@ -113,7 +123,7 @@ const Dashboard = () => {
       // Shorter loading time for smoother animation
       setTimeout(() => {
         setIsLoading(false);
-      }, 200);
+      }, 150);
     }
   };
 
