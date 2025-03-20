@@ -45,10 +45,10 @@ type GradientData = {
 };
 
 const COLORS = {
-  degradation: '#ef4444',
-  improvement: '#22c55e',
-  stable: '#3b82f6',
-  uncertain: '#f59e0b',
+  degradation: '#ef4444',  // Red for degradation (bad)
+  improvement: '#22c55e',  // Green for improvement (good)
+  stable: '#3b82f6',       // Blue for stable
+  uncertain: '#f59e0b',    // Amber for uncertain
 };
 
 const TRANSITION_TYPES = {
@@ -69,7 +69,7 @@ const TRANSITION_TYPES = {
   'Other': { color: '#a855f7', isNegative: false },
 };
 
-// Mock data generator
+// Mock data generator 
 const generateGradientData = (): GradientData[] => {
   const years = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023];
   
@@ -168,6 +168,78 @@ const generateGradientData = (): GradientData[] => {
   });
 };
 
+// Generates data for vegetation gradient analysis
+const generateVegetationGradientData = (year: number): any[] => {
+  return [
+    {
+      name: 'Forest Cover Increase',
+      value: Math.round(400 + Math.random() * 200 - (2023 - year) * 15),
+      color: '#22c55e',
+      isPositive: true
+    },
+    {
+      name: 'Forest Cover Decrease',
+      value: Math.round(600 + Math.random() * 300 + (2023 - year) * 25),
+      color: '#ef4444',
+      isPositive: false
+    },
+    {
+      name: 'Grassland Increase',
+      value: Math.round(500 + Math.random() * 250 - (2023 - year) * 10),
+      color: '#a3e635',
+      isPositive: true
+    },
+    {
+      name: 'Grassland Decrease',
+      value: Math.round(450 + Math.random() * 220 + (2023 - year) * 18),
+      color: '#f97316',
+      isPositive: false
+    },
+    {
+      name: 'Stable Vegetation',
+      value: Math.round(900 + Math.random() * 300 - (2023 - year) * 5),
+      color: '#3b82f6',
+      isPositive: true
+    }
+  ];
+};
+
+// Generates data for precipitation gradient analysis
+const generatePrecipitationGradientData = (year: number): any[] => {
+  return [
+    {
+      name: 'Increased Rainfall Areas',
+      value: Math.round(350 + Math.random() * 150 - (2023 - year) * 20),
+      color: '#22c55e',
+      isPositive: true
+    },
+    {
+      name: 'Decreased Rainfall Areas',
+      value: Math.round(450 + Math.random() * 200 + (2023 - year) * 15),
+      color: '#ef4444',
+      isPositive: false
+    },
+    {
+      name: 'Stable Rainfall Areas',
+      value: Math.round(800 + Math.random() * 300),
+      color: '#3b82f6',
+      isPositive: true
+    },
+    {
+      name: 'Drought Intensification',
+      value: Math.round(250 + Math.random() * 120 + (2023 - year) * 10),
+      color: '#b91c1c',
+      isPositive: false
+    },
+    {
+      name: 'Water Availability Improvement',
+      value: Math.round(200 + Math.random() * 100 - (2023 - year) * 8),
+      color: '#0ea5e9',
+      isPositive: true
+    }
+  ];
+};
+
 const getProcessedChartData = (gradientData: GradientData[], selectedYear: number) => {
   // Find data for the selected year
   const yearData = getClosestYearData(gradientData, selectedYear);
@@ -213,7 +285,7 @@ const getClosestYearData = (data: GradientData[], targetYear: number): GradientD
   const exactMatch = data.find(d => d.year === targetYear);
   if (exactMatch) return exactMatch;
   
-  // Find closest year (should convert strings to numbers if needed)
+  // Find closest year (convert strings to numbers if needed)
   return data.reduce((prev, curr) => {
     const prevDiff = Math.abs(prev.year - Number(targetYear));
     const currDiff = Math.abs(curr.year - Number(targetYear));
@@ -222,22 +294,29 @@ const getClosestYearData = (data: GradientData[], targetYear: number): GradientD
 };
 
 const GradientAnalysis: React.FC<{ year: number }> = ({ year }) => {
-  const [activeTab, setActiveTab] = useState('transitions');
+  const [activeTab, setActiveTab] = useState('landCover');
+  const [subTab, setSubTab] = useState('transitions');
   const [chartType, setChartType] = useState<'bar' | 'pie'>('bar');
   const [gradientData, setGradientData] = useState<GradientData[]>([]);
+  const [vegetationGradientData, setVegetationGradientData] = useState<any[]>([]);
+  const [precipitationGradientData, setPrecipitationGradientData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   // Load gradient data
   useEffect(() => {
     // In a real implementation, we would load actual data from the land_cover_transition directory
-    // For now, we'll use our mock data generator
     setIsLoading(true);
     setTimeout(() => {
-      const data = generateGradientData();
-      setGradientData(data);
+      const landCoverData = generateGradientData();
+      const vegetationData = generateVegetationGradientData(year);
+      const precipitationData = generatePrecipitationGradientData(year);
+      
+      setGradientData(landCoverData);
+      setVegetationGradientData(vegetationData);
+      setPrecipitationGradientData(precipitationData);
       setIsLoading(false);
     }, 800);
-  }, []);
+  }, [year]);
   
   const { transitionData, degradationData, recoveryData } = getProcessedChartData(gradientData, year);
   
@@ -251,6 +330,21 @@ const GradientAnalysis: React.FC<{ year: number }> = ({ year }) => {
     .reduce((sum, t) => sum + t.value, 0);
     
   const netChange = totalRecoveryArea - totalDegradationArea;
+  
+  // Get the active data for current tab
+  const getActiveData = () => {
+    if (activeTab === 'landCover') {
+      if (subTab === 'transitions') return transitionData;
+      if (subTab === 'hotspots') return degradationData;
+      if (subTab === 'recovery') return recoveryData;
+      return transitionData;
+    } else if (activeTab === 'vegetation') {
+      return vegetationGradientData;
+    } else if (activeTab === 'precipitation') {
+      return precipitationGradientData;
+    }
+    return [];
+  };
   
   const renderBarChart = (data: any[]) => (
     <ResponsiveContainer width="100%" height={300}>
@@ -300,20 +394,21 @@ const GradientAnalysis: React.FC<{ year: number }> = ({ year }) => {
   );
   
   const getGradientInsights = () => {
-    if (transitionData.length === 0) return "No gradient data available for analysis.";
-    
-    const degradationTypes = transitionData.filter(t => t.isNegative);
-    const recoveryTypes = transitionData.filter(t => !t.isNegative);
-    
-    const mostCommonDegradation = degradationTypes.sort((a, b) => b.value - a.value)[0];
-    const mostCommonRecovery = recoveryTypes.sort((a, b) => b.value - a.value)[0];
-    
-    const netChangeText = netChange > 0 
-      ? `improving with a net gain of ${netChange.toLocaleString()} ha` 
-      : `degrading with a net loss of ${Math.abs(netChange).toLocaleString()} ha`;
-    
-    return `Based on land cover transition gradient analysis for ${year}:
-    
+    if (activeTab === 'landCover') {
+      if (transitionData.length === 0) return "No land cover gradient data available for analysis.";
+      
+      const degradationTypes = transitionData.filter(t => t.isNegative);
+      const recoveryTypes = transitionData.filter(t => !t.isNegative);
+      
+      const mostCommonDegradation = degradationTypes.sort((a, b) => b.value - a.value)[0];
+      const mostCommonRecovery = recoveryTypes.sort((a, b) => b.value - a.value)[0];
+      
+      const netChangeText = netChange > 0 
+        ? `improving with a net gain of ${netChange.toLocaleString()} ha` 
+        : `degrading with a net loss of ${Math.abs(netChange).toLocaleString()} ha`;
+      
+      return `Based on land cover transition gradient analysis for ${year}:
+      
 • The ecosystem is currently ${netChangeText}.
 • The most significant degradation process is "${mostCommonDegradation?.name}", affecting ${mostCommonDegradation?.value.toLocaleString()} hectares.
 • The most significant recovery process is "${mostCommonRecovery?.name}", affecting ${mostCommonRecovery?.value.toLocaleString()} hectares.
@@ -321,6 +416,86 @@ const GradientAnalysis: React.FC<{ year: number }> = ({ year }) => {
 • Recovery is strongest in riverside areas, where restoration efforts have successfully converted barren land to vegetation.
 
 These gradient patterns indicate areas that require immediate intervention to prevent further land degradation, as well as successful restoration models that could be replicated in other regions.`;
+    } else if (activeTab === 'vegetation') {
+      const positiveChanges = vegetationGradientData.filter(d => d.isPositive);
+      const negativeChanges = vegetationGradientData.filter(d => !d.isPositive);
+      
+      const totalPositive = positiveChanges.reduce((sum, d) => sum + d.value, 0);
+      const totalNegative = negativeChanges.reduce((sum, d) => sum + d.value, 0);
+      const netVegChange = totalPositive - totalNegative;
+      
+      const vegChangeText = netVegChange > 0 
+        ? `improving with a net vegetation gain of ${netVegChange.toLocaleString()} ha` 
+        : `degrading with a net vegetation loss of ${Math.abs(netVegChange).toLocaleString()} ha`;
+        
+      return `Based on vegetation productivity gradient analysis for ${year}:
+      
+• The overall vegetation status is ${vegChangeText}.
+• Forest cover is declining in more areas than it is increasing, particularly in the southern regions.
+• Grassland transitions show mixed patterns with both gains and losses across the region.
+• Areas with stable vegetation are primarily concentrated in protected areas and along water bodies.
+• Climate change and human activities appear to be the primary drivers of vegetation degradation.
+
+Long-term vegetation monitoring indicates a persistent trend of degradation with localized areas of recovery that could be expanded through conservation interventions.`;
+    } else if (activeTab === 'precipitation') {
+      const positiveChanges = precipitationGradientData.filter(d => d.isPositive);
+      const negativeChanges = precipitationGradientData.filter(d => !d.isPositive);
+      
+      const totalPositive = positiveChanges.reduce((sum, d) => sum + d.value, 0);
+      const totalNegative = negativeChanges.reduce((sum, d) => sum + d.value, 0);
+      const netPrecipChange = totalPositive - totalNegative;
+      
+      const precipChangeText = netPrecipChange > 0 
+        ? `improving with increased rainfall in ${netPrecipChange.toLocaleString()} ha` 
+        : `worsening with decreased rainfall in ${Math.abs(netPrecipChange).toLocaleString()} ha`;
+        
+      return `Based on precipitation gradient analysis for ${year}:
+      
+• The overall precipitation pattern is ${precipChangeText}.
+• Drought conditions are intensifying in the eastern and southern regions.
+• Stable rainfall areas are primarily concentrated in the central highlands.
+• Water availability has improved in some northern watersheds due to increased seasonal precipitation.
+• The gradient analysis reveals an increasing variability in rainfall patterns, with longer dry spells interrupted by more intense rain events.
+
+These rainfall gradients correlate strongly with vegetation changes and suggest a need for improved water management infrastructure to buffer against increasing climate variability.`;
+    }
+    
+    return "No gradient data available for analysis.";
+  };
+  
+  // Get appropriate dataType for MapVisualization based on active tab
+  const getMapDataType = () => {
+    if (activeTab === 'landCover') return "gradientTransition";
+    if (activeTab === 'vegetation') return "vegetationGradient";
+    if (activeTab === 'precipitation') return "precipitationGradient";
+    return "gradientTransition";
+  };
+  
+  // Get the legend items for the current active tab
+  const getLegendItems = () => {
+    if (activeTab === 'landCover') {
+      return Object.entries(TRANSITION_TYPES).slice(0, 8).map(([name, { color }]) => ({
+        name, 
+        color
+      }));
+    } else if (activeTab === 'vegetation') {
+      return [
+        { name: 'Significant Increase', color: '#22c55e' },
+        { name: 'Moderate Increase', color: '#84cc16' },
+        { name: 'Stable Vegetation', color: '#3b82f6' },
+        { name: 'Moderate Decrease', color: '#f97316' },
+        { name: 'Significant Decrease', color: '#ef4444' }
+      ];
+    } else if (activeTab === 'precipitation') {
+      return [
+        { name: 'Significant Increase', color: '#0ea5e9' },
+        { name: 'Moderate Increase', color: '#22c55e' },
+        { name: 'Stable Rainfall', color: '#3b82f6' },
+        { name: 'Moderate Decrease', color: '#f97316' },
+        { name: 'Significant Decrease', color: '#ef4444' }
+      ];
+    }
+    return [];
   };
   
   return (
@@ -331,10 +506,10 @@ These gradient patterns indicate areas that require immediate intervention to pr
             Advanced Analysis
           </span>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Land Cover Transition & Gradient Analysis
+            Ecological Gradient & Transition Analysis
           </h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            Analyze patterns of land cover change, identify degradation hotspots, and discover areas of ecosystem recovery.
+            Analyze patterns of environmental change, identify degradation hotspots, and discover areas of ecosystem recovery.
           </p>
         </div>
         
@@ -376,27 +551,35 @@ These gradient patterns indicate areas that require immediate intervention to pr
             </div>
           </div>
           
+          <Tabs defaultValue="landCover" onValueChange={setActiveTab} className="w-full mb-6">
+            <TabsList className="mb-4">
+              <TabsTrigger value="landCover">Land Cover Gradient</TabsTrigger>
+              <TabsTrigger value="vegetation">Vegetation Gradient</TabsTrigger>
+              <TabsTrigger value="precipitation">Precipitation Gradient</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1 h-full order-2 lg:order-1">
+            <div className="lg:col-span-1 h-full order-1">
               <div className="h-[400px]">
                 <MapVisualization 
                   className="w-full h-full" 
                   year={year}
                   expandedView={true}
-                  dataType="landCover"
+                  dataType={getMapDataType()}
                 />
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <Card className="col-span-2">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-medium">Transition Legend</h4>
+                      <h4 className="text-sm font-medium">{activeTab === 'landCover' ? 'Transition' : activeTab === 'vegetation' ? 'Vegetation' : 'Precipitation'} Legend</h4>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      {Object.entries(TRANSITION_TYPES).slice(0, 8).map(([name, { color }]) => (
-                        <div key={name} className="flex items-center text-xs">
-                          <div className="w-3 h-3 rounded-sm mr-1" style={{ backgroundColor: color }}></div>
-                          <span className="truncate">{name}</span>
+                      {getLegendItems().map((item, index) => (
+                        <div key={index} className="flex items-center text-xs">
+                          <div className="w-3 h-3 rounded-sm mr-1" style={{ backgroundColor: item.color }}></div>
+                          <span className="truncate">{item.name}</span>
                         </div>
                       ))}
                     </div>
@@ -405,15 +588,88 @@ These gradient patterns indicate areas that require immediate intervention to pr
               </div>
             </div>
             
-            <div className="lg:col-span-2 space-y-6 order-1 lg:order-2">
-              <Tabs defaultValue="transitions" onValueChange={setActiveTab} className="w-full">
-                <TabsList className="mb-4">
-                  <TabsTrigger value="transitions">Land Transitions</TabsTrigger>
-                  <TabsTrigger value="hotspots">Degradation Hotspots</TabsTrigger>
-                  <TabsTrigger value="recovery">Recovery Areas</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="transitions" className="space-y-4">
+            <div className="lg:col-span-2 space-y-6 order-2">
+              {activeTab === 'landCover' && (
+                <Tabs defaultValue="transitions" onValueChange={setSubTab} className="w-full">
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="transitions">Land Transitions</TabsTrigger>
+                    <TabsTrigger value="hotspots">Degradation Hotspots</TabsTrigger>
+                    <TabsTrigger value="recovery">Recovery Areas</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="transitions" className="space-y-4">
+                    {isLoading ? (
+                      <div className="h-[300px] flex items-center justify-center">
+                        <div className="flex flex-col items-center">
+                          <div className="w-8 h-8 border-4 border-t-sahel-green border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mb-3"></div>
+                          <p className="text-sm text-muted-foreground">Loading data...</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {chartType === 'bar' ? renderBarChart(transitionData) : renderPieChart(transitionData)}
+                        
+                        <div className="flex items-start gap-2 mt-4 text-sm text-muted-foreground">
+                          <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                          <p>
+                            Transitions show how land cover has changed between consecutive years.
+                            Negative transitions (red/orange) indicate degradation, while positive transitions (green) indicate recovery.
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="hotspots" className="space-y-4">
+                    {isLoading ? (
+                      <div className="h-[300px] flex items-center justify-center">
+                        <div className="flex flex-col items-center">
+                          <div className="w-8 h-8 border-4 border-t-sahel-green border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mb-3"></div>
+                          <p className="text-sm text-muted-foreground">Loading data...</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {chartType === 'bar' ? renderBarChart(degradationData) : renderPieChart(degradationData)}
+                        
+                        <div className="flex items-start gap-2 mt-4 text-sm text-muted-foreground">
+                          <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                          <p>
+                            Degradation hotspots are areas with significant negative land cover changes.
+                            These regions require priority intervention to prevent further ecosystem damage.
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="recovery" className="space-y-4">
+                    {isLoading ? (
+                      <div className="h-[300px] flex items-center justify-center">
+                        <div className="flex flex-col items-center">
+                          <div className="w-8 h-8 border-4 border-t-sahel-green border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mb-3"></div>
+                          <p className="text-sm text-muted-foreground">Loading data...</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {chartType === 'bar' ? renderBarChart(recoveryData) : renderPieChart(recoveryData)}
+                        
+                        <div className="flex items-start gap-2 mt-4 text-sm text-muted-foreground">
+                          <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                          <p>
+                            Recovery areas show where positive land cover transitions are occurring.
+                            These success stories provide models for restoration efforts elsewhere in the region.
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              )}
+              
+              {activeTab === 'vegetation' && (
+                <>
                   {isLoading ? (
                     <div className="h-[300px] flex items-center justify-center">
                       <div className="flex flex-col items-center">
@@ -423,20 +679,22 @@ These gradient patterns indicate areas that require immediate intervention to pr
                     </div>
                   ) : (
                     <>
-                      {chartType === 'bar' ? renderBarChart(transitionData) : renderPieChart(transitionData)}
+                      {chartType === 'bar' ? renderBarChart(vegetationGradientData) : renderPieChart(vegetationGradientData)}
                       
                       <div className="flex items-start gap-2 mt-4 text-sm text-muted-foreground">
                         <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
                         <p>
-                          Transitions show how land cover has changed between consecutive years.
-                          Negative transitions (red/orange) indicate degradation, while positive transitions (green) indicate recovery.
+                          Vegetation gradient analysis shows changes in plant productivity and cover over time.
+                          Green areas indicate improvement, while red areas show degradation in vegetation health.
                         </p>
                       </div>
                     </>
                   )}
-                </TabsContent>
-                
-                <TabsContent value="hotspots" className="space-y-4">
+                </>
+              )}
+              
+              {activeTab === 'precipitation' && (
+                <>
                   {isLoading ? (
                     <div className="h-[300px] flex items-center justify-center">
                       <div className="flex flex-col items-center">
@@ -446,42 +704,19 @@ These gradient patterns indicate areas that require immediate intervention to pr
                     </div>
                   ) : (
                     <>
-                      {chartType === 'bar' ? renderBarChart(degradationData) : renderPieChart(degradationData)}
+                      {chartType === 'bar' ? renderBarChart(precipitationGradientData) : renderPieChart(precipitationGradientData)}
                       
                       <div className="flex items-start gap-2 mt-4 text-sm text-muted-foreground">
                         <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
                         <p>
-                          Degradation hotspots are areas with significant negative land cover changes.
-                          These regions require priority intervention to prevent further ecosystem damage.
+                          Precipitation gradient analysis reveals changing rainfall patterns over time.
+                          Blue/green areas show improvement in water availability, while red areas indicate drought intensification.
                         </p>
                       </div>
                     </>
                   )}
-                </TabsContent>
-                
-                <TabsContent value="recovery" className="space-y-4">
-                  {isLoading ? (
-                    <div className="h-[300px] flex items-center justify-center">
-                      <div className="flex flex-col items-center">
-                        <div className="w-8 h-8 border-4 border-t-sahel-green border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mb-3"></div>
-                        <p className="text-sm text-muted-foreground">Loading data...</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {chartType === 'bar' ? renderBarChart(recoveryData) : renderPieChart(recoveryData)}
-                      
-                      <div className="flex items-start gap-2 mt-4 text-sm text-muted-foreground">
-                        <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                        <p>
-                          Recovery areas show where positive land cover transitions are occurring.
-                          These success stories provide models for restoration efforts elsewhere in the region.
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </TabsContent>
-              </Tabs>
+                </>
+              )}
               
               <div className="p-4 bg-muted rounded-md">
                 <h4 className="font-medium mb-2">Gradient Analysis Insights:</h4>
