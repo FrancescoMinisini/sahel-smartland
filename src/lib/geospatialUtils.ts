@@ -1,3 +1,4 @@
+
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -87,6 +88,13 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
     }
     
     const response = await fetch(filePath);
+    
+    // Check if file exists/response is ok
+    if (!response.ok) {
+      console.warn(`File not found or error: ${filePath}`);
+      return { data: [], width: 0, height: 0 };
+    }
+    
     const arrayBuffer = await response.arrayBuffer();
     const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
     const image = await tiff.getImage();
