@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -698,3 +699,23 @@ This trend correlates with observed changes in vegetation patterns and may contr
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white rounded-xl shadow-sm border border-border/40 p-6">
               <div className="w-10 h-10 rounded-lg bg-sahel-green/10 flex items-center justify-center mb-4">
+                <FileText size={20} className="text-sahel-green" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">Reports & Analysis</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Download detailed reports or browse through interactive analysis dashboards.
+              </p>
+              <button className="text-sm text-sahel-green flex items-center hover:underline">
+                View reports <ArrowRight size={14} className="ml-1" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
+    </div>
+  );
+};
+
+export default Dashboard;
