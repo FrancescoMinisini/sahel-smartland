@@ -142,6 +142,23 @@ const MapVisualization = ({
       return;
     }
     
+    if (dataType === 'precipitation' && canvas.parentElement) {
+      const parentWidth = canvas.parentElement.clientWidth;
+      const parentHeight = canvas.parentElement.clientHeight;
+      const aspectRatio = prevYearData.width / prevYearData.height;
+      
+      let displayWidth = parentWidth;
+      let displayHeight = displayWidth / aspectRatio;
+      
+      if (displayHeight < parentHeight) {
+        displayHeight = parentHeight;
+        displayWidth = displayHeight * aspectRatio;
+      }
+      
+      canvas.style.width = `${displayWidth}px`;
+      canvas.style.height = `${displayHeight}px`;
+    }
+    
     if (canvas.width !== prevYearData.width || canvas.height !== prevYearData.height) {
       canvas.width = prevYearData.width;
       canvas.height = prevYearData.height;
@@ -432,13 +449,6 @@ const MapVisualization = ({
       </div>
       
       {renderLegend()}
-      
-      <div className="absolute top-3 right-12 bg-white/80 rounded-full px-2 py-1 text-xs font-medium flex items-center shadow-sm">
-        <Info size={10} className="mr-1" />
-        {dataType === 'landCover' ? 'Land Cover' : 
-         dataType === 'precipitation' ? 'Precipitation' : 
-         dataType === 'vegetation' ? 'Vegetation' : 'Population'}
-      </div>
     </div>
   );
 };
