@@ -1,6 +1,7 @@
+
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
-import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2 } from 'lucide-react';
+import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info } from 'lucide-react';
 import { 
   loadTIFF, 
   renderTIFFToCanvas, 
@@ -8,7 +9,9 @@ import {
   landCoverColors, 
   landCoverClasses,
   getAvailableYears,
-  calculateLandCoverStats
+  calculateLandCoverStats,
+  calculatePrecipitationStats,
+  precipitationColorScale
 } from '@/lib/geospatialUtils';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -17,29 +20,45 @@ interface MapVisualizationProps {
   year?: number;
   onStatsChange?: (stats: Record<string, number>) => void;
   expandedView?: boolean;
+  dataType?: 'landCover' | 'precipitation' | 'vegetation' | 'population';
 }
 
 const MapVisualization = ({ 
   className, 
   year = 2023, 
   onStatsChange,
-  expandedView = false
+  expandedView = false,
+  dataType = 'landCover'
 }: MapVisualizationProps) => {
   const { toast } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeLayer, setActiveLayer] = useState('landCover');
+  const [activeLayer, setActiveLayer] = useState(dataType);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [mapData, setMapData] = useState<{
-    [year: number]: { data: number[], width: number, height: number }
-  }>({});
+    [dataType: string]: {
+      [year: number]: { 
+        data: number[], 
+        width: number, 
+        height: number,
+        min?: number,
+        max?: number
+      }
+    }
+  }>({
+    landCover: {},
+    precipitation: {},
+    vegetation: {},
+    population: {}
+  });
   const [currentStats, setCurrentStats] = useState<Record<string, number>>({});
   const [transitionAnimationId, setTransitionAnimationId] = useState<number | null>(null);
   const previousYearRef = useRef<number | null>(null);
+  const previousDataTypeRef = useRef<string | null>(null);
   
   // Find the closest available years for interpolation
   const { prevYear, nextYear, progress } = useMemo(() => {
-    const availableYears = getAvailableYears();
+    const availableYears = getAvailableYears(dataType);
     
     if (availableYears.includes(year)) {
       return { prevYear: year, nextYear: year, progress: 0 };
@@ -54,7 +73,7 @@ const MapVisualization = ({
     const progress = yearRange > 0 ? (year - prevYear) / yearRange : 0;
     
     return { prevYear, nextYear, progress };
-  }, [year]);
+  }, [year, dataType]);
 
   // Notify parent component when stats change
   useEffect(() => {
@@ -63,6 +82,12 @@ const MapVisualization = ({
     }
   }, [currentStats, onStatsChange]);
 
+  // Update active layer when dataType prop changes
+  useEffect(() => {
+    setActiveLayer(dataType);
+    previousDataTypeRef.current = dataType;
+  }, [dataType]);
+
   // Preload data for all years when the component mounts
   useEffect(() => {
     const preloadAllYears = async () => {
@@ -70,21 +95,27 @@ const MapVisualization = ({
       
       try {
         // Get all available years
-        const availableYears = getAvailableYears();
+        const availableYears = getAvailableYears(dataType);
         
         // Create a queue to load years in sequence
         for (const yearToLoad of availableYears) {
-          if (!mapData[yearToLoad]) {
+          if (!mapData[dataType]?.[yearToLoad]) {
             // Load data for this year
-            const data = await loadTIFF(yearToLoad);
-            setMapData(prev => ({ ...prev, [yearToLoad]: data }));
+            const data = await loadTIFF(yearToLoad, dataType);
+            setMapData(prev => ({
+              ...prev,
+              [dataType]: {
+                ...(prev[dataType] || {}),
+                [yearToLoad]: data
+              }
+            }));
           }
         }
       } catch (error) {
-        console.error('Error preloading TIFF data:', error);
+        console.error(`Error preloading ${dataType} data:`, error);
         toast({
-          title: 'Error loading map data',
-          description: 'Could not preload all the land cover data years.',
+          title: `Error loading ${dataType} data`,
+          description: `Could not preload all the ${dataType} data years.`,
           variant: 'destructive'
         });
       } finally {
@@ -92,7 +123,12 @@ const MapVisualization = ({
       }
     };
     
-    preloadAllYears();
+    // Check if we need to load data for this data type
+    if (!mapData[dataType] || Object.keys(mapData[dataType]).length === 0) {
+      preloadAllYears();
+    } else {
+      setIsLoading(false);
+    }
     
     // Cleanup function
     return () => {
@@ -100,7 +136,7 @@ const MapVisualization = ({
         cancelAnimationFrame(transitionAnimationId);
       }
     };
-  }, []);
+  }, [dataType]);
 
   // Render the map with smooth transitions when the year changes
   useEffect(() => {
@@ -110,10 +146,15 @@ const MapVisualization = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    const prevYearData = mapData[prevYear];
-    const nextYearData = mapData[nextYear];
+    // Get data for the current data type
+    const dataForType = mapData[dataType] || {};
+    const prevYearData = dataForType[prevYear];
+    const nextYearData = dataForType[nextYear];
     
-    if (!prevYearData || prevYearData.data.length === 0) return;
+    if (!prevYearData || prevYearData.data.length === 0) {
+      console.error(`No data for ${dataType} for year ${prevYear}`);
+      return;
+    }
     
     // Set canvas dimensions if not already set
     if (canvas.width !== prevYearData.width || canvas.height !== prevYearData.height) {
@@ -122,113 +163,177 @@ const MapVisualization = ({
     }
     
     // Handle smooth transition when year changes
-    if (previousYearRef.current !== null && previousYearRef.current !== year) {
+    if (previousYearRef.current !== null && 
+        (previousYearRef.current !== year || previousDataTypeRef.current !== dataType)) {
       // Cancel any existing animation
       if (transitionAnimationId !== null) {
         cancelAnimationFrame(transitionAnimationId);
       }
       
-      // Determine the previous year's data
-      const previousYear = previousYearRef.current;
-      const previousPrevYear = Math.max(...getAvailableYears().filter(y => y <= previousYear));
-      const previousNextYear = Math.min(...getAvailableYears().filter(y => y >= previousYear));
-      const previousProgress = (previousYear - previousPrevYear) / (previousNextYear - previousPrevYear || 1);
+      // Determine if data type has changed
+      const dataTypeChanged = previousDataTypeRef.current !== dataType;
       
-      const startPrevData = mapData[previousPrevYear]?.data;
-      const startNextData = mapData[previousNextYear]?.data;
-      
-      if (startPrevData && startNextData) {
-        // Create a starting interpolated data
-        const startInterpolatedData = interpolateData(
-          startPrevData,
-          startNextData,
-          previousProgress
-        );
-        
-        // Create ending interpolated data
-        const endInterpolatedData = nextYearData && prevYear !== nextYear
-          ? interpolateData(prevYearData.data, nextYearData.data, progress)
-          : prevYearData.data;
-        
-        // Animate between the two interpolated states
-        let animationProgress = 0;
-        const animationDuration = 500; // ms
-        const startTime = performance.now();
-        
-        const animateTransition = (time: number) => {
-          // Calculate progress for the animation
-          animationProgress = Math.min((time - startTime) / animationDuration, 1);
-          
-          // Interpolate between the start and end states
-          const transitionData = startInterpolatedData.map((startValue, index) => {
-            if (animationProgress >= 1) {
-              return endInterpolatedData[index];
-            }
-            
-            // Use progress to determine which value to show
-            return Math.random() < animationProgress ? endInterpolatedData[index] : startValue;
-          });
-          
-          // Render the transitional state
-          renderTIFFToCanvas(
-            ctx, 
-            transitionData, 
-            prevYearData.width, 
-            prevYearData.height
-          );
-          
-          // Continue animation if not complete
-          if (animationProgress < 1) {
-            const newAnimationId = requestAnimationFrame(animateTransition);
-            setTransitionAnimationId(newAnimationId);
-          } else {
-            setTransitionAnimationId(null);
-            // Update statistics after animation completes
-            setCurrentStats(calculateLandCoverStats(endInterpolatedData));
-          }
-        };
-        
-        // Start the animation
-        const animationId = requestAnimationFrame(animateTransition);
-        setTransitionAnimationId(animationId);
+      if (dataTypeChanged) {
+        // If data type changed, just render the new data type without animation
+        renderDataToCanvas(prevYearData, nextYearData, progress);
+      } else {
+        // Animate year transition for the same data type
+        animateYearTransition(prevYearData, nextYearData, progress);
       }
     } else {
       // Regular render without transition animation
-      if (nextYearData && prevYear !== nextYear) {
-        const interpolatedData = interpolateData(
-          prevYearData.data,
-          nextYearData.data,
-          progress
-        );
-        
-        renderTIFFToCanvas(
-          ctx, 
-          interpolatedData, 
-          prevYearData.width, 
-          prevYearData.height
-        );
-        
-        // Update statistics
-        const stats = calculateLandCoverStats(interpolatedData);
-        setCurrentStats(stats);
-      } else {
-        // Just render the previous year's data
-        renderTIFFToCanvas(
-          ctx, 
-          prevYearData.data, 
-          prevYearData.width, 
-          prevYearData.height
-        );
-        
-        // Update statistics
-        const stats = calculateLandCoverStats(prevYearData.data);
-        setCurrentStats(stats);
-      }
+      renderDataToCanvas(prevYearData, nextYearData, progress);
     }
     
-    // Update the previous year ref
+    // Update the previous year and data type refs
     previousYearRef.current = year;
-  }, [mapData, prevYear, nextYear, progress, isLoading, year, transitionAnimationId]);
+    previousDataTypeRef.current = dataType;
+  }, [mapData, prevYear, nextYear, progress, isLoading, year, dataType, transitionAnimationId]);
+
+  // Helper function to render data to canvas
+  const renderDataToCanvas = (
+    prevYearData: typeof mapData[string][number],
+    nextYearData: typeof mapData[string][number] | undefined,
+    progress: number
+  ) => {
+    if (!canvasRef.current) return;
+    const ctx = canvasRef.current.getContext('2d');
+    if (!ctx) return;
+    
+    let renderData;
+    let min = prevYearData.min || 0;
+    let max = prevYearData.max || 0;
+    
+    if (nextYearData && prevYear !== nextYear) {
+      renderData = interpolateData(
+        prevYearData.data,
+        nextYearData.data,
+        progress
+      );
+      
+      // For precipitation, interpolate min/max as well
+      if (dataType === 'precipitation') {
+        const nextMin = nextYearData.min || 0;
+        const nextMax = nextYearData.max || 0;
+        min = min + (nextMin - min) * progress;
+        max = max + (nextMax - max) * progress;
+      }
+    } else {
+      renderData = prevYearData.data;
+    }
+    
+    // Render based on data type
+    renderTIFFToCanvas(
+      ctx, 
+      renderData, 
+      prevYearData.width, 
+      prevYearData.height,
+      {
+        opacity: 1,
+        dataType,
+        min,
+        max
+      }
+    );
+    
+    // Update statistics based on data type
+    if (dataType === 'landCover') {
+      const stats = calculateLandCoverStats(renderData);
+      setCurrentStats(stats);
+    } else if (dataType === 'precipitation') {
+      const stats = calculatePrecipitationStats(renderData);
+      setCurrentStats(stats);
+    }
+  };
+
+  // Helper function to animate year transition
+  const animateYearTransition = (
+    prevYearData: typeof mapData[string][number],
+    nextYearData: typeof mapData[string][number] | undefined,
+    targetProgress: number
+  ) => {
+    if (!canvasRef.current || !nextYearData) return;
+    const ctx = canvasRef.current.getContext('2d');
+    if (!ctx) return;
+    
+    // Determine the previous year's data
+    const previousYear = previousYearRef.current || year;
+    const previousDataType = previousDataTypeRef.current || dataType;
+    const previousData = mapData[previousDataType]?.[previousYear];
+    
+    if (!previousData) return;
+    
+    // Create a starting point for the animation
+    const startInterpolatedData = [...previousData.data];
+    
+    // Create ending interpolated data
+    const endInterpolatedData = nextYearData && prevYear !== nextYear
+      ? interpolateData(prevYearData.data, nextYearData.data, targetProgress)
+      : prevYearData.data;
+    
+    // Animate between the two states
+    let animationProgress = 0;
+    const animationDuration = 500; // ms
+    const startTime = performance.now();
+    
+    const animateTransition = (time: number) => {
+      // Calculate progress for the animation
+      animationProgress = Math.min((time - startTime) / animationDuration, 1);
+      
+      // Interpolate between the start and end states
+      const transitionData = startInterpolatedData.map((startValue, index) => {
+        if (animationProgress >= 1) {
+          return endInterpolatedData[index];
+        }
+        
+        // Use progress to determine which value to show
+        return Math.random() < animationProgress ? endInterpolatedData[index] : startValue;
+      });
+      
+      // Calculate min/max for precipitation
+      let min = prevYearData.min || 0;
+      let max = prevYearData.max || 0;
+      
+      if (dataType === 'precipitation' && nextYearData) {
+        const nextMin = nextYearData.min || 0;
+        const nextMax = nextYearData.max || 0;
+        min = min + (nextMin - min) * targetProgress;
+        max = max + (nextMax - max) * targetProgress;
+      }
+      
+      // Render the transitional state
+      renderTIFFToCanvas(
+        ctx, 
+        transitionData, 
+        prevYearData.width, 
+        prevYearData.height,
+        {
+          opacity: 1,
+          dataType,
+          min,
+          max
+        }
+      );
+      
+      // Continue animation if not complete
+      if (animationProgress < 1) {
+        const newAnimationId = requestAnimationFrame(animateTransition);
+        setTransitionAnimationId(newAnimationId);
+      } else {
+        setTransitionAnimationId(null);
+        // Update statistics after animation completes
+        if (dataType === 'landCover') {
+          setCurrentStats(calculateLandCoverStats(endInterpolatedData));
+        } else if (dataType === 'precipitation') {
+          setCurrentStats(calculatePrecipitationStats(endInterpolatedData));
+        }
+      }
+    };
+    
+    // Start the animation
+    const animationId = requestAnimationFrame(animateTransition);
+    setTransitionAnimationId(animationId);
+  };
 
   const handleZoomIn = () => {
     setZoomLevel(prev => Math.min(prev + 0.2, 3));
@@ -249,9 +354,54 @@ const MapVisualization = ({
   const mapLayers = [
     { id: 'landCover', name: 'Land Cover', color: 'bg-sahel-green' },
     { id: 'vegetation', name: 'Vegetation', color: 'bg-sahel-greenLight' },
-    { id: 'rainfall', name: 'Rainfall', color: 'bg-sahel-blue' },
+    { id: 'precipitation', name: 'Rainfall', color: 'bg-sahel-blue' },
     { id: 'population', name: 'Population', color: 'bg-sahel-earth' },
   ];
+  
+  // Generate legend based on data type
+  const renderLegend = () => {
+    if (dataType === 'landCover') {
+      return (
+        <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 max-w-xs max-h-36 overflow-auto text-xs shadow-md">
+          <div className="grid grid-cols-2 gap-1">
+            {Object.entries(landCoverClasses)
+              .filter(([key]) => key !== '0')
+              .map(([key, name]) => (
+                <div key={key} className="flex items-center">
+                  <div 
+                    className="w-3 h-3 rounded-sm mr-1"
+                    style={{ backgroundColor: landCoverColors[key as keyof typeof landCoverColors] }}
+                  />
+                  <span className="truncate">{name}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      );
+    } else if (dataType === 'precipitation') {
+      return (
+        <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 shadow-md">
+          <div className="flex flex-col">
+            <span className="text-xs font-medium mb-1">Precipitation (mm)</span>
+            <div className="flex h-4 w-full">
+              {precipitationColorScale.map((color, i) => (
+                <div 
+                  key={i} 
+                  className="h-full flex-1" 
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+            <div className="flex justify-between text-xs mt-1">
+              <span>Low</span>
+              <span>High</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className={cn(
@@ -334,6 +484,17 @@ const MapVisualization = ({
             ))}
           </div>
         </div>
+      </div>
+      
+      {/* Legend based on data type */}
+      {renderLegend()}
+      
+      {/* Data type indicator */}
+      <div className="absolute top-3 right-12 bg-white/80 rounded-full px-2 py-1 text-xs font-medium flex items-center shadow-sm">
+        <Info size={10} className="mr-1" />
+        {dataType === 'landCover' ? 'Land Cover' : 
+         dataType === 'precipitation' ? 'Precipitation' : 
+         dataType === 'vegetation' ? 'Vegetation' : 'Population'}
       </div>
     </div>
   );

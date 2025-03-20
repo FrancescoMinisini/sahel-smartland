@@ -1,3 +1,4 @@
+
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -30,14 +31,40 @@ export const landCoverClasses = {
   0: 'No Data'
 };
 
+// Colors for precipitation visualization (blue intensity)
+export const precipitationColorScale = [
+  '#f7fbff', // Very light blue - lowest precipitation
+  '#deebf7',
+  '#c6dbef',
+  '#9ecae1',
+  '#6baed6',
+  '#4292c6',
+  '#2171b5',
+  '#08519c',
+  '#08306b'  // Dark blue - highest precipitation
+];
+
 // Load and process a GeoTIFF file
-export const loadTIFF = async (year: number): Promise<{ 
+export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{ 
   data: number[], 
   width: number, 
-  height: number 
+  height: number,
+  min?: number,
+  max?: number
 }> => {
   try {
-    const response = await fetch(`/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`);
+    let filePath = '';
+    
+    if (dataType === 'landCover') {
+      filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
+    } else if (dataType === 'precipitation') {
+      filePath = `/Datasets_Hackathon/Climate_Precipitation_Data/${year}R.tif`;
+    } else {
+      // Default to land cover
+      filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
+    }
+    
+    const response = await fetch(filePath);
     const arrayBuffer = await response.arrayBuffer();
     const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
     const image = await tiff.getImage();
@@ -46,7 +73,14 @@ export const loadTIFF = async (year: number): Promise<{
     const values = await image.readRasters();
     
     // Convert the TypedArray to a regular Array
-    const data = Array.from(values[0] as Uint8Array);
+    const data = Array.from(values[0] as Uint8Array | Float32Array);
+    
+    // For precipitation, we need min/max to normalize values for color scale
+    if (dataType === 'precipitation') {
+      const min = Math.min(...data);
+      const max = Math.max(...data);
+      return { data, width, height, min, max };
+    }
     
     return { data, width, height };
   } catch (error) {
@@ -82,26 +116,55 @@ export const interpolateData = (
   });
 };
 
-// Enhanced rendering function with better color blending
+// Get color for precipitation value between min and max
+export const getPrecipitationColor = (value: number, min: number, max: number): string => {
+  // Normalize the value to 0-1 range
+  const normalized = Math.max(0, Math.min(1, (value - min) / (max - min || 1)));
+  
+  // Map to color index
+  const index = Math.floor(normalized * (precipitationColorScale.length - 1));
+  return precipitationColorScale[index];
+};
+
+// Enhanced rendering function that handles both land cover and precipitation data
 export const renderTIFFToCanvas = (
   ctx: CanvasRenderingContext2D,
   data: number[],
   width: number,
   height: number,
-  opacity: number = 1
+  options: {
+    opacity?: number,
+    dataType?: string,
+    min?: number,
+    max?: number
+  } = {}
 ): void => {
   if (!ctx || data.length === 0 || width === 0 || height === 0) {
     return;
   }
 
+  const { 
+    opacity = 1, 
+    dataType = 'landCover',
+    min = 0,
+    max = 500
+  } = options;
+
   // Create an ImageData object
   const imageData = ctx.createImageData(width, height);
   const pixels = imageData.data;
 
-  // Map the data values to RGBA values with improved color mapping
+  // Map the data values to RGBA values
   for (let i = 0; i < data.length; i++) {
     const value = data[i];
-    const color = landCoverColors[value as keyof typeof landCoverColors] || landCoverColors[0];
+    let color;
+    
+    if (dataType === 'precipitation') {
+      color = getPrecipitationColor(value, min, max);
+    } else {
+      // Land cover coloring
+      color = landCoverColors[value as keyof typeof landCoverColors] || landCoverColors[0];
+    }
     
     // Convert hex color to RGB
     const r = parseInt(color.slice(1, 3), 16);
@@ -121,7 +184,7 @@ export const renderTIFFToCanvas = (
 };
 
 // Get a list of available years for land cover data
-export const getAvailableYears = (): number[] => {
+export const getAvailableYears = (dataType = 'landCover'): number[] => {
   return Array.from({ length: 14 }, (_, i) => 2010 + i);
 };
 
@@ -142,4 +205,26 @@ export const calculateLandCoverStats = (data: number[]): Record<string, number> 
   });
   
   return stats;
+};
+
+// Calculate precipitation statistics (average, min, max)
+export const calculatePrecipitationStats = (data: number[]): Record<string, number> => {
+  if (data.length === 0) return { average: 0, min: 0, max: 0, total: 0 };
+  
+  let sum = 0;
+  let min = data[0];
+  let max = data[0];
+  
+  data.forEach(value => {
+    sum += value;
+    min = Math.min(min, value);
+    max = Math.max(max, value);
+  });
+  
+  return {
+    average: sum / data.length,
+    min,
+    max,
+    total: sum
+  };
 };

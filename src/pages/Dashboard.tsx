@@ -599,6 +599,7 @@ const Dashboard = () => {
                             year={selectedYear}
                             expandedView={true}
                             onStatsChange={handleStatsChange}
+                            dataType="precipitation"
                           />
                         </div>
                         <div className="text-center mt-3">
