@@ -43,6 +43,14 @@ export const precipitationColorScale = [
   '#08306b'  // Dark blue - highest precipitation
 ];
 
+// Colors for vector layers
+export const vectorLayerColors = {
+  regionBoundaries: '#ff7800',
+  districtBoundaries: '#ffb700',
+  roadNetwork: '#000000',
+  riverNetwork: '#0078ff'
+};
+
 // Load and process a GeoTIFF file
 export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{ 
   data: number[], 
@@ -58,12 +66,24 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
       filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
     } else if (dataType === 'precipitation') {
       filePath = `/Datasets_Hackathon/Climate_Precipitation_Data/${year}R.tif`;
+    } else if (dataType === 'regionBoundaries') {
+      filePath = `/Datasets_Hackathon/Admin_layers/Assaba_Region_layer.tif`;
+    } else if (dataType === 'districtBoundaries') {
+      filePath = `/Datasets_Hackathon/Admin_layers/Assaba_Districts_layer.tif`;
+    } else if (dataType === 'roadNetwork') {
+      filePath = `/Datasets_Hackathon/Streamwater_Line_Road_Network/Road_Network.tif`;
+    } else if (dataType === 'riverNetwork') {
+      filePath = `/Datasets_Hackathon/Streamwater_Line_Road_Network/River_Network.tif`;
     } else {
       // Default to land cover
       filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
     }
     
     const response = await fetch(filePath);
+    if (!response.ok) {
+      throw new Error(`Failed to load TIFF: ${response.statusText}`);
+    }
+    
     const arrayBuffer = await response.arrayBuffer();
     const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
     const image = await tiff.getImage();
@@ -83,7 +103,7 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
     
     return { data, width, height };
   } catch (error) {
-    console.error(`Error loading TIFF for year ${year}:`, error);
+    console.error(`Error loading TIFF for ${dataType}:`, error);
     return { data: [], width: 0, height: 0 };
   }
 };
@@ -125,7 +145,7 @@ export const getPrecipitationColor = (value: number, min: number, max: number): 
   return precipitationColorScale[index];
 };
 
-// Enhanced rendering function that handles both land cover and precipitation data
+// Enhanced rendering function that handles multiple layer types
 export const renderTIFFToCanvas = (
   ctx: CanvasRenderingContext2D,
   data: number[],
@@ -136,7 +156,8 @@ export const renderTIFFToCanvas = (
     dataType?: string,
     min?: number,
     max?: number,
-    smoothing?: boolean
+    smoothing?: boolean,
+    isVectorLayer?: boolean
   } = {}
 ): void => {
   if (!ctx || data.length === 0 || width === 0 || height === 0) {
@@ -148,11 +169,11 @@ export const renderTIFFToCanvas = (
     dataType = 'landCover',
     min = 0,
     max = 500,
-    smoothing = false
+    smoothing = false,
+    isVectorLayer = false
   } = options;
 
   // Set image smoothing property based on the data type
-  // For precipitation we want smoothing, for land cover we don't
   ctx.imageSmoothingEnabled = dataType === 'precipitation' ? true : smoothing;
   ctx.imageSmoothingQuality = 'high';
 
@@ -164,9 +185,19 @@ export const renderTIFFToCanvas = (
   for (let i = 0; i < data.length; i++) {
     const value = data[i];
     let color;
+    let alpha = opacity * 255;
     
     if (dataType === 'precipitation') {
       color = getPrecipitationColor(value, min, max);
+    } else if (isVectorLayer) {
+      if (value > 0) {
+        // For vector layers, only show features (non-zero values)
+        color = vectorLayerColors[dataType as keyof typeof vectorLayerColors] || '#ff0000';
+        alpha = 180; // Semi-transparent
+      } else {
+        color = '#000000';
+        alpha = 0; // Transparent for background
+      }
     } else {
       // Land cover coloring
       color = landCoverColors[value as keyof typeof landCoverColors] || landCoverColors[0];
@@ -182,7 +213,7 @@ export const renderTIFFToCanvas = (
     pixels[pixelIndex] = r;
     pixels[pixelIndex + 1] = g;
     pixels[pixelIndex + 2] = b;
-    pixels[pixelIndex + 3] = opacity * 255; // Alpha channel
+    pixels[pixelIndex + 3] = alpha; // Alpha channel
   }
 
   // Put the ImageData onto the canvas
@@ -305,3 +336,6 @@ export const getPrecipitationTimeSeriesData = (): Array<Record<string, number>> 
     };
   });
 };
+
+// Support
+

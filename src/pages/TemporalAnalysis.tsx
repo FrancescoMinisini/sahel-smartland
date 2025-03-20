@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from "@/components/ui/card";
@@ -5,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import YearSlider from '@/components/YearSlider';
 import MapVisualization from '@/components/MapVisualization';
 import Navbar from '@/components/Navbar';
-import { Info, Calendar, Map, BarChartHorizontal, TrendingUp, TrendingDown, HelpCircle } from 'lucide-react';
+import { Info, Calendar, Map, BarChartHorizontal, TrendingUp, TrendingDown, HelpCircle, Layers } from 'lucide-react';
 import { landCoverClasses, landCoverColors } from '@/lib/geospatialUtils';
 import { 
   BarChart, 
@@ -263,7 +264,7 @@ const TemporalAnalysis = () => {
               <h2 className="text-xl font-semibold">Time Period</h2>
             </div>
             <p className="text-muted-foreground mb-6">
-              Adjust the slider to see land use changes from 1985 to 2023
+              Adjust the slider to see land use changes from 2010 to 2023
             </p>
             <YearSlider 
               minYear={2010} 
@@ -303,6 +304,10 @@ const TemporalAnalysis = () => {
                       year={selectedYear} 
                       onStatsChange={handleStatsChange}
                     />
+                  </div>
+                  <div className="p-3 bg-muted/50 text-sm flex items-center gap-2">
+                    <Layers size={16} className="text-sahel-earth/70" />
+                    <span>Use the layers control in the top-left of the map to toggle region boundaries, district boundaries, roads and river networks.</span>
                   </div>
                 </Card>
               </TabsContent>
