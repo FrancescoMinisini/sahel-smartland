@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -703,3 +704,26 @@ const Dashboard = () => {
                             stroke="currentColor"
                             strokeWidth="2"
                             strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-sahel-earth"
+                          >
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-sm">A steady increase in population density, particularly in urban areas</span>
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
+    </div>
+  );
+};
+
+export default Dashboard;
