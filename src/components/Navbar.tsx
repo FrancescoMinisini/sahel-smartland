@@ -2,131 +2,112 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from "@/lib/utils";
-import { Menu, X } from 'lucide-react';
-import { Button } from "@/components/ui/button";
-import { ThemeToggle } from './ThemeToggle';
+import { Menu, X, Map, BarChart2, FileText, Home, ChevronRight } from 'lucide-react';
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 10) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+      setIsScrolled(window.scrollY > 10);
     };
-
+    
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Close mobile menu when route changes
-  useEffect(() => {
-    setIsOpen(false);
-  }, [location.pathname]);
+  const navLinks = [
+    { name: 'Home', path: '/', icon: Home },
+    { name: 'Dashboard', path: '/dashboard', icon: BarChart2 },
+    { name: 'Map', path: '/map', icon: Map },
+    { name: 'Reports', path: '/reports', icon: FileText },
+  ];
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
 
   return (
-    <nav 
+    <header 
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-        isScrolled ? "bg-white/80 dark:bg-background/80 backdrop-blur-md shadow-sm" : "bg-transparent"
+        "fixed top-0 left-0 right-0 z-50 px-6 py-4 transition-all duration-300",
+        isScrolled ? "bg-background/80 backdrop-blur-md shadow-sm" : "bg-transparent"
       )}
     >
-      <div className="container mx-auto px-4 md:px-6">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center">
-            <span className="text-xl font-bold text-sahel-green dark:text-sahel-greenLight">Sahel</span>
-            <span className="text-xl font-bold text-sahel-earth dark:text-sahel-sand">Restore</span>
-          </Link>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link 
-              to="/" 
-              className={cn(
-                "text-sm font-medium transition-colors",
-                location.pathname === "/" 
-                  ? "text-sahel-green dark:text-sahel-greenLight font-semibold" 
-                  : "text-gray-600 dark:text-gray-300 hover:text-sahel-earth dark:hover:text-sahel-sand"
-              )}
-            >
-              Home
-            </Link>
-            <Link 
-              to="/dashboard" 
-              className={cn(
-                "text-sm font-medium transition-colors",
-                location.pathname === "/dashboard" 
-                  ? "text-sahel-green dark:text-sahel-greenLight font-semibold" 
-                  : "text-gray-600 dark:text-gray-300 hover:text-sahel-earth dark:hover:text-sahel-sand"
-              )}
-            >
-              Dashboard
-            </Link>
-            
-            <div className="flex items-center space-x-4">
-              <ThemeToggle />
-              <Button variant="default" size="sm">
-                Get Started
-              </Button>
+      <div className="container mx-auto flex items-center justify-between">
+        <Link to="/" className="flex items-center space-x-2">
+          <div className="relative w-10 h-10 overflow-hidden rounded-full bg-sahel-green">
+            <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-lg">
+              G20
             </div>
           </div>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center space-x-2">
-            <ThemeToggle />
-            <Button
-              variant="ghost" 
-              size="icon"
-              onClick={() => setIsOpen(!isOpen)}
-              className="p-1"
-            >
-              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </Button>
+          <div className="flex flex-col">
+            <span className="font-semibold text-lg tracking-tight">SahelSmart</span>
+            <span className="text-xs text-muted-foreground">Land Restoration</span>
           </div>
-        </div>
+        </Link>
+
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center space-x-6">
+          {navLinks.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              className={cn(
+                "flex items-center space-x-1 font-medium text-sm transition-colors hover:text-primary",
+                location.pathname === link.path 
+                  ? "text-primary" 
+                  : "text-muted-foreground"
+              )}
+            >
+              <link.icon size={16} />
+              <span>{link.name}</span>
+              {location.pathname === link.path && (
+                <div className="absolute bottom-0 h-0.5 w-full bg-primary mt-6 animate-fade-in" />
+              )}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Mobile menu button */}
+        <button
+          onClick={toggleMobileMenu}
+          className="md:hidden text-foreground p-2 rounded-md"
+          aria-label="Toggle menu"
+        >
+          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
       </div>
 
-      {/* Mobile Menu */}
-      {isOpen && (
-        <div className="md:hidden bg-white dark:bg-background shadow-lg">
-          <div className="px-4 py-5 space-y-4">
-            <Link 
-              to="/" 
-              className={cn(
-                "block text-sm font-medium",
-                location.pathname === "/" 
-                  ? "text-sahel-green dark:text-sahel-greenLight font-semibold" 
-                  : "text-gray-600 dark:text-gray-300"
-              )}
-            >
-              Home
-            </Link>
-            <Link 
-              to="/dashboard" 
-              className={cn(
-                "block text-sm font-medium",
-                location.pathname === "/dashboard" 
-                  ? "text-sahel-green dark:text-sahel-greenLight font-semibold" 
-                  : "text-gray-600 dark:text-gray-300"
-              )}
-            >
-              Dashboard
-            </Link>
-            <div className="pt-2">
-              <Button variant="default" size="sm" className="w-full">
-                Get Started
-              </Button>
-            </div>
-          </div>
+      {/* Mobile Navigation */}
+      {mobileMenuOpen && (
+        <div className="absolute top-full left-0 right-0 bg-background/95 backdrop-blur-lg shadow-md animate-slide-in-right md:hidden">
+          <nav className="container mx-auto py-4 px-6 flex flex-col space-y-3">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={cn(
+                  "flex items-center justify-between p-3 rounded-md transition-colors",
+                  location.pathname === link.path 
+                    ? "bg-primary/10 text-primary" 
+                    : "text-foreground hover:bg-muted"
+                )}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <div className="flex items-center space-x-3">
+                  <link.icon size={18} />
+                  <span>{link.name}</span>
+                </div>
+                <ChevronRight size={16} className="text-muted-foreground" />
+              </Link>
+            ))}
+          </nav>
         </div>
       )}
-    </nav>
+    </header>
   );
 };
 

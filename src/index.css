@@ -91,7 +91,7 @@ html, body {
 }
 
 .glass-dark {
-  @apply bg-black bg-opacity-10 backdrop-filter backdrop-blur-xl border border-black border-opacity-20 shadow-lg dark:bg-white/5 dark:border-white/10;
+  @apply bg-black bg-opacity-10 backdrop-filter backdrop-blur-xl border border-black border-opacity-20 shadow-lg;
 }
 
 /* Custom scrollbar */
