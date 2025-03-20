@@ -41,7 +41,7 @@ const MapVisualization = ({
   const [isLoading, setIsLoading] = useState(true);
   const [activeLayer, setActiveLayer] = useState(dataType);
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [mapData, setMapData] = useState<{
+  const [mapData, setMapData<{
     [dataType: string]: {
       [year: number]: { 
         data: number[], 
