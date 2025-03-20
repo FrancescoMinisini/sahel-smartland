@@ -1,3 +1,4 @@
+
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -50,28 +51,6 @@ export const precipitationColorScale = [
   '#08519c',
   '#08306b'  // Dark blue - highest precipitation
 ];
-
-// Define color scale for vegetation (GPP) visualization
-export const vegetationColorScale = [
-  '#fff5eb', // Very light - lowest vegetation productivity
-  '#fee6ce',
-  '#fdd0a2',
-  '#fdae6b',
-  '#fd8d3c',
-  '#f16913',
-  '#d94801',
-  '#a63603',
-  '#7f2704'  // Dark orange/brown - highest vegetation productivity
-];
-
-// Colors for vegetation GPP visualization
-export const gppColors = {
-  'Very Low': '#fff5eb',
-  'Low': '#fee6ce',
-  'Moderate': '#fdae6b',
-  'High': '#f16913',
-  'Very High': '#7f2704'
-};
 
 // Load and process a GeoTIFF file
 export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{ 
@@ -153,18 +132,6 @@ export const getPrecipitationColor = (value: number, min: number, max: number): 
   // Map to color index
   const index = Math.floor(normalized * (precipitationColorScale.length - 1));
   return precipitationColorScale[index];
-};
-
-// Get color for GPP value between min and max
-export const getGPPColor = (value: number, min: number, max: number): string => {
-  if (value === 0) return '#f5f5f5'; // No data
-  
-  // Normalize the value to 0-1 range, clamping to the specified range
-  const normalized = Math.max(0, Math.min(1, (value - min) / (max - min || 1)));
-  
-  // Map to color index
-  const index = Math.floor(normalized * (vegetationColorScale.length - 1));
-  return vegetationColorScale[index];
 };
 
 // Enhanced rendering function that handles both land cover and precipitation data
@@ -449,131 +416,4 @@ export const getLandCoverTimeSeriesData = async (): Promise<Array<{ year: number
   
   // Return the parsed data with class names
   return rawData;
-};
-
-// Function to load GPP data file paths
-export const getGPPFilePaths = (): Record<number, string> => {
-  const years = getAvailableYears();
-  const paths: Record<number, string> = {};
-  
-  years.forEach(year => {
-    paths[year] = `/Datasets_Hackathon/MODIS_Gross_Primary_Production_GPP/${year}_GP.tif`;
-  });
-  
-  return paths;
-};
-
-// Function to load TIFF for vegetation (GPP) data
-export const loadGPPTIFF = async (year: number): Promise<{ 
-  data: number[], 
-  width: number, 
-  height: number,
-  min: number,
-  max: number
-}> => {
-  try {
-    const filePath = `/Datasets_Hackathon/MODIS_Gross_Primary_Production_GPP/${year}_GP.tif`;
-    
-    const response = await fetch(filePath);
-    const arrayBuffer = await response.arrayBuffer();
-    const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
-    const image = await tiff.getImage();
-    const width = image.getWidth();
-    const height = image.getHeight();
-    const values = await image.readRasters();
-    
-    // Convert the TypedArray to a regular Array
-    const data = Array.from(values[0] as Float32Array);
-    
-    // Find min/max values for scaling
-    let min = Number.MAX_VALUE;
-    let max = Number.MIN_VALUE;
-    
-    for (let i = 0; i < data.length; i++) {
-      const value = data[i];
-      if (value > 0) { // Ignore nodata values (usually 0 or negative)
-        min = Math.min(min, value);
-        max = Math.max(max, value);
-      }
-    }
-    
-    return { data, width, height, min, max };
-  } catch (error) {
-    console.error(`Error loading GPP TIFF for year ${year}:`, error);
-    return { data: [], width: 0, height: 0, min: 0, max: 1 };
-  }
-};
-
-// Calculate statistics from GPP data
-export const calculateGPPStats = (data: number[]): Record<string, number> => {
-  if (data.length === 0) return { average: 0, min: 0, max: 0, total: 0 };
-  
-  // Filter out NoData values (typically 0)
-  const validData = data.filter(value => value > 0);
-  
-  if (validData.length === 0) return { average: 0, min: 0, max: 0, total: 0 };
-  
-  const sum = validData.reduce((acc, val) => acc + val, 0);
-  const min = Math.min(...validData);
-  const max = Math.max(...validData);
-  
-  return {
-    average: sum / validData.length,
-    min,
-    max,
-    total: sum
-  };
-};
-
-// Generate GPP time series data
-export const getGPPTimeSeriesData = (): Array<{ [key: string]: number; year: number }> => {
-  return [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023].map(year => {
-    // These values are simulated based on available data
-    const baseProduction = 120 + Math.sin((year - 2010) / 5 * Math.PI) * 20;
-    const yearModifier = Math.max(0, 1 + (year - 2010) * 0.01);
-    
-    return {
-      year,
-      'Forest GPP': Math.round(baseProduction * 1.4 * yearModifier),
-      'Grassland GPP': Math.round(baseProduction * 0.8 * yearModifier),
-      'Cropland GPP': Math.round(baseProduction * 1.1 * yearModifier),
-      'Shrubland GPP': Math.round(baseProduction * 0.7 * yearModifier),
-      'Total GPP': Math.round(baseProduction * 4.0 * yearModifier)
-    };
-  });
-};
-
-// Get trend analysis for vegetation
-export const getVegetationTrendAnalysis = (): string => {
-  const gppData = getGPPTimeSeriesData();
-  
-  if (gppData.length < 2) {
-    return "Insufficient data to analyze vegetation trends.";
-  }
-  
-  const firstYear = gppData[0];
-  const lastYear = gppData[gppData.length - 1];
-  
-  // Calculate percentage changes
-  const totalChange = (lastYear['Total GPP'] - firstYear['Total GPP']) / firstYear['Total GPP'] * 100;
-  const forestChange = (lastYear['Forest GPP'] - firstYear['Forest GPP']) / firstYear['Forest GPP'] * 100;
-  const grasslandChange = (lastYear['Grassland GPP'] - firstYear['Grassland GPP']) / firstYear['Grassland GPP'] * 100;
-  const croplandChange = (lastYear['Cropland GPP'] - firstYear['Cropland GPP']) / firstYear['Cropland GPP'] * 100;
-  
-  return `Based on observed GPP (Gross Primary Production) data from ${firstYear.year} to ${lastYear.year}:
-  
-• Overall vegetation productivity has ${totalChange > 0 ? 'increased' : 'decreased'} by approximately ${Math.abs(totalChange).toFixed(1)}%.
-• Forest productivity shows a ${forestChange > 0 ? 'positive' : 'negative'} trend of ${Math.abs(forestChange).toFixed(1)}%.
-• Grassland productivity has ${grasslandChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(grasslandChange).toFixed(1)}%.
-• Cropland productivity shows a ${croplandChange > 0 ? 'growth' : 'decline'} of ${Math.abs(croplandChange).toFixed(1)}%.
-
-The most significant changes are observed in ${
-  Math.abs(forestChange) > Math.abs(grasslandChange) && Math.abs(forestChange) > Math.abs(croplandChange) 
-    ? 'forest areas' 
-    : Math.abs(grasslandChange) > Math.abs(croplandChange) 
-      ? 'grassland ecosystems' 
-      : 'agricultural lands'
-}.
-
-These trends can be attributed to a combination of climatic variations, land management practices, and the natural response of vegetation to changing environmental conditions.`;
 };

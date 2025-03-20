@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
 import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info } from 'lucide-react';
@@ -10,11 +11,7 @@ import {
   getAvailableYears,
   calculateLandCoverStats,
   calculatePrecipitationStats,
-  precipitationColorScale,
-  loadGPPTIFF,
-  getGPPColor,
-  calculateGPPStats,
-  vegetationColorScale
+  precipitationColorScale
 } from '@/lib/geospatialUtils';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -96,13 +93,7 @@ const MapVisualization = ({
         
         for (const yearToLoad of availableYears) {
           if (!mapData[dataType]?.[yearToLoad]) {
-            let data;
-            if (dataType === 'vegetation') {
-              data = await loadGPPTIFF(yearToLoad);
-            } else {
-              data = await loadTIFF(yearToLoad, dataType);
-            }
-            
+            const data = await loadTIFF(yearToLoad, dataType);
             setMapData(prev => ({
               ...prev,
               [dataType]: {
@@ -137,6 +128,7 @@ const MapVisualization = ({
     };
   }, [dataType]);
 
+  // Resize handler to maintain proper canvas dimensions
   useEffect(() => {
     const handleResize = () => {
       if (isLoading || !canvasRef.current || !containerRef.current) return;
@@ -161,23 +153,29 @@ const MapVisualization = ({
     const containerHeight = container.clientHeight;
     const dataAspectRatio = prevYearData.width / prevYearData.height;
     
+    // Set canvas display size to fill the container while maintaining aspect ratio
     let displayWidth, displayHeight;
     
     if (containerWidth / containerHeight > dataAspectRatio) {
+      // Container is wider than data
       displayHeight = containerHeight;
       displayWidth = displayHeight * dataAspectRatio;
     } else {
+      // Container is taller than data
       displayWidth = containerWidth;
       displayHeight = displayWidth / dataAspectRatio;
     }
     
+    // Apply CSS sizing (this is what's visually shown)
     canvas.style.width = `${displayWidth}px`;
     canvas.style.height = `${displayHeight}px`;
     
-    const scaleFactor = dataType === 'precipitation' ? 2 : 1;
+    // For better rendering quality, set canvas dimensions higher than display size
+    const scaleFactor = dataType === 'precipitation' ? 2 : 1; // Higher resolution for precipitation
     canvas.width = prevYearData.width * scaleFactor; 
     canvas.height = prevYearData.height * scaleFactor;
     
+    // Render with the adjusted canvas
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.scale(scaleFactor, scaleFactor);
@@ -239,81 +237,32 @@ const MapVisualization = ({
       if (dataType === 'precipitation') {
         min = 0;
         max = 500;
-      } else if (dataType === 'vegetation') {
-        min = prevYearData.min !== undefined ? prevYearData.min : 0;
-        max = prevYearData.max !== undefined ? prevYearData.max : 500;
       }
     } else {
       renderData = prevYearData.data;
-      
-      if (dataType === 'precipitation' || dataType === 'vegetation') {
-        min = prevYearData.min !== undefined ? prevYearData.min : 0;
-        max = prevYearData.max !== undefined ? prevYearData.max : 500;
-      }
     }
     
-    const renderOptions = {
-      opacity: 1,
-      dataType,
-      min,
-      max,
-      smoothing: dataType === 'precipitation' || dataType === 'vegetation'
-    };
+    // Use the enhanced rendering with appropriate options for each data type
+    renderTIFFToCanvas(
+      ctx, 
+      renderData, 
+      prevYearData.width, 
+      prevYearData.height,
+      {
+        opacity: 1,
+        dataType,
+        min,
+        max,
+        smoothing: dataType === 'precipitation'
+      }
+    );
     
-    if (dataType === 'vegetation') {
-      ctx.clearRect(0, 0, prevYearData.width, prevYearData.height);
-      
-      const imageData = ctx.createImageData(prevYearData.width, prevYearData.height);
-      const pixels = imageData.data;
-      
-      for (let i = 0; i < renderData.length; i++) {
-        const value = renderData[i];
-        let color = getGPPColor(value, min, max);
-        
-        const r = parseInt(color.slice(1, 3), 16);
-        const g = parseInt(color.slice(3, 5), 16);
-        const b = parseInt(color.slice(5, 7), 16);
-        
-        const pixelIndex = i * 4;
-        pixels[pixelIndex] = r;
-        pixels[pixelIndex + 1] = g;
-        pixels[pixelIndex + 2] = b;
-        pixels[pixelIndex + 3] = value > 0 ? 255 : 0;
-      }
-      
-      ctx.putImageData(imageData, 0, 0);
-      
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = prevYearData.width;
-      tempCanvas.height = prevYearData.height;
-      const tempCtx = tempCanvas.getContext('2d');
-      
-      if (tempCtx) {
-        tempCtx.putImageData(imageData, 0, 0);
-        ctx.clearRect(0, 0, prevYearData.width, prevYearData.height);
-        ctx.filter = 'blur(0.5px)';
-        ctx.drawImage(tempCanvas, 0, 0);
-        ctx.filter = 'none';
-      }
-      
-      const stats = calculateGPPStats(renderData);
+    if (dataType === 'landCover') {
+      const stats = calculateLandCoverStats(renderData);
       setCurrentStats(stats);
-    } else {
-      renderTIFFToCanvas(
-        ctx, 
-        renderData, 
-        prevYearData.width, 
-        prevYearData.height,
-        renderOptions
-      );
-      
-      if (dataType === 'landCover') {
-        const stats = calculateLandCoverStats(renderData);
-        setCurrentStats(stats);
-      } else if (dataType === 'precipitation') {
-        const stats = calculatePrecipitationStats(renderData);
-        setCurrentStats(stats);
-      }
+    } else if (dataType === 'precipitation') {
+      const stats = calculatePrecipitationStats(renderData);
+      setCurrentStats(stats);
     }
   };
 
@@ -451,27 +400,6 @@ const MapVisualization = ({
             <div className="flex justify-between text-xs mt-1">
               <span>0 mm</span>
               <span>500 mm</span>
-            </div>
-          </div>
-        </div>
-      );
-    } else if (dataType === 'vegetation') {
-      return (
-        <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 shadow-md">
-          <div className="flex flex-col">
-            <span className="text-xs font-medium mb-1">Gross Primary Production (gC/m²/year)</span>
-            <div className="flex h-4 w-full">
-              {vegetationColorScale.map((color, i) => (
-                <div 
-                  key={i} 
-                  className="h-full flex-1" 
-                  style={{ backgroundColor: color }}
-                />
-              ))}
-            </div>
-            <div className="flex justify-between text-xs mt-1">
-              <span>Low</span>
-              <span>High</span>
             </div>
           </div>
         </div>
