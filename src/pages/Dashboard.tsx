@@ -254,33 +254,31 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <div>
-                  {/* Grid layout with two columns */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {/* Map visualization that takes 2/3 of the width */}
-                    <div className="md:col-span-2">
-                      <MapVisualization 
-                        className="w-full" 
-                        year={selectedYear}
-                        expandedView={true} 
-                      />
-                      <div className="text-center mt-2">
-                        <Link 
-                          to="/map" 
-                          className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
-                        >
-                          <ZoomIn size={14} className="mr-1" /> 
-                          Open full map view
-                        </Link>
-                      </div>
+                  {/* Modified layout to accommodate expanded map view */}
+                  <div className="flex flex-col gap-8">
+                    {/* Expanded map visualization that takes the full width */}
+                    <MapVisualization 
+                      className="w-full" 
+                      year={selectedYear}
+                      expandedView={true} 
+                    />
+                    <div className="text-center">
+                      <Link 
+                        to="/map" 
+                        className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
+                      >
+                        <ZoomIn size={14} className="mr-1" /> 
+                        Open full map view
+                      </Link>
                     </div>
 
-                    {/* Charts and visualizations taking 1/3 of the width */}
+                    {/* Charts and visualizations below the map */}
                     <div className="bg-muted/30 rounded-lg p-4">
                       {activeTab === 'landCover' && (
-                        <div className="text-center p-4">
-                          <h3 className="text-xl font-semibold mb-4">Land Cover Changes</h3>
-                          <p className="text-muted-foreground text-sm mb-6">
-                            Land cover changes in the Sahel region over time.
+                        <div className="text-center p-8">
+                          <h3 className="text-xl font-semibold mb-4">Land Cover Change (2010-2023)</h3>
+                          <p className="text-muted-foreground mb-6">
+                            Visualization of land cover changes in the Sahel region over the past decade.
                           </p>
                           <div className="h-48 bg-sahel-sandLight rounded-lg flex items-center justify-center">
                             <BarChart2 size={48} className="text-sahel-earth/30" />
@@ -289,10 +287,10 @@ const Dashboard = () => {
                       )}
                       
                       {activeTab === 'vegetation' && (
-                        <div className="text-center p-4">
-                          <h3 className="text-xl font-semibold mb-4">Vegetation Trends</h3>
-                          <p className="text-muted-foreground text-sm mb-6">
-                            Productivity trends across the region.
+                        <div className="text-center p-8">
+                          <h3 className="text-xl font-semibold mb-4">Vegetation Productivity (2010-2023)</h3>
+                          <p className="text-muted-foreground mb-6">
+                            Analysis of gross primary production trends across the Sahel region.
                           </p>
                           <div className="h-48 bg-sahel-greenLight/10 rounded-lg flex items-center justify-center">
                             <Leaf size={48} className="text-sahel-green/30" />
@@ -301,10 +299,10 @@ const Dashboard = () => {
                       )}
                       
                       {activeTab === 'precipitation' && (
-                        <div className="text-center p-4">
-                          <h3 className="text-xl font-semibold mb-4">Precipitation Patterns</h3>
-                          <p className="text-muted-foreground text-sm mb-6">
-                            Annual rainfall data visualization.
+                        <div className="text-center p-8">
+                          <h3 className="text-xl font-semibold mb-4">Precipitation Patterns (2010-2023)</h3>
+                          <p className="text-muted-foreground mb-6">
+                            Visualization of annual rainfall data across the Sahel region.
                           </p>
                           <div className="h-48 bg-sahel-blue/10 rounded-lg flex items-center justify-center">
                             <CloudRain size={48} className="text-sahel-blue/30" />
@@ -313,10 +311,10 @@ const Dashboard = () => {
                       )}
                       
                       {activeTab === 'population' && (
-                        <div className="text-center p-4">
-                          <h3 className="text-xl font-semibold mb-4">Population Density</h3>
-                          <p className="text-muted-foreground text-sm mb-6">
-                            Population growth and distribution analysis.
+                        <div className="text-center p-8">
+                          <h3 className="text-xl font-semibold mb-4">Population Density (2010-2023)</h3>
+                          <p className="text-muted-foreground mb-6">
+                            Analysis of population growth and distribution in the Sahel region.
                           </p>
                           <div className="h-48 bg-sahel-earth/10 rounded-lg flex items-center justify-center">
                             <Users size={48} className="text-sahel-earth/30" />
@@ -378,7 +376,7 @@ const Dashboard = () => {
             </div>
           </div>
           
-          {/* Key Findings section */}
+          {/* Key Findings section moved to the bottom of the page */}
           <div className="bg-white dark:bg-muted rounded-xl shadow-sm border border-border/40 overflow-hidden">
             <div className="p-6">
               <h3 className="text-lg font-semibold mb-4">Key Findings</h3>
