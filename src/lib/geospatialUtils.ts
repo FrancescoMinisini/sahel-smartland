@@ -291,17 +291,132 @@ export const getAccuratePrecipitationData = (year: number): Record<string, numbe
   };
 };
 
-// Function to generate the full time series data for precipitation
-export const getPrecipitationTimeSeriesData = (): Array<{ [key: string]: number; year: number }> => {
-  return [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023].map(year => {
-    const data = getAccuratePrecipitationData(year);
+// Function to load and parse the precipitation data by region from CSV
+export const loadPrecipitationCSVData = async (): Promise<Array<{ year: number, Overall: number, South: number, Center: number, North: number }>> => {
+  try {
+    console.log('Loading precipitation CSV data...');
+    const response = await fetch('/Datasets_Hackathon/Graph_data/precipitation_averages.csv');
+    const csv = await response.text();
+    console.log('Precipitation CSV text loaded:', csv.substring(0, 100) + '...');
+    
+    // Parse CSV
+    const lines = csv.split('\n');
+    const headers = lines[0].split(',');
+    console.log('Precipitation CSV headers:', headers);
+    
+    // Skip header row and map data rows to objects
+    const result = lines.slice(1)
+      .filter(line => line.trim() !== '') // Skip empty lines
+      .map(line => {
+        const values = line.split(',');
+        return {
+          year: parseInt(values[0]),
+          Overall: parseFloat(values[1]),
+          South: parseFloat(values[2]),
+          Center: parseFloat(values[3]),
+          North: parseFloat(values[4])
+        };
+      })
+      .sort((a, b) => a.year - b.year); // Sort by year ascending
+
+    console.log('Parsed precipitation data:', result);
+    return result;
+  } catch (error) {
+    console.error('Error loading precipitation CSV data:', error);
+    return [];
+  }
+};
+
+// Function to get precipitation data by region for charts
+export const getPrecipitationByRegionData = async (year: number): Promise<Array<{ name: string, value: number, color: string, change: number, rawChange: number }>> => {
+  const precipData = await loadPrecipitationCSVData();
+  
+  // If we couldn't load data or it's empty, return empty array
+  if (precipData.length === 0) {
+    console.warn('No precipitation data loaded from CSV');
+    return [];
+  }
+  
+  // Find the data for the selected year
+  const yearData = precipData.find(d => d.year === year);
+  if (!yearData) {
+    console.warn(`No precipitation data found for year ${year}`);
+    return [];
+  }
+  
+  // Find data from previous year to calculate change
+  let prevYearData = precipData.find(d => d.year === year - 1);
+  // If no previous year data, use the earliest available
+  if (!prevYearData && precipData.length > 0) {
+    prevYearData = precipData[0];
+  }
+  
+  // Define colors for regions
+  const colors = {
+    Overall: '#4575b4',
+    South: '#74add1',
+    Center: '#91bfdb',
+    North: '#f46d43'
+  };
+  
+  // Create data array for charts
+  const chartData = Object.entries(yearData)
+    .filter(([key]) => key !== 'year') // Skip the year field
+    .map(([region, value]) => {
+      const previousValue = prevYearData ? prevYearData[region as keyof typeof prevYearData] as number : value;
+      const changeValue = value - previousValue;
+      const percentChange = previousValue !== 0 ? (changeValue / previousValue) * 100 : 0;
+      
+      return {
+        name: region,
+        value: Math.round(value * 1000) / 1000, // Round to 3 decimal places
+        color: colors[region as keyof typeof colors] || '#cccccc',
+        change: Math.round(percentChange * 10) / 10, // Round percent change to 1 decimal place
+        rawChange: Math.round(changeValue * 1000) / 1000 // Round raw change to 3 decimal places
+      };
+    });
+  
+  console.log('Precipitation by region chart data:', chartData);
+  return chartData;
+};
+
+// Function to generate time series data for precipitation by region
+export const getPrecipitationTimeSeriesData = async (): Promise<Array<{ [key: string]: number; year: number }>> => {
+  const precipData = await loadPrecipitationCSVData();
+  
+  // If we couldn't load data or it's empty, return dummy data
+  if (precipData.length === 0) {
+    console.warn('No precipitation data loaded from CSV, using fallback data');
+    return [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023].map(year => {
+      const data = getAccuratePrecipitationData(year);
+      return {
+        year,
+        'Annual': data.annual,
+        'Dry Season': data.dryseason,
+        'Wet Season': data.wetseason,
+        'Extreme Events': data.extremeEvents,
+        'Water Stress Index': data.waterStressIndex
+      };
+    });
+  }
+  
+  // Add the extreme events and water stress index to the data
+  return precipData.map(yearData => {
+    const baseData = {
+      year: yearData.year,
+      Overall: yearData.Overall,
+      South: yearData.South,
+      Center: yearData.Center,
+      North: yearData.North
+    };
+    
+    // Get extreme events and water stress from the original function based on year
+    const additionalData = getAccuratePrecipitationData(yearData.year);
+    
     return {
-      year,
-      'Annual': data.annual,
-      'Dry Season': data.dryseason,
-      'Wet Season': data.wetseason,
-      'Extreme Events': data.extremeEvents,
-      'Water Stress Index': data.waterStressIndex
+      ...baseData,
+      'Extreme Events': additionalData.extremeEvents,
+      'Water Stress Index': additionalData.waterStressIndex
     };
   });
 };
