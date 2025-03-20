@@ -16,6 +16,42 @@ interface ChartCarouselProps {
 }
 
 const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselProps) => {
+  // Filter out any data points with zero values
+  const filteredData = data.filter(item => item.value > 0);
+  
+  // Get all land cover types that appear in the time series data
+  const getAllLandCoverTypes = () => {
+    const types = new Set<string>();
+    timeSeriesData.forEach(yearData => {
+      Object.keys(yearData).forEach(key => {
+        if (key !== 'year' && yearData[key] > 0) {
+          types.add(key);
+        }
+      });
+    });
+    return Array.from(types);
+  };
+  
+  const landCoverTypes = getAllLandCoverTypes();
+  
+  // Color mapping for consistency
+  const getColorForType = (type: string) => {
+    const colorMap: Record<string, string> = {
+      'Forests': '#1a9850',
+      'Shrublands': '#91cf60',
+      'Grasslands': '#fee08b',
+      'Croplands': '#fc8d59',
+      'Urban': '#d73027',
+      'Barren': '#bababa',
+      'Water': '#4575b4',
+      'Wetlands': '#74add1',
+      'Savannas': '#f46d43',
+      'Snow and Ice': '#ffffff',
+    };
+    
+    return colorMap[type] || `#${Math.floor(Math.random()*16777215).toString(16)}`;
+  };
+
   return (
     <div className={cn("relative", className)}>
       <Carousel
@@ -31,7 +67,7 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
             <div className="h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={data}
+                  data={filteredData}
                   margin={{
                     top: 20,
                     right: 30,
@@ -60,7 +96,7 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
                     dataKey="value" 
                     name="Area (thousand pixels)"
                   >
-                    {data.map((entry, index) => (
+                    {filteredData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Bar>
@@ -75,7 +111,7 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={data}
+                    data={filteredData}
                     dataKey="value"
                     nameKey="name"
                     cx="50%"
@@ -83,7 +119,7 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
                     outerRadius={150}
                     label={(entry) => entry.name}
                   >
-                    {data.map((entry, index) => (
+                    {filteredData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -127,13 +163,18 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
                   <Tooltip />
                   <Legend />
                   
-                  {/* Show the key land cover types only to avoid overcrowding */}
-                  <Area type="monotone" dataKey="Forests" stackId="1" stroke="#1a9850" fill="#1a9850" fillOpacity={0.7} />
-                  <Area type="monotone" dataKey="Shrublands" stackId="1" stroke="#91cf60" fill="#91cf60" fillOpacity={0.7} />
-                  <Area type="monotone" dataKey="Grasslands" stackId="1" stroke="#fee08b" fill="#fee08b" fillOpacity={0.7} />
-                  <Area type="monotone" dataKey="Croplands" stackId="1" stroke="#fc8d59" fill="#fc8d59" fillOpacity={0.7} />
-                  <Area type="monotone" dataKey="Urban" stackId="1" stroke="#d73027" fill="#d73027" fillOpacity={0.7} />
-                  <Area type="monotone" dataKey="Barren" stackId="1" stroke="#bababa" fill="#bababa" fillOpacity={0.7} />
+                  {/* Dynamically render all land cover types with non-zero values */}
+                  {landCoverTypes.map((type, index) => (
+                    <Area 
+                      key={type}
+                      type="monotone" 
+                      dataKey={type} 
+                      stackId="1" 
+                      stroke={getColorForType(type)} 
+                      fill={getColorForType(type)} 
+                      fillOpacity={0.7} 
+                    />
+                  ))}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
