@@ -520,7 +520,7 @@ These demographic shifts have important implications for land use planning, reso
       
       <div className="mt-6">
         <Tabs defaultValue={initialTab === 'landCover' ? 'land-cover' : initialTab === 'precipitation' ? 'precipitation' : initialTab === 'vegetation' ? 'vegetation' : 'population'} onValueChange={handleTabChange}>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 sm:gap-0">
             <TabsList className="grid sm:w-auto grid-cols-2 sm:grid-cols-4 sm:inline-grid">
               <TabsTrigger value="land-cover" className="flex items-center gap-1.5">
                 <MapPin size={14} />
@@ -542,25 +542,27 @@ These demographic shifts have important implications for land use planning, reso
               </TabsTrigger>
             </TabsList>
             
-            <div className="hidden md:flex items-center gap-2">
-              <CalendarDays size={16} className="text-muted-foreground" />
+            <div className="hidden md:flex items-center gap-2 flex-1 max-w-xl">
+              <CalendarDays size={16} className="text-muted-foreground flex-shrink-0" />
               <YearSlider 
                 initialValue={year}
                 onChange={handleYearChange}
                 min={2010}
                 max={2023}
                 step={1}
+                className="w-full"
               />
             </div>
           </div>
           
-          <div className="md:hidden mb-4">
+          <div className="md:hidden mb-4 w-full">
             <YearSlider 
               initialValue={year}
               onChange={handleYearChange}
               min={2010}
               max={2023}
               step={1}
+              className="w-full"
             />
           </div>
           
