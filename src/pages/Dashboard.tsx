@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -20,7 +21,9 @@ import {
   Layers,
   ZoomIn,
   HelpCircle,
-  Info
+  Info,
+  Sprout,
+  Trees
 } from 'lucide-react';
 import { 
   landCoverClasses, 
@@ -29,7 +32,8 @@ import {
   getAccuratePrecipitationData,
   getPrecipitationTimeSeriesData,
   getLandCoverTimeSeriesData,
-  loadPrecipitationByRegion
+  loadPrecipitationByRegion,
+  getVegetationTimeSeriesData
 } from '@/lib/geospatialUtils';
 import ChartCarousel from '@/components/ChartCarousel';
 
@@ -39,7 +43,10 @@ const Dashboard = () => {
   const [selectedYear, setSelectedYear] = useState(2023);
   const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
   const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
+  const [vegetationStats, setVegetationStats] = useState<Record<string, number>>({});
+  const [previousVegetationStats, setPreviousVegetationStats] = useState<Record<string, number>>({});
   const [timeSeriesData, setTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
+  const [vegetationTimeSeriesData, setVegetationTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
   const [regionalPrecipitationData, setRegionalPrecipitationData] = useState<Array<{year: number, Overall: number, South: number, Center: number, North: number}>>([]);
   
   const dataTabs = [
@@ -52,12 +59,19 @@ const Dashboard = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
+        // Load land cover data
         const landCoverData = await getLandCoverTimeSeriesData();
         setTimeSeriesData(landCoverData);
         
+        // Load precipitation data
         const precipData = await loadPrecipitationByRegion();
         console.log("Loaded precipitation by region:", precipData);
         setRegionalPrecipitationData(precipData);
+        
+        // Load vegetation productivity data
+        const vegetationData = getVegetationTimeSeriesData();
+        console.log("Loaded vegetation productivity data:", vegetationData);
+        setVegetationTimeSeriesData(vegetationData);
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
@@ -83,6 +97,7 @@ const Dashboard = () => {
 
   const handleYearChange = (year: number) => {
     setPreviousYearStats({...landCoverStats});
+    setPreviousVegetationStats({...vegetationStats});
     setIsLoading(true);
     setSelectedYear(year);
     
@@ -92,7 +107,11 @@ const Dashboard = () => {
   };
 
   const handleStatsChange = (stats: Record<string, number>) => {
-    setLandCoverStats(stats);
+    if (activeTab === 'landCover') {
+      setLandCoverStats(stats);
+    } else if (activeTab === 'vegetation') {
+      setVegetationStats(stats);
+    }
   };
 
   const chartData = Object.entries(landCoverStats)
@@ -145,6 +164,44 @@ const Dashboard = () => {
       rawChange: -6
     }
   ];
+
+  // Generate vegetation chart data from time series data
+  const vegetationChartData = (() => {
+    const currentYear = vegetationTimeSeriesData.find(d => d.year === selectedYear) ||
+                        vegetationTimeSeriesData[vegetationTimeSeriesData.length - 1] ||
+                        { year: selectedYear, Forest: 1200, Grassland: 800, Cropland: 900, Shrubland: 600 };
+    
+    return [
+      {
+        name: 'Forest',
+        value: currentYear.Forest || 1200,
+        color: '#1a9850', // Dark green
+        change: 1.2,
+        rawChange: 15
+      },
+      {
+        name: 'Grassland',
+        value: currentYear.Grassland || 800,
+        color: '#fee08b', // Light yellow
+        change: -0.5,
+        rawChange: -4
+      },
+      {
+        name: 'Cropland',
+        value: currentYear.Cropland || 900,
+        color: '#fc8d59', // Orange
+        change: 0.8,
+        rawChange: 7
+      },
+      {
+        name: 'Shrubland',
+        value: currentYear.Shrubland || 600,
+        color: '#91cf60', // Medium green
+        change: -0.3,
+        rawChange: -2
+      }
+    ];
+  })();
 
   const getTrendAnalysis = () => {
     if (timeSeriesData.length < 2) {
@@ -203,6 +260,41 @@ const Dashboard = () => {
                     grasslandsTrend === "decreasing" ? ", suggesting possible conversion to cropland or urban areas.\n" : ".\n";
     
     return analysisText;
+  };
+
+  const getVegetationTrendAnalysis = () => {
+    if (vegetationTimeSeriesData.length < 2) {
+      return "Insufficient data to analyze vegetation productivity trends.";
+    }
+    
+    const firstYearData = vegetationTimeSeriesData[0];
+    const lastYearData = vegetationTimeSeriesData[vegetationTimeSeriesData.length - 1];
+    
+    const forestChange = ((lastYearData.Forest - firstYearData.Forest) / firstYearData.Forest) * 100;
+    const grasslandChange = ((lastYearData.Grassland - firstYearData.Grassland) / firstYearData.Grassland) * 100;
+    const croplandChange = ((lastYearData.Cropland - firstYearData.Cropland) / firstYearData.Cropland) * 100;
+    const shrublandChange = ((lastYearData.Shrubland - firstYearData.Shrubland) / firstYearData.Shrubland) * 100;
+    
+    return `Based on Gross Primary Production (GPP) data from ${firstYearData.year} to ${lastYearData.year}:
+    
+• Forest productivity has changed by ${forestChange.toFixed(1)}% over the past ${lastYearData.year - firstYearData.year} years.
+• Grassland productivity has changed by ${grasslandChange.toFixed(1)}%.
+• Cropland productivity has changed by ${croplandChange.toFixed(1)}%.
+• Shrubland productivity has changed by ${shrublandChange.toFixed(1)}%.
+
+The data indicates ${forestChange > 0 ? "improvements" : "declines"} in forest carbon sequestration and ${croplandChange > 0 ? "gains" : "losses"} in agricultural productivity. 
+${
+  Math.abs(forestChange) > Math.abs(grasslandChange) && 
+  Math.abs(forestChange) > Math.abs(croplandChange) && 
+  Math.abs(forestChange) > Math.abs(shrublandChange)
+    ? "Forests show the most significant changes, suggesting they are most responsive to environmental factors."
+    : Math.abs(croplandChange) > Math.abs(grasslandChange) && 
+      Math.abs(croplandChange) > Math.abs(shrublandChange)
+      ? "Croplands show the most significant changes, which may be related to agricultural practices and climate factors."
+      : "Multiple vegetation types show significant changes, indicating complex ecosystem dynamics."
+}
+
+These productivity trends can help identify areas for conservation focus and agricultural improvement.`;
   };
 
   const getPrecipitationTrends = () => {
@@ -269,7 +361,7 @@ This regional analysis is essential for targeted water resource management and c
       title: 'Vegetation Production', 
       value: selectedYear > 2020 ? '+8.2%' : selectedYear > 2015 ? '+6.7%' : '+4.2%', 
       description: 'Average increase in gross primary production since 2010',
-      icon: <BarChart2 size={20} />,
+      icon: <Sprout size={20} />,
       trend: { value: selectedYear > 2020 ? 8.2 : selectedYear > 2015 ? 6.7 : 4.2, isPositive: true },
       analyticsData: [
         { year: 2010, value: 1.5 },
@@ -462,6 +554,7 @@ This regional analysis is essential for targeted water resource management and c
                             year={selectedYear}
                             expandedView={true}
                             onStatsChange={handleStatsChange}
+                            dataType="landCover"
                           />
                         </div>
                         <div className="text-center mt-3">
@@ -478,13 +571,52 @@ This regional analysis is essential for targeted water resource management and c
                   )}
                   
                   {activeTab === 'vegetation' && (
-                    <div className="text-center p-8">
-                      <h3 className="text-xl font-semibold mb-4">Vegetation Productivity (2010-2023)</h3>
-                      <p className="text-muted-foreground mb-6">
-                        Analysis of gross primary production trends across the Sahel region.
-                      </p>
-                      <div className="h-48 bg-sahel-greenLight/10 rounded-lg flex items-center justify-center">
-                        <Leaf size={48} className="text-sahel-green/30" />
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                      <div className="lg:col-span-2 space-y-6">
+                        <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
+                          <h3 className="text-lg font-medium mb-4">Vegetation Productivity ({selectedYear})</h3>
+                          <ChartCarousel 
+                            data={vegetationChartData} 
+                            timeSeriesData={vegetationTimeSeriesData}
+                            dataType="vegetation"
+                          />
+                          <div className="mt-4 text-sm text-muted-foreground">
+                            <div className="flex items-start gap-2 mb-2">
+                              <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                              <p>
+                                The charts show Gross Primary Production (GPP) data, which is a measure of vegetation productivity. 
+                                Higher GPP values indicate greater photosynthetic activity and carbon sequestration.
+                              </p>
+                            </div>
+                            <div className="mt-3 p-3 bg-muted rounded-md">
+                              <h4 className="font-medium mb-2">Vegetation Productivity Analysis:</h4>
+                              <p className="whitespace-pre-line">
+                                {getVegetationTrendAnalysis()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="lg:col-span-1 h-full">
+                        <div className="h-[400px]">
+                          <MapVisualization 
+                            className="w-full h-full" 
+                            year={selectedYear}
+                            expandedView={true}
+                            onStatsChange={handleStatsChange}
+                            dataType="vegetation"
+                          />
+                        </div>
+                        <div className="text-center mt-3">
+                          <Link 
+                            to="/map" 
+                            className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
+                          >
+                            <ZoomIn size={14} className="mr-1" /> 
+                            Open full map view
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   )}

@@ -1,7 +1,7 @@
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart, LineChart, Line, ComposedChart, Scatter } from 'recharts';
 import { cn } from "@/lib/utils";
-import { regionalPrecipitationColors } from "@/lib/geospatialUtils";
+import { regionalPrecipitationColors, vegetationProductivityScale } from "@/lib/geospatialUtils";
 
 interface ChartCarouselProps {
   data: Array<{
@@ -68,6 +68,13 @@ const ChartCarousel = ({
     // For regional precipitation time series, we keep the data as is
     // The timeSeriesData should contain regional data (Overall, South, Center, North)
     convertedTimeSeriesData = timeSeriesData;
+  } else if (dataType === 'vegetation') {
+    // For vegetation data, we'll show GPP values in gC/m²/year
+    convertedData = filteredData;
+    displayUnit = 'gC/m²/year';
+    
+    // For vegetation time series, we keep the data as is
+    convertedTimeSeriesData = timeSeriesData;
   }
   
   // Debug function to ensure proper data
@@ -75,6 +82,9 @@ const ChartCarousel = ({
     if (dataType === 'precipitation') {
       console.log('Precipitation data for charts:', convertedData);
       console.log('Precipitation time series data:', convertedTimeSeriesData);
+    } else if (dataType === 'vegetation') {
+      console.log('Vegetation data for charts:', convertedData);
+      console.log('Vegetation time series data:', convertedTimeSeriesData);
     }
   };
 
@@ -95,6 +105,14 @@ const ChartCarousel = ({
         }
       }
       return [`${value.toLocaleString()}`, name];
+    } else if (dataType === 'vegetation') {
+      // For vegetation productivity data
+      if (name === 'Forest' || name === 'Grassland' || name === 'Cropland' || name === 'Shrubland' || name === 'Total') {
+        return [`${value.toLocaleString()} ${displayUnit}`, name];
+      } else if (name === 'AnnualChange') {
+        return [`${value > 0 ? '+' : ''}${value.toLocaleString()}%`, `Annual Change`];
+      }
+      return [`${value.toLocaleString()} ${displayUnit}`, name];
     }
     // Default for land cover
     return [`${value.toLocaleString()} ${displayUnit}`, name];
@@ -103,6 +121,19 @@ const ChartCarousel = ({
   // Get color for regional data
   const getRegionalColor = (region: string) => {
     return regionalPrecipitationColors[region as keyof typeof regionalPrecipitationColors] || '#999999';
+  };
+
+  // Get color for vegetation data
+  const getVegetationColor = (key: string) => {
+    const colorMap: Record<string, string> = {
+      'Forest': '#1a9850',
+      'Grassland': '#fee08b',
+      'Cropland': '#fc8d59',
+      'Shrubland': '#91cf60',
+      'Total': '#6baed6',
+      'AnnualChange': '#d53e4f'
+    };
+    return colorMap[key] || '#999999';
   };
 
   return (
@@ -139,6 +170,8 @@ const ChartCarousel = ({
                     label={{ 
                       value: dataType === 'precipitation' ? 
                         'Precipitation Index' : 
+                        dataType === 'vegetation' ? 
+                        `Productivity (${displayUnit})` :
                         `Area (${displayUnit})`, 
                       angle: -90, 
                       position: 'insideLeft',
@@ -151,6 +184,8 @@ const ChartCarousel = ({
                     dataKey="value" 
                     name={dataType === 'precipitation' ? 
                       'Precipitation Index' : 
+                      dataType === 'vegetation' ?
+                      `Productivity (${displayUnit})` :
                       `Area (${displayUnit})`}
                   >
                     {convertedData.map((entry, index) => (
@@ -255,6 +290,70 @@ const ChartCarousel = ({
                       name="North"
                     />
                   </LineChart>
+                ) : dataType === 'vegetation' ? (
+                  <LineChart
+                    data={convertedTimeSeriesData}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 20,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="year" 
+                      label={{ 
+                        value: 'Year', 
+                        position: 'insideBottom',
+                        offset: -10
+                      }}
+                    />
+                    <YAxis 
+                      label={{ 
+                        value: `Productivity (${displayUnit})`, 
+                        angle: -90, 
+                        position: 'insideLeft',
+                        style: { textAnchor: 'middle' }
+                      }} 
+                    />
+                    <Tooltip formatter={formatTooltip} />
+                    <Legend />
+                    
+                    {/* Vegetation productivity by land cover type */}
+                    <Line 
+                      type="monotone" 
+                      dataKey="Forest" 
+                      stroke={getVegetationColor('Forest')} 
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      name="Forest"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="Grassland" 
+                      stroke={getVegetationColor('Grassland')} 
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      name="Grassland"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="Cropland" 
+                      stroke={getVegetationColor('Cropland')} 
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      name="Cropland"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="Shrubland" 
+                      stroke={getVegetationColor('Shrubland')} 
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      name="Shrubland"
+                    />
+                  </LineChart>
                 ) : (
                   <AreaChart
                     data={convertedTimeSeriesData}
@@ -303,7 +402,87 @@ const ChartCarousel = ({
                 Regional Precipitation Index Trends (2010-2023)
               </div>
             )}
+            {dataType === 'vegetation' && (
+              <div className="text-xs text-center mt-1 text-muted-foreground">
+                Vegetation Productivity by Land Cover Type (2010-2023)
+              </div>
+            )}
           </CarouselItem>
+
+          {/* Specialized Chart for Vegetation Productivity Changes */}
+          {dataType === 'vegetation' && (
+            <CarouselItem className="md:basis-full">
+              <div className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart
+                    data={convertedTimeSeriesData}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 20,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="year" 
+                      label={{ 
+                        value: 'Year', 
+                        position: 'insideBottom',
+                        offset: -10
+                      }}
+                    />
+                    <YAxis 
+                      yAxisId="left"
+                      label={{ 
+                        value: 'Total Productivity', 
+                        angle: -90, 
+                        position: 'insideLeft',
+                        style: { textAnchor: 'middle' }
+                      }} 
+                    />
+                    <YAxis 
+                      yAxisId="right"
+                      orientation="right"
+                      label={{ 
+                        value: 'Annual Change (%)', 
+                        angle: 90, 
+                        position: 'insideRight',
+                        style: { textAnchor: 'middle' }
+                      }} 
+                    />
+                    <Tooltip formatter={formatTooltip} />
+                    <Legend />
+                    
+                    {/* Total productivity as area */}
+                    <Area 
+                      yAxisId="left"
+                      type="monotone" 
+                      dataKey="Total" 
+                      fill={getVegetationColor('Total')} 
+                      stroke={getVegetationColor('Total')}
+                      fillOpacity={0.2}
+                      name="Total Productivity"
+                    />
+                    
+                    {/* Annual change as line with right axis */}
+                    <Line 
+                      yAxisId="right"
+                      type="monotone" 
+                      dataKey="AnnualChange" 
+                      stroke={getVegetationColor('AnnualChange')} 
+                      strokeWidth={2}
+                      dot={{ r: 5 }}
+                      name="Annual Change"
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="text-xs text-center mt-1 text-muted-foreground">
+                Total Vegetation Productivity and Annual Change Rate
+              </div>
+            </CarouselItem>
+          )}
 
           {/* Specialized Chart for Water Stress Index and Extreme Events - Only for Precipitation */}
           {dataType === 'precipitation' && (

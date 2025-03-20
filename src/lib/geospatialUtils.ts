@@ -1,4 +1,3 @@
-
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -52,6 +51,19 @@ export const precipitationColorScale = [
   '#08306b'  // Dark blue - highest precipitation
 ];
 
+// Vegetation productivity (GPP) color scale - from low (light green) to high (dark green)
+export const vegetationProductivityScale = [
+  '#f7fcf5', // Very light green - lowest productivity
+  '#e5f5e0',
+  '#c7e9c0',
+  '#a1d99b',
+  '#74c476',
+  '#41ab5d',
+  '#238b45',
+  '#006d2c',
+  '#00441b'  // Dark green - highest productivity
+];
+
 // Load and process a GeoTIFF file
 export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{ 
   data: number[], 
@@ -67,6 +79,8 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
       filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
     } else if (dataType === 'precipitation') {
       filePath = `/Datasets_Hackathon/Climate_Precipitation_Data/${year}R.tif`;
+    } else if (dataType === 'vegetation') {
+      filePath = `/Datasets_Hackathon/MODIS_Gross_Primary_Production_GPP/${year}_GP.tif`;
     } else {
       // Default to land cover
       filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
@@ -83,16 +97,22 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
     // Convert the TypedArray to a regular Array
     const data = Array.from(values[0] as Uint8Array | Float32Array);
     
-    // For precipitation, we need min/max to normalize values for color scale
-    if (dataType === 'precipitation') {
-      const min = Math.min(...data);
-      const max = Math.max(...data);
+    // For precipitation and vegetation, we need min/max to normalize values for color scale
+    if (dataType === 'precipitation' || dataType === 'vegetation') {
+      // Filter out no-data values (typically negative or very high values in GPP data)
+      const validData = dataType === 'vegetation' 
+                      ? data.filter(val => val > 0 && val < 3000)
+                      : data.filter(val => val > 0);
+      
+      const min = validData.length > 0 ? Math.min(...validData) : 0;
+      const max = validData.length > 0 ? Math.max(...validData) : 500;
+      
       return { data, width, height, min, max };
     }
     
     return { data, width, height };
   } catch (error) {
-    console.error(`Error loading TIFF for year ${year}:`, error);
+    console.error(`Error loading TIFF for year ${year} and type ${dataType}:`, error);
     return { data: [], width: 0, height: 0 };
   }
 };
@@ -134,7 +154,20 @@ export const getPrecipitationColor = (value: number, min: number, max: number): 
   return precipitationColorScale[index];
 };
 
-// Enhanced rendering function that handles both land cover and precipitation data
+// Get color for vegetation productivity value between min and max
+export const getVegetationColor = (value: number, min: number, max: number): string => {
+  // Normalize the value to 0-1 range, clamping to the specified range
+  // Filter out no-data values (typically ≤ 0 in GPP data)
+  if (value <= 0) return '#ffffff00'; // Transparent
+  
+  const normalized = Math.max(0, Math.min(1, (value - min) / (max - min || 1)));
+  
+  // Map to color index
+  const index = Math.floor(normalized * (vegetationProductivityScale.length - 1));
+  return vegetationProductivityScale[index];
+};
+
+// Enhanced rendering function that handles land cover, precipitation, and vegetation data
 export const renderTIFFToCanvas = (
   ctx: CanvasRenderingContext2D,
   data: number[],
@@ -161,8 +194,8 @@ export const renderTIFFToCanvas = (
   } = options;
 
   // Set image smoothing property based on the data type
-  // For precipitation we want smoothing, for land cover we don't
-  ctx.imageSmoothingEnabled = dataType === 'precipitation' ? true : smoothing;
+  // For precipitation and vegetation we want smoothing, for land cover we don't
+  ctx.imageSmoothingEnabled = dataType === 'precipitation' || dataType === 'vegetation' ? true : smoothing;
   ctx.imageSmoothingQuality = 'high';
 
   // Create an ImageData object
@@ -176,6 +209,8 @@ export const renderTIFFToCanvas = (
     
     if (dataType === 'precipitation') {
       color = getPrecipitationColor(value, min, max);
+    } else if (dataType === 'vegetation') {
+      color = getVegetationColor(value, min, max);
     } else {
       // Land cover coloring
       color = landCoverColors[value as keyof typeof landCoverColors] || landCoverColors[0];
@@ -185,20 +220,21 @@ export const renderTIFFToCanvas = (
     const r = parseInt(color.slice(1, 3), 16);
     const g = parseInt(color.slice(3, 5), 16);
     const b = parseInt(color.slice(5, 7), 16);
+    const a = color.length > 7 ? parseInt(color.slice(7, 9), 16) : 255; // Handle alpha if present
     
     // Set RGBA values in the ImageData
     const pixelIndex = i * 4;
     pixels[pixelIndex] = r;
     pixels[pixelIndex + 1] = g;
     pixels[pixelIndex + 2] = b;
-    pixels[pixelIndex + 3] = opacity * 255; // Alpha channel
+    pixels[pixelIndex + 3] = (a / 255) * opacity * 255; // Alpha channel
   }
 
   // Put the ImageData onto the canvas
   ctx.putImageData(imageData, 0, 0);
   
-  // If we're rendering precipitation, apply post-processing for smoother appearance
-  if (dataType === 'precipitation') {
+  // If we're rendering precipitation or vegetation, apply post-processing for smoother appearance
+  if (dataType === 'precipitation' || dataType === 'vegetation') {
     // Create a temporary canvas for post-processing
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = width;
@@ -262,6 +298,33 @@ export const calculatePrecipitationStats = (data: number[], noDataValue = 0): Re
     min,
     max,
     total: sum
+  };
+};
+
+// Calculate vegetation productivity (GPP) statistics
+export const calculateVegetationStats = (data: number[]): Record<string, number> => {
+  if (data.length === 0) return { average: 0, min: 0, max: 0, total: 0, forestGPP: 0, grasslandGPP: 0, croplandGPP: 0, barrenGPP: 0 };
+  
+  // Filter out NoData values (typically ≤ 0 in GPP data)
+  const validData = data.filter(value => value > 0 && value < 3000);
+  
+  if (validData.length === 0) return { average: 0, min: 0, max: 0, total: 0, forestGPP: 0, grasslandGPP: 0, croplandGPP: 0, barrenGPP: 0 };
+  
+  const sum = validData.reduce((acc, val) => acc + val, 0);
+  const min = Math.min(...validData);
+  const max = Math.max(...validData);
+  
+  // Simulate different GPP values by land cover type
+  // In a real application, we would cross-reference with land cover data
+  return {
+    average: sum / validData.length,
+    min,
+    max,
+    total: sum,
+    forestGPP: max * 0.9, // Forest typically has highest GPP
+    grasslandGPP: max * 0.6, // Grassland moderate GPP
+    croplandGPP: max * 0.7, // Cropland relatively high GPP
+    barrenGPP: min * 1.5 // Barren has lowest GPP
   };
 };
 
@@ -416,4 +479,26 @@ export const getLandCoverTimeSeriesData = async (): Promise<Array<{ year: number
   
   // Return the parsed data with class names
   return rawData;
+};
+
+// Function to generate vegetation productivity time series data
+export const getVegetationTimeSeriesData = (): Array<{ year: number, [key: string]: number }> => {
+  // Generate synthetic vegetation GPP data for different land cover types across years
+  return [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023].map(year => {
+    // Base value that increases over time
+    const baseGPP = 980 + (year - 2010) * 15;
+    // Add some variability by year
+    const variation = Math.sin((year - 2010) * 0.7) * 50;
+    
+    return {
+      year,
+      'Forest': baseGPP + variation + 300, // Forests have higher GPP
+      'Grassland': baseGPP + variation * 0.8 + 50,
+      'Cropland': baseGPP + variation * 1.2 + 100,
+      'Shrubland': baseGPP + variation * 0.6 - 50,
+      'Total': baseGPP + variation + 100,
+      // Include productivity gains/losses by year
+      'AnnualChange': 1.5 + Math.sin((year - 2010) * 0.5) * 1.2
+    };
+  });
 };

@@ -11,7 +11,9 @@ import {
   getAvailableYears,
   calculateLandCoverStats,
   calculatePrecipitationStats,
-  precipitationColorScale
+  calculateVegetationStats,
+  precipitationColorScale,
+  vegetationProductivityScale
 } from '@/lib/geospatialUtils';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -171,7 +173,7 @@ const MapVisualization = ({
     canvas.style.height = `${displayHeight}px`;
     
     // For better rendering quality, set canvas dimensions higher than display size
-    const scaleFactor = dataType === 'precipitation' ? 2 : 1; // Higher resolution for precipitation
+    const scaleFactor = dataType === 'precipitation' || dataType === 'vegetation' ? 2 : 1; // Higher resolution for precipitation and vegetation
     canvas.width = prevYearData.width * scaleFactor; 
     canvas.height = prevYearData.height * scaleFactor;
     
@@ -237,9 +239,20 @@ const MapVisualization = ({
       if (dataType === 'precipitation') {
         min = 0;
         max = 500;
+      } else if (dataType === 'vegetation') {
+        min = 0;
+        max = 3000;
       }
     } else {
       renderData = prevYearData.data;
+      
+      if (dataType === 'precipitation') {
+        min = prevYearData.min || 0;
+        max = prevYearData.max || 500;
+      } else if (dataType === 'vegetation') {
+        min = prevYearData.min || 0;
+        max = prevYearData.max || 3000;
+      }
     }
     
     // Use the enhanced rendering with appropriate options for each data type
@@ -253,7 +266,7 @@ const MapVisualization = ({
         dataType,
         min,
         max,
-        smoothing: dataType === 'precipitation'
+        smoothing: dataType === 'precipitation' || dataType === 'vegetation'
       }
     );
     
@@ -262,6 +275,9 @@ const MapVisualization = ({
       setCurrentStats(stats);
     } else if (dataType === 'precipitation') {
       const stats = calculatePrecipitationStats(renderData);
+      setCurrentStats(stats);
+    } else if (dataType === 'vegetation') {
+      const stats = calculateVegetationStats(renderData);
       setCurrentStats(stats);
     }
   };
@@ -305,6 +321,11 @@ const MapVisualization = ({
       let min = 0;
       let max = 500;
       
+      if (dataType === 'vegetation') {
+        min = 0;
+        max = 3000;
+      }
+      
       renderTIFFToCanvas(
         ctx, 
         transitionData, 
@@ -315,7 +336,7 @@ const MapVisualization = ({
           dataType,
           min,
           max,
-          smoothing: dataType === 'precipitation'
+          smoothing: dataType === 'precipitation' || dataType === 'vegetation'
         }
       );
       
@@ -328,6 +349,8 @@ const MapVisualization = ({
           setCurrentStats(calculateLandCoverStats(endInterpolatedData));
         } else if (dataType === 'precipitation') {
           setCurrentStats(calculatePrecipitationStats(endInterpolatedData));
+        } else if (dataType === 'vegetation') {
+          setCurrentStats(calculateVegetationStats(endInterpolatedData));
         }
       }
     };
@@ -400,6 +423,27 @@ const MapVisualization = ({
             <div className="flex justify-between text-xs mt-1">
               <span>0 mm</span>
               <span>500 mm</span>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (dataType === 'vegetation') {
+      return (
+        <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 shadow-md">
+          <div className="flex flex-col">
+            <span className="text-xs font-medium mb-1">GPP (gC/m²/year)</span>
+            <div className="flex h-4 w-full">
+              {vegetationProductivityScale.map((color, i) => (
+                <div 
+                  key={i} 
+                  className="h-full flex-1" 
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+            <div className="flex justify-between text-xs mt-1">
+              <span>0</span>
+              <span>3000</span>
             </div>
           </div>
         </div>
