@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
 import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2 } from 'lucide-react';
@@ -256,8 +255,7 @@ const MapVisualization = ({
 
   return (
     <div className={cn(
-      "relative rounded-xl overflow-hidden shadow-lg", 
-      expandedView ? "w-full" : "", // Apply full width if expanded
+      "relative rounded-xl overflow-hidden shadow-lg w-full h-full", 
       className
     )}>
       {/* Year indicator */}
@@ -265,11 +263,8 @@ const MapVisualization = ({
         {year}
       </div>
       
-      {/* Map Container - Adjust aspect ratio based on expanded view */}
-      <div className={cn(
-        "w-full bg-sahel-sandLight overflow-hidden relative",
-        expandedView ? "aspect-[16/9]" : "aspect-[4/3]" // Wider aspect ratio when expanded
-      )}>
+      {/* Map Container - Take full size of parent container */}
+      <div className="w-full h-full bg-sahel-sandLight overflow-hidden relative">
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="flex flex-col items-center">
@@ -315,33 +310,31 @@ const MapVisualization = ({
         </button>
       </div>
       
-      {/* Layer Selector - Only show if not in expanded view */}
-      {!expandedView && (
-        <div className="absolute top-4 left-4">
-          <div className="bg-white rounded-lg shadow-md p-2">
-            <div className="flex items-center gap-2 mb-2 px-2">
-              <Layers size={14} className="text-sahel-earth" />
-              <span className="text-xs font-medium">Layers</span>
-            </div>
-            <div className="space-y-1">
-              {mapLayers.map(layer => (
-                <button
-                  key={layer.id}
-                  onClick={() => handleLayerChange(layer.id)}
-                  className={cn(
-                    "w-full text-left px-3 py-1.5 text-xs rounded-md flex items-center gap-2 transition-colors",
-                    activeLayer === layer.id ? "bg-sahel-green/10 text-sahel-green" : "text-sahel-earth hover:bg-muted"
-                  )}
-                >
-                  <span className={cn("w-2 h-2 rounded-full", layer.color)}></span>
-                  {layer.name}
-                  {activeLayer === layer.id && <Eye size={12} className="ml-auto" />}
-                </button>
-              ))}
-            </div>
+      {/* Layer Selector - Always show regardless of view mode */}
+      <div className="absolute top-4 left-4">
+        <div className="bg-white rounded-lg shadow-md p-2">
+          <div className="flex items-center gap-2 mb-2 px-2">
+            <Layers size={14} className="text-sahel-earth" />
+            <span className="text-xs font-medium">Layers</span>
+          </div>
+          <div className="space-y-1">
+            {mapLayers.map(layer => (
+              <button
+                key={layer.id}
+                onClick={() => handleLayerChange(layer.id)}
+                className={cn(
+                  "w-full text-left px-3 py-1.5 text-xs rounded-md flex items-center gap-2 transition-colors",
+                  activeLayer === layer.id ? "bg-sahel-green/10 text-sahel-green" : "text-sahel-earth hover:bg-muted"
+                )}
+              >
+                <span className={cn("w-2 h-2 rounded-full", layer.color)}></span>
+                {layer.name}
+                {activeLayer === layer.id && <Eye size={12} className="ml-auto" />}
+              </button>
+            ))}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

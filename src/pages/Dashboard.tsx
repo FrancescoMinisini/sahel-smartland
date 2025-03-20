@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -308,12 +307,14 @@ const Dashboard = () => {
                     </div>
                     
                     {/* Map visualization - 1/3 width on larger screens */}
-                    <div className="lg:col-span-1">
-                      <MapVisualization 
-                        className="w-full" 
-                        year={selectedYear}
-                        expandedView={true} 
-                      />
+                    <div className="lg:col-span-1 h-full">
+                      <div className="h-[400px]">
+                        <MapVisualization 
+                          className="w-full h-full" 
+                          year={selectedYear}
+                          expandedView={true} 
+                        />
+                      </div>
                       <div className="text-center mt-3">
                         <Link 
                           to="/map" 
