@@ -95,14 +95,22 @@ const MapVisualization = ({
         
         for (const yearToLoad of availableYears) {
           if (!mapData[dataType]?.[yearToLoad]) {
-            const data = await loadTIFF(yearToLoad, dataType);
-            setMapData(prev => ({
-              ...prev,
-              [dataType]: {
-                ...(prev[dataType] || {}),
-                [yearToLoad]: data
+            try {
+              const data = await loadTIFF(yearToLoad, dataType);
+              if (data && data.data && data.data.length > 0) {
+                setMapData(prev => ({
+                  ...prev,
+                  [dataType]: {
+                    ...(prev[dataType] || {}),
+                    [yearToLoad]: data
+                  }
+                }));
+              } else {
+                console.error(`Empty or invalid data loaded for ${dataType} year ${yearToLoad}`);
               }
-            }));
+            } catch (err) {
+              console.error(`Error loading ${dataType} data for year ${yearToLoad}:`, err);
+            }
           }
         }
       } catch (error) {
@@ -128,7 +136,7 @@ const MapVisualization = ({
         cancelAnimationFrame(transitionAnimationId);
       }
     };
-  }, [dataType]);
+  }, [dataType, mapData, toast]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -148,7 +156,10 @@ const MapVisualization = ({
     const dataForType = mapData[dataType] || {};
     const prevYearData = dataForType[prevYear];
     
-    if (!prevYearData) return;
+    if (!prevYearData) {
+      console.error(`No data available for ${dataType} in year ${prevYear}`);
+      return;
+    }
     
     const containerWidth = container.clientWidth;
     const containerHeight = container.clientHeight;
@@ -170,7 +181,7 @@ const MapVisualization = ({
     // Use a higher scale factor for precipitation to improve resolution
     let scaleFactor = 1;
     if (dataType === 'precipitation') {
-      scaleFactor = 4; // Increased from 2 to 4 for better resolution
+      scaleFactor = 2; // Back to 2 since 4 might be causing performance issues
     } else if (dataType === 'vegetation') {
       scaleFactor = 2;
     }
@@ -265,13 +276,14 @@ const MapVisualization = ({
       }
     }
     
-    // Special enhanced rendering for precipitation data
+    // Always clear canvas first
+    ctx.clearRect(0, 0, prevYearData.width, prevYearData.height);
+    
     if (dataType === 'precipitation') {
-      // Clear canvas with a light blue background
+      // Special handling for precipitation data - simpler approach
       ctx.fillStyle = '#f7fbff20'; // Very light blue with some transparency
       ctx.fillRect(0, 0, prevYearData.width, prevYearData.height);
       
-      // Use enhanced rendering for precipitation
       renderTIFFToCanvas(
         ctx, 
         renderData, 
@@ -283,7 +295,7 @@ const MapVisualization = ({
           min,
           max,
           smoothing: true,
-          highQuality: true // New option for higher quality rendering
+          highQuality: false // Disable high quality rendering temporarily
         }
       );
     } else {
@@ -360,6 +372,9 @@ const MapVisualization = ({
         max = 3000;
       }
       
+      // Clear canvas before rendering
+      ctx.clearRect(0, 0, prevYearData.width, prevYearData.height);
+      
       // Special handling for precipitation during transition
       if (dataType === 'precipitation') {
         ctx.fillStyle = '#f7fbff20'; // Light blue background
@@ -376,7 +391,7 @@ const MapVisualization = ({
             min,
             max,
             smoothing: true,
-            highQuality: true
+            highQuality: false // Disable high quality rendering temporarily
           }
         );
       } else {
