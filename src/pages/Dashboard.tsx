@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -68,12 +67,10 @@ const Dashboard = () => {
   };
 
   const handleYearChange = (year: number) => {
-    // Store the previous year's stats before updating to the new year
     setPreviousYearStats({...landCoverStats});
     setIsLoading(true);
     setSelectedYear(year);
     
-    // Simulate data loading for the new year
     setTimeout(() => {
       setIsLoading(false);
     }, 500);
@@ -82,37 +79,30 @@ const Dashboard = () => {
   const handleStatsChange = (stats: Record<string, number>) => {
     setLandCoverStats(stats);
     
-    // Update time series data for historical tracking
     setTimeSeriesData(prevData => {
-      // Check if we already have data for this year
       const existingIndex = prevData.findIndex(item => item.year === selectedYear);
       
-      // Create new data point with converted values (thousand pixels)
       const newDataPoint = { year: selectedYear };
       
-      // Add each land cover class as a separate data point
       Object.entries(stats)
-        .filter(([key]) => key !== '0') // Filter out "No Data" class
+        .filter(([key]) => key !== '0')
         .forEach(([key, value]) => {
           const className = landCoverClasses[Number(key) as keyof typeof landCoverClasses] || `Class ${key}`;
-          newDataPoint[className] = Math.round(value / 1000); // Convert to 1000s of pixels
+          newDataPoint[className] = Math.round(value / 1000);
         });
       
       if (existingIndex >= 0) {
-        // Replace existing data for this year
         const newData = [...prevData];
         newData[existingIndex] = newDataPoint;
         return newData;
       } else {
-        // Add new data point for this year
         return [...prevData, newDataPoint].sort((a, b) => a.year - b.year);
       }
     });
   };
 
-  // Transform the statistics into chart-compatible data
   const chartData = Object.entries(landCoverStats)
-    .filter(([key]) => key !== '0') // Filter out "No Data" class
+    .filter(([key]) => key !== '0')
     .map(([key, value]) => {
       const landCoverKey = Number(key);
       const previousValue = previousYearStats[key] || value;
@@ -120,15 +110,14 @@ const Dashboard = () => {
       
       return {
         name: landCoverClasses[landCoverKey as keyof typeof landCoverClasses] || `Class ${key}`,
-        value: Math.round(value / 1000), // Convert to 1000s of pixels (approximate km²)
+        value: Math.round(value / 1000),
         color: landCoverColors[landCoverKey as keyof typeof landCoverColors] || '#cccccc',
-        change: Math.round((changeValue / (previousValue || 1)) * 100), // Percent change
+        change: Math.round((changeValue / (previousValue || 1)) * 100),
         rawChange: changeValue
       };
     })
-    .sort((a, b) => b.value - a.value); // Sort by descending value
+    .sort((a, b) => b.value - a.value);
 
-  // Generate trend analysis text based on time series data
   const getTrendAnalysis = () => {
     if (timeSeriesData.length < 2) {
       return "Insufficient data to analyze trends. Please select multiple years to build trend data.";
@@ -146,7 +135,6 @@ const Dashboard = () => {
       .filter(d => d.Urban !== undefined)
       .map(d => ({ year: d.year, value: d.Urban }));
     
-    // Simple linear trend analysis
     let forestTrend = "stable";
     let barrenTrend = "stable";
     let urbanTrend = "stable";
@@ -297,7 +285,6 @@ const Dashboard = () => {
       
       <main className="flex-1 pt-24 pb-12">
         <div className="container mx-auto px-6">
-          {/* Dashboard Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">Data Dashboard</h1>
             <p className="text-muted-foreground">
@@ -305,7 +292,6 @@ const Dashboard = () => {
             </p>
           </div>
           
-          {/* Year Slider */}
           <div className="bg-white dark:bg-muted rounded-xl shadow-sm border border-border/40 p-6 mb-8">
             <div className="flex items-center gap-2 mb-3">
               <Calendar size={18} className="text-primary" />
@@ -325,7 +311,6 @@ const Dashboard = () => {
             />
           </div>
           
-          {/* Key Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {keyStats.map((stat, index) => (
               <DataCard
@@ -342,9 +327,7 @@ const Dashboard = () => {
             ))}
           </div>
           
-          {/* Main Dashboard Content */}
           <div className="bg-white dark:bg-muted rounded-xl shadow-sm border border-border/40 overflow-hidden mb-8">
-            {/* Dashboard Tabs */}
             <div className="flex flex-wrap border-b border-border/40">
               {dataTabs.map((tab) => (
                 <button
@@ -377,7 +360,6 @@ const Dashboard = () => {
               </div>
             </div>
             
-            {/* Dashboard Content */}
             <div className="p-6">
               {isLoading ? (
                 <div className="h-[400px] flex items-center justify-center">
@@ -390,72 +372,16 @@ const Dashboard = () => {
                 <div>
                   {activeTab === 'landCover' && (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                      {/* Charts - 2/3 width on larger screens */}
                       <div className="lg:col-span-2 space-y-6">
-                        {/* Land Cover Distribution Chart */}
                         <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
                           <h3 className="text-lg font-medium mb-4">Land Cover Distribution ({selectedYear})</h3>
-                          <ChartCarousel data={chartData} />
+                          <ChartCarousel data={chartData} timeSeriesData={timeSeriesData} />
                           <div className="mt-4 text-sm text-muted-foreground">
                             <div className="flex items-start gap-2 mb-2">
                               <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
                               <p>
-                                The charts display the distribution of land cover types measured in thousands of pixels. 
-                                Use the arrows to switch between bar and pie chart views.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Historical Trend Chart */}
-                        <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
-                          <h3 className="text-lg font-medium mb-4">Land Cover Change Over Time</h3>
-                          <div className="h-[400px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <AreaChart
-                                data={timeSeriesData}
-                                margin={{
-                                  top: 20,
-                                  right: 30,
-                                  left: 20,
-                                  bottom: 20,
-                                }}
-                              >
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis 
-                                  dataKey="year" 
-                                  label={{ 
-                                    value: 'Year', 
-                                    position: 'insideBottom',
-                                    offset: -10
-                                  }}
-                                />
-                                <YAxis 
-                                  label={{ 
-                                    value: 'Area (thousand pixels)', 
-                                    angle: -90, 
-                                    position: 'insideLeft',
-                                    style: { textAnchor: 'middle' }
-                                  }} 
-                                />
-                                <Tooltip />
-                                <Legend />
-                                
-                                {/* Show the key land cover types only to avoid overcrowding */}
-                                <Area type="monotone" dataKey="Forests" stackId="1" stroke="#1a9850" fill="#1a9850" fillOpacity={0.7} />
-                                <Area type="monotone" dataKey="Shrublands" stackId="1" stroke="#91cf60" fill="#91cf60" fillOpacity={0.7} />
-                                <Area type="monotone" dataKey="Grasslands" stackId="1" stroke="#fee08b" fill="#fee08b" fillOpacity={0.7} />
-                                <Area type="monotone" dataKey="Croplands" stackId="1" stroke="#fc8d59" fill="#fc8d59" fillOpacity={0.7} />
-                                <Area type="monotone" dataKey="Urban" stackId="1" stroke="#d73027" fill="#d73027" fillOpacity={0.7} />
-                                <Area type="monotone" dataKey="Barren" stackId="1" stroke="#bababa" fill="#bababa" fillOpacity={0.7} />
-                              </AreaChart>
-                            </ResponsiveContainer>
-                          </div>
-                          <div className="mt-4 text-sm text-muted-foreground">
-                            <div className="flex items-start gap-2 mb-2">
-                              <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                              <p>
-                                This chart accumulates data as you explore different years. The stacked area chart shows how the proportion of each land cover type changes over time, which can reveal patterns of land conversion, urbanization, or environmental recovery.
+                                Use the arrows to switch between chart views: bar chart, pie chart, and time series chart.
+                                The time series chart shows how land cover has changed over the years.
                               </p>
                             </div>
                             <div className="mt-3 p-3 bg-muted rounded-md">
@@ -468,7 +394,6 @@ const Dashboard = () => {
                         </div>
                       </div>
 
-                      {/* Map visualization - 1/3 width on larger screens */}
                       <div className="lg:col-span-1 h-full">
                         <div className="h-[400px]">
                           <MapVisualization 
@@ -531,7 +456,6 @@ const Dashboard = () => {
             </div>
           </div>
           
-          {/* Quick Links */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white rounded-xl shadow-sm border border-border/40 p-6">
               <div className="w-10 h-10 rounded-lg bg-sahel-green/10 flex items-center justify-center mb-4">
@@ -579,7 +503,6 @@ const Dashboard = () => {
             </div>
           </div>
           
-          {/* Key Findings section moved to the bottom of the page */}
           <div className="bg-white dark:bg-muted rounded-xl shadow-sm border border-border/40 overflow-hidden">
             <div className="p-6">
               <h3 className="text-lg font-semibold mb-4">Key Findings</h3>

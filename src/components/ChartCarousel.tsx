@@ -1,6 +1,6 @@
 
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart } from 'recharts';
 import { cn } from "@/lib/utils";
 
 interface ChartCarouselProps {
@@ -12,9 +12,10 @@ interface ChartCarouselProps {
     rawChange: number;
   }>;
   className?: string;
+  timeSeriesData?: Array<{year: number, [key: string]: number}>;
 }
 
-const ChartCarousel = ({ data, className }: ChartCarouselProps) => {
+const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselProps) => {
   return (
     <div className={cn("relative", className)}>
       <Carousel
@@ -25,6 +26,7 @@ const ChartCarousel = ({ data, className }: ChartCarouselProps) => {
         className="w-full"
       >
         <CarouselContent>
+          {/* Bar Chart */}
           <CarouselItem className="md:basis-full">
             <div className="h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -67,6 +69,7 @@ const ChartCarousel = ({ data, className }: ChartCarouselProps) => {
             </div>
           </CarouselItem>
 
+          {/* Pie Chart */}
           <CarouselItem className="md:basis-full">
             <div className="h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -87,6 +90,51 @@ const ChartCarousel = ({ data, className }: ChartCarouselProps) => {
                   <Tooltip />
                   <Legend />
                 </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </CarouselItem>
+
+          {/* Area Chart for Time Series Data */}
+          <CarouselItem className="md:basis-full">
+            <div className="h-[400px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={timeSeriesData}
+                  margin={{
+                    top: 20,
+                    right: 30,
+                    left: 20,
+                    bottom: 20,
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="year" 
+                    label={{ 
+                      value: 'Year', 
+                      position: 'insideBottom',
+                      offset: -10
+                    }}
+                  />
+                  <YAxis 
+                    label={{ 
+                      value: 'Area (thousand pixels)', 
+                      angle: -90, 
+                      position: 'insideLeft',
+                      style: { textAnchor: 'middle' }
+                    }} 
+                  />
+                  <Tooltip />
+                  <Legend />
+                  
+                  {/* Show the key land cover types only to avoid overcrowding */}
+                  <Area type="monotone" dataKey="Forests" stackId="1" stroke="#1a9850" fill="#1a9850" fillOpacity={0.7} />
+                  <Area type="monotone" dataKey="Shrublands" stackId="1" stroke="#91cf60" fill="#91cf60" fillOpacity={0.7} />
+                  <Area type="monotone" dataKey="Grasslands" stackId="1" stroke="#fee08b" fill="#fee08b" fillOpacity={0.7} />
+                  <Area type="monotone" dataKey="Croplands" stackId="1" stroke="#fc8d59" fill="#fc8d59" fillOpacity={0.7} />
+                  <Area type="monotone" dataKey="Urban" stackId="1" stroke="#d73027" fill="#d73027" fillOpacity={0.7} />
+                  <Area type="monotone" dataKey="Barren" stackId="1" stroke="#bababa" fill="#bababa" fillOpacity={0.7} />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </CarouselItem>
