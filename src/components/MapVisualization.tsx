@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
 import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info } from 'lucide-react';
@@ -347,15 +346,16 @@ const MapVisualization = ({
     setZoomLevel(1);
   };
 
-  const handleLayerChange = (layer: string) => {
+  // Fix Type 1: Properly type the layer parameter to match the expected dataType type
+  const handleLayerChange = (layer: 'landCover' | 'precipitation' | 'vegetation' | 'population') => {
     setActiveLayer(layer);
   };
 
   const mapLayers = [
-    { id: 'landCover', name: 'Land Cover', color: 'bg-sahel-green' },
-    { id: 'vegetation', name: 'Vegetation', color: 'bg-sahel-greenLight' },
-    { id: 'precipitation', name: 'Rainfall', color: 'bg-sahel-blue' },
-    { id: 'population', name: 'Population', color: 'bg-sahel-earth' },
+    { id: 'landCover' as const, name: 'Land Cover', color: 'bg-sahel-green' },
+    { id: 'vegetation' as const, name: 'Vegetation', color: 'bg-sahel-greenLight' },
+    { id: 'precipitation' as const, name: 'Rainfall', color: 'bg-sahel-blue' },
+    { id: 'population' as const, name: 'Population', color: 'bg-sahel-earth' },
   ];
   
   // Generate legend based on data type
@@ -370,7 +370,8 @@ const MapVisualization = ({
                 <div key={key} className="flex items-center">
                   <div 
                     className="w-3 h-3 rounded-sm mr-1"
-                    style={{ backgroundColor: landCoverColors[key as keyof typeof landCoverColors] }}
+                    // Fix Type 2: Convert string key to number before using it as an index
+                    style={{ backgroundColor: landCoverColors[Number(key) as keyof typeof landCoverColors] }}
                   />
                   <span className="truncate">{name}</span>
                 </div>
