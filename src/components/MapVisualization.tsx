@@ -56,7 +56,6 @@ const MapVisualization = ({
   });
   const [currentStats, setCurrentStats] = useState<Record<string, number>>({});
   const [transitionAnimationId, setTransitionAnimationId] = useState<number | null>(null);
-  const [dataError, setDataError] = useState<boolean>(false);
   const previousYearRef = useRef<number | null>(null);
   const previousDataTypeRef = useRef<string | null>(null);
   
@@ -67,13 +66,8 @@ const MapVisualization = ({
       return { prevYear: year, nextYear: year, progress: 0 };
     }
     
-    // Find closest years
-    const yearsBefore = availableYears.filter(y => y <= year);
-    const yearsAfter = availableYears.filter(y => y >= year);
-    
-    // Default to the earliest or latest year available if we don't have data before/after
-    const prevYear = yearsBefore.length > 0 ? Math.max(...yearsBefore) : Math.min(...availableYears);
-    const nextYear = yearsAfter.length > 0 ? Math.min(...yearsAfter) : Math.max(...availableYears);
+    const prevYear = Math.max(...availableYears.filter(y => y <= year));
+    const nextYear = Math.min(...availableYears.filter(y => y >= year));
     
     const yearRange = nextYear - prevYear;
     const progress = yearRange > 0 ? (year - prevYear) / yearRange : 0;
@@ -90,63 +84,32 @@ const MapVisualization = ({
   useEffect(() => {
     setActiveLayer(dataType);
     previousDataTypeRef.current = dataType;
-    setDataError(false); // Reset error state when data type changes
   }, [dataType]);
 
   useEffect(() => {
     const preloadAllYears = async () => {
       setIsLoading(true);
-      setDataError(false);
       
       try {
         const availableYears = getAvailableYears(dataType);
         
-        // Only attempt to load years that we don't already have
-        const yearsToLoad = availableYears.filter(y => !mapData[dataType]?.[y]);
-        
-        if (yearsToLoad.length === 0) {
-          setIsLoading(false);
-          return;
-        }
-        
-        let newDataLoaded = false;
-        
-        for (const yearToLoad of yearsToLoad) {
-          try {
+        for (const yearToLoad of availableYears) {
+          if (!mapData[dataType]?.[yearToLoad]) {
             const data = await loadTIFF(yearToLoad, dataType);
-            
-            // Only update if we got valid data
-            if (data.data.length > 0 && data.width > 0 && data.height > 0) {
-              setMapData(prev => ({
-                ...prev,
-                [dataType]: {
-                  ...(prev[dataType] || {}),
-                  [yearToLoad]: data
-                }
-              }));
-              newDataLoaded = true;
-            }
-          } catch (error) {
-            console.warn(`Could not load ${dataType} data for year ${yearToLoad}:`, error);
-            // Continue trying other years even if one fails
+            setMapData(prev => ({
+              ...prev,
+              [dataType]: {
+                ...(prev[dataType] || {}),
+                [yearToLoad]: data
+              }
+            }));
           }
-        }
-        
-        // If we couldn't load any data, show an error message
-        if (!newDataLoaded && !Object.keys(mapData[dataType] || {}).length) {
-          setDataError(true);
-          toast({
-            title: `No data available`,
-            description: `Could not load ${dataType} data for any year. Please try another data type.`,
-            variant: 'destructive'
-          });
         }
       } catch (error) {
         console.error(`Error preloading ${dataType} data:`, error);
-        setDataError(true);
         toast({
           title: `Error loading ${dataType} data`,
-          description: `Could not preload the ${dataType} data years.`,
+          description: `Could not preload all the ${dataType} data years.`,
           variant: 'destructive'
         });
       } finally {
@@ -165,7 +128,7 @@ const MapVisualization = ({
         cancelAnimationFrame(transitionAnimationId);
       }
     };
-  }, [dataType, toast, mapData]);
+  }, [dataType]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -183,20 +146,9 @@ const MapVisualization = ({
     const canvas = canvasRef.current;
     const container = containerRef.current;
     const dataForType = mapData[dataType] || {};
+    const prevYearData = dataForType[prevYear];
     
-    // Check if we have data for the current data type
-    if (Object.keys(dataForType).length === 0) {
-      console.warn(`No map data available for ${dataType}`);
-      return;
-    }
-    
-    // Use prevYear data or find any available year data as fallback
-    const prevYearData = dataForType[prevYear] || dataForType[Object.keys(dataForType)[0]];
-    
-    if (!prevYearData) {
-      console.warn(`No map data available for ${dataType} at year ${prevYear}`);
-      return;
-    }
+    if (!prevYearData) return;
     
     const containerWidth = container.clientWidth;
     const containerHeight = container.clientHeight;
@@ -215,7 +167,7 @@ const MapVisualization = ({
     canvas.style.width = `${displayWidth}px`;
     canvas.style.height = `${displayHeight}px`;
     
-    const scaleFactor = dataType === 'precipitation' ? 4 : dataType === 'vegetation' ? 2 : 1;
+    const scaleFactor = dataType === 'precipitation' || dataType === 'vegetation' ? 2 : 1;
     canvas.width = prevYearData.width * scaleFactor; 
     canvas.height = prevYearData.height * scaleFactor;
     
@@ -228,13 +180,6 @@ const MapVisualization = ({
 
   useEffect(() => {
     if (isLoading || !canvasRef.current || !containerRef.current) return;
-    
-    // Check if we have any data for the current data type
-    const dataForType = mapData[dataType] || {};
-    if (Object.keys(dataForType).length === 0) {
-      console.warn(`No data for ${dataType}`);
-      return;
-    }
     
     adjustCanvasSize();
     
@@ -265,18 +210,8 @@ const MapVisualization = ({
     if (!ctx) return;
     
     const dataForType = mapData[dataType] || {};
-    
-    // If no data is available for this type, exit early
-    if (Object.keys(dataForType).length === 0) {
-      console.error(`No data for ${dataType}`);
-      return;
-    }
-    
-    // Use prevYear data or find any available year's data as fallback
-    const prevYearData = dataForType[prevYear] || dataForType[Object.keys(dataForType)[0]];
-    
-    // Try to get nextYear data if it exists (for interpolation)
-    const nextYearData = prevYear !== nextYear ? dataForType[nextYear] : null;
+    const prevYearData = dataForType[prevYear];
+    const nextYearData = dataForType[nextYear];
     
     if (!prevYearData || prevYearData.data.length === 0) {
       console.error(`No data for ${dataType} for year ${prevYear}`);
@@ -333,8 +268,7 @@ const MapVisualization = ({
         dataType,
         min,
         max,
-        smoothing: dataType === 'precipitation' || dataType === 'vegetation',
-        highQuality: dataType === 'precipitation'
+        smoothing: dataType === 'precipitation' || dataType === 'vegetation'
       }
     );
     
@@ -352,34 +286,18 @@ const MapVisualization = ({
 
   const animateYearTransition = () => {
     const dataForType = mapData[dataType] || {};
+    const prevYearData = dataForType[prevYear];
+    const nextYearData = dataForType[nextYear];
     
-    // Skip animation if no data is available
-    if (Object.keys(dataForType).length === 0) return;
-    
-    // Use prevYear data or find any available year data as fallback
-    const prevYearData = dataForType[prevYear] || dataForType[Object.keys(dataForType)[0]];
-    const nextYearData = prevYear !== nextYear ? dataForType[nextYear] : null;
-    
-    if (!canvasRef.current || !prevYearData) return;
+    if (!canvasRef.current || !prevYearData || !nextYearData) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
     
     const previousYear = previousYearRef.current || year;
     const previousDataType = previousDataTypeRef.current || dataType;
-    const previousDataForType = mapData[previousDataType] || {};
+    const previousData = mapData[previousDataType]?.[previousYear];
     
-    // Skip animation if no previous data
-    if (Object.keys(previousDataForType).length === 0) {
-      renderCurrentData();
-      return;
-    }
-    
-    const previousData = previousDataForType[previousYear] || previousDataForType[Object.keys(previousDataForType)[0]];
-    
-    if (!previousData) {
-      renderCurrentData();
-      return;
-    }
+    if (!previousData) return;
     
     const startInterpolatedData = [...previousData.data];
     
@@ -420,8 +338,7 @@ const MapVisualization = ({
           dataType,
           min,
           max,
-          smoothing: dataType === 'precipitation' || dataType === 'vegetation',
-          highQuality: dataType === 'precipitation'
+          smoothing: dataType === 'precipitation' || dataType === 'vegetation'
         }
       );
       
@@ -552,16 +469,6 @@ const MapVisualization = ({
             <div className="flex flex-col items-center">
               <Loader2 className="w-8 h-8 text-neutral-600 animate-spin mb-3" />
               <p className="text-sm text-sahel-earth">Loading map data...</p>
-            </div>
-          </div>
-        ) : dataError ? (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="flex flex-col items-center max-w-md text-center p-6">
-              <Info className="w-10 h-10 text-sahel-earth mb-3" />
-              <h3 className="text-lg font-medium text-sahel-earth mb-2">No Map Data Available</h3>
-              <p className="text-sm text-sahel-earth/80">
-                We couldn't load the {dataType} data for this year range. Please try a different data type or date range.
-              </p>
             </div>
           </div>
         ) : (
