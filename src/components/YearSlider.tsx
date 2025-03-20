@@ -1,7 +1,8 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
+import { Play, Pause } from "lucide-react";
 
 interface YearSliderProps {
   minYear: number;
@@ -10,6 +11,8 @@ interface YearSliderProps {
   onChange?: (year: number) => void;
   className?: string;
   showLabels?: boolean;
+  autoPlay?: boolean;
+  autoPlayInterval?: number;
 }
 
 const YearSlider = ({
@@ -18,9 +21,13 @@ const YearSlider = ({
   initialValue,
   onChange,
   className,
-  showLabels = true
+  showLabels = true,
+  autoPlay = false,
+  autoPlayInterval = 2000
 }: YearSliderProps) => {
   const [currentYear, setCurrentYear] = useState<number>(initialValue || minYear);
+  const [isPlaying, setIsPlaying] = useState<boolean>(autoPlay);
+  const autoPlayTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (initialValue && initialValue >= minYear && initialValue <= maxYear) {
@@ -28,12 +35,49 @@ const YearSlider = ({
     }
   }, [initialValue, minYear, maxYear]);
 
+  // Handle auto-play functionality
+  useEffect(() => {
+    if (isPlaying) {
+      // Clear any existing timer
+      if (autoPlayTimerRef.current) {
+        window.clearInterval(autoPlayTimerRef.current);
+      }
+      
+      // Set up a new timer
+      autoPlayTimerRef.current = window.setInterval(() => {
+        setCurrentYear((prevYear) => {
+          const nextYear = prevYear >= maxYear ? minYear : prevYear + 1;
+          if (onChange) {
+            onChange(nextYear);
+          }
+          return nextYear;
+        });
+      }, autoPlayInterval);
+    } else if (autoPlayTimerRef.current) {
+      // Stop the timer if isPlaying is false
+      window.clearInterval(autoPlayTimerRef.current);
+      autoPlayTimerRef.current = null;
+    }
+
+    // Clean up the timer when component unmounts
+    return () => {
+      if (autoPlayTimerRef.current) {
+        window.clearInterval(autoPlayTimerRef.current);
+        autoPlayTimerRef.current = null;
+      }
+    };
+  }, [isPlaying, minYear, maxYear, onChange, autoPlayInterval]);
+
   const handleSliderChange = (value: number[]) => {
     const year = value[0];
     setCurrentYear(year);
     if (onChange) {
       onChange(year);
     }
+  };
+
+  const togglePlayPause = () => {
+    setIsPlaying(!isPlaying);
   };
 
   // Calculate percentage position for the year label
@@ -48,6 +92,19 @@ const YearSlider = ({
       >
         {currentYear}
       </div>
+      
+      {/* Play/Pause Button */}
+      <button 
+        onClick={togglePlayPause}
+        className="absolute -top-8 right-0 p-1.5 bg-muted hover:bg-muted/80 rounded-full transition-colors"
+        aria-label={isPlaying ? "Pause" : "Play"}
+      >
+        {isPlaying ? (
+          <Pause className="h-4 w-4 text-primary" />
+        ) : (
+          <Play className="h-4 w-4 text-primary" />
+        )}
+      </button>
       
       <Slider
         min={minYear}

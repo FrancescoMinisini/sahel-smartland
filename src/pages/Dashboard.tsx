@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -178,7 +177,7 @@ const Dashboard = () => {
               <h3 className="text-lg font-medium">Time Period Selection</h3>
             </div>
             <p className="text-muted-foreground text-sm mb-6">
-              Drag the slider to view data for different years between 2010 and 2023.
+              Drag the slider to view data for different years between 2010 and 2023, or use auto-play to watch changes over time.
             </p>
             <YearSlider 
               minYear={2010} 
@@ -186,6 +185,8 @@ const Dashboard = () => {
               initialValue={selectedYear}
               onChange={handleYearChange}
               className="max-w-3xl mx-auto"
+              autoPlay={false}
+              autoPlayInterval={1500}
             />
           </div>
           
@@ -675,3 +676,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
