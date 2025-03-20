@@ -123,7 +123,7 @@ const YearSlider = ({
   const yearPercentage = ((currentYear - actualMinYear) / (actualMaxYear - actualMinYear)) * 100;
 
   return (
-    <div className={cn("relative pt-8 pb-8 w-full", className)}>
+    <div className={cn("relative pt-10 pb-8 w-full", className)}>
       <div className="flex items-center gap-2 w-full">
         {/* Play/Pause Button */}
         <button 
@@ -139,6 +139,14 @@ const YearSlider = ({
         </button>
         
         <div className="relative flex-1 w-full">
+          {/* Year Display - Above the slider */}
+          <div 
+            className="absolute text-sm font-semibold bg-primary text-primary-foreground px-2 py-0.5 rounded-md transform -translate-x-1/2 -top-6 transition-all duration-150 z-10"
+            style={{ left: `${yearPercentage}%` }}
+          >
+            {currentYear}
+          </div>
+          
           <Slider
             min={actualMinYear}
             max={actualMaxYear}
@@ -149,14 +157,6 @@ const YearSlider = ({
             onPointerDown={handleDragStart}
             className="transition-all w-full"
           />
-          
-          {/* Year Display - Moved to be on top of the slider */}
-          <div 
-            className="absolute text-sm font-semibold bg-primary text-primary-foreground px-2 py-0.5 rounded-md transform -translate-x-1/2 -top-6 transition-all duration-150 z-10"
-            style={{ left: `${yearPercentage}%` }}
-          >
-            {currentYear}
-          </div>
           
           {showLabels && (
             <div className="flex justify-between mt-2">

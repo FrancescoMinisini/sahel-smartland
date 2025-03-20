@@ -1,4 +1,3 @@
-
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart, LineChart, Line, ComposedChart, Scatter } from 'recharts';
 import { cn } from "@/lib/utils";
@@ -66,7 +65,7 @@ const ChartCarousel = ({
   } else if (dataType === 'precipitation') {
     // For precipitation data, we'll show regional data
     convertedData = filteredData;
-    displayUnit = 'precipitation index';
+    displayUnit = 'mm';
     
     // For regional precipitation time series, we keep the data as is
     // The timeSeriesData should contain regional data (South, Center, North)
@@ -105,14 +104,14 @@ const ChartCarousel = ({
       if (entry && entry.payload) {
         if (name === 'South' || name === 'Center' || name === 'North') {
           // For regional precipitation data
-          return [`${value.toLocaleString()} (index)`, name];
+          return [`${value.toLocaleString()} mm`, name];
         } else if (name === 'Extreme Events') {
           return [`${value.toLocaleString()} events`, name];
         } else if (name === 'Water Stress Index') {
           return [`${value.toLocaleString()} (${value < 40 ? 'Low' : value < 60 ? 'Medium' : 'High'})`, name];
         }
       }
-      return [`${value.toLocaleString()}`, name];
+      return [`${value.toLocaleString()} mm`, name];
     } else if (dataType === 'vegetation') {
       // For vegetation productivity data
       if (name === 'Forest' || name === 'Grassland' || name === 'Cropland' || name === 'Shrubland') {
@@ -142,6 +141,34 @@ const ChartCarousel = ({
     };
     return colorMap[key] || '#999999';
   };
+
+  // Map land cover class names for the area chart
+  const getLandCoverColor = (classKey: string) => {
+    const colorMap: Record<string, string> = {
+      'Forests': '#1a9850',
+      'Shrublands': '#91cf60',
+      'Grasslands': '#fee08b',
+      'Croplands': '#fc8d59',
+      'Urban': '#d73027',
+      'Barren': '#bababa',
+      'Water': '#4575b4',
+      'Wetlands': '#74add1'
+    };
+    return colorMap[classKey] || '#999999';
+  };
+
+  // Create properly organized land cover time series data for the area chart
+  const prepareLandCoverTimeSeriesData = () => {
+    if (dataType !== 'landCover' || !timeSeriesData || timeSeriesData.length === 0) {
+      return timeSeriesData;
+    }
+
+    // Sort years in ascending order
+    return [...timeSeriesData].sort((a, b) => a.year - b.year);
+  };
+
+  // Prepare sorted time series data for land cover
+  const sortedLandCoverTimeSeriesData = prepareLandCoverTimeSeriesData();
 
   return (
     <div className={cn("relative", className)}>
@@ -177,7 +204,7 @@ const ChartCarousel = ({
                     domain={calculateYDomain()}
                     label={{ 
                       value: dataType === 'precipitation' ? 
-                        'Precipitation Index' : 
+                        'Precipitation (mm)' : 
                         dataType === 'vegetation' ? 
                         `Productivity (${displayUnit})` :
                         `Area (${displayUnit})`, 
@@ -191,7 +218,7 @@ const ChartCarousel = ({
                   <Bar 
                     dataKey="value" 
                     name={dataType === 'precipitation' ? 
-                      'Precipitation Index' : 
+                      'Precipitation (mm)' : 
                       dataType === 'vegetation' ?
                       `Productivity (${displayUnit})` :
                       `Area (${displayUnit})`}
@@ -256,7 +283,7 @@ const ChartCarousel = ({
                     <YAxis 
                       domain={calculateYDomain()}
                       label={{ 
-                        value: 'Precipitation Index', 
+                        value: 'Precipitation (mm)', 
                         angle: -90, 
                         position: 'insideLeft',
                         style: { textAnchor: 'middle' }
@@ -358,7 +385,7 @@ const ChartCarousel = ({
                   </LineChart>
                 ) : (
                   <AreaChart
-                    data={convertedTimeSeriesData}
+                    data={sortedLandCoverTimeSeriesData}
                     margin={{
                       top: 20,
                       right: 30,
@@ -369,6 +396,9 @@ const ChartCarousel = ({
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
                       dataKey="year" 
+                      type="number"
+                      domain={['dataMin', 'dataMax']}
+                      tickCount={10}
                       label={{ 
                         value: 'Year', 
                         position: 'insideBottom',
@@ -387,27 +417,32 @@ const ChartCarousel = ({
                     <Tooltip formatter={formatTooltip} />
                     <Legend />
                     
-                    {/* Show the key land cover types with stacked area */}
-                    <Area type="monotone" dataKey="Forests" stackId="1" stroke="#1a9850" fill="#1a9850" fillOpacity={0.7} />
-                    <Area type="monotone" dataKey="Shrublands" stackId="1" stroke="#91cf60" fill="#91cf60" fillOpacity={0.7} />
-                    <Area type="monotone" dataKey="Grasslands" stackId="1" stroke="#fee08b" fill="#fee08b" fillOpacity={0.7} />
-                    <Area type="monotone" dataKey="Croplands" stackId="1" stroke="#fc8d59" fill="#fc8d59" fillOpacity={0.7} />
-                    <Area type="monotone" dataKey="Urban" stackId="1" stroke="#d73027" fill="#d73027" fillOpacity={0.7} />
-                    <Area type="monotone" dataKey="Barren" stackId="1" stroke="#bababa" fill="#bababa" fillOpacity={0.7} />
-                    <Area type="monotone" dataKey="Water" stackId="1" stroke="#4575b4" fill="#4575b4" fillOpacity={0.7} />
-                    <Area type="monotone" dataKey="Wetlands" stackId="1" stroke="#74add1" fill="#74add1" fillOpacity={0.7} />
+                    {/* Show the key land cover types with area lines */}
+                    <Area type="monotone" dataKey="Forests" stroke={getLandCoverColor("Forests")} fill={getLandCoverColor("Forests")} fillOpacity={0.7} />
+                    <Area type="monotone" dataKey="Shrublands" stroke={getLandCoverColor("Shrublands")} fill={getLandCoverColor("Shrublands")} fillOpacity={0.7} />
+                    <Area type="monotone" dataKey="Grasslands" stroke={getLandCoverColor("Grasslands")} fill={getLandCoverColor("Grasslands")} fillOpacity={0.7} />
+                    <Area type="monotone" dataKey="Croplands" stroke={getLandCoverColor("Croplands")} fill={getLandCoverColor("Croplands")} fillOpacity={0.7} />
+                    <Area type="monotone" dataKey="Urban" stroke={getLandCoverColor("Urban")} fill={getLandCoverColor("Urban")} fillOpacity={0.7} />
+                    <Area type="monotone" dataKey="Barren" stroke={getLandCoverColor("Barren")} fill={getLandCoverColor("Barren")} fillOpacity={0.7} />
+                    <Area type="monotone" dataKey="Water" stroke={getLandCoverColor("Water")} fill={getLandCoverColor("Water")} fillOpacity={0.7} />
+                    <Area type="monotone" dataKey="Wetlands" stroke={getLandCoverColor("Wetlands")} fill={getLandCoverColor("Wetlands")} fillOpacity={0.7} />
                   </AreaChart>
                 )}
               </ResponsiveContainer>
             </div>
             {dataType === 'precipitation' && (
               <div className="text-xs text-center mt-1 text-muted-foreground">
-                Regional Precipitation Index Trends (2010-2023)
+                Regional Precipitation Trends (2010-2023)
               </div>
             )}
             {dataType === 'vegetation' && (
               <div className="text-xs text-center mt-1 text-muted-foreground">
                 Vegetation Productivity by Land Cover Type (2010-2023)
+              </div>
+            )}
+            {dataType === 'landCover' && (
+              <div className="text-xs text-center mt-1 text-muted-foreground">
+                Land Cover Changes (2010-2023)
               </div>
             )}
           </CarouselItem>
@@ -481,7 +516,7 @@ const ChartCarousel = ({
             <CarouselItem className="md:basis-full">
               <div className="h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
+                  <BarChart
                     data={convertedTimeSeriesData}
                     margin={{
                       top: 20,
@@ -500,9 +535,8 @@ const ChartCarousel = ({
                       }}
                     />
                     <YAxis 
-                      domain={calculateYDomain()}
                       label={{ 
-                        value: 'Regional Variations', 
+                        value: 'Precipitation (mm)', 
                         angle: -90, 
                         position: 'insideLeft',
                         style: { textAnchor: 'middle' }
@@ -511,15 +545,15 @@ const ChartCarousel = ({
                     <Tooltip formatter={formatTooltip} />
                     <Legend />
                     
-                    {/* Comparison of regional precipitation index */}
+                    {/* Comparison of regional precipitation */}
                     <Bar dataKey="South" fill={getRegionalColor('South')} />
                     <Bar dataKey="Center" fill={getRegionalColor('Center')} />
                     <Bar dataKey="North" fill={getRegionalColor('North')} />
-                  </LineChart>
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
               <div className="text-xs text-center mt-1 text-muted-foreground">
-                Regional Comparison: South, Center, and North Precipitation Indices
+                Regional Comparison: South, Center, and North Precipitation
               </div>
             </CarouselItem>
           )}
