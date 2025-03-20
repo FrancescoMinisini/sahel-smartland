@@ -71,10 +71,15 @@ const HeroSection = () => {
                 <ArrowRight size={16} className="ml-2" />
               </Link>
               
-              <button className="inline-flex items-center justify-center px-6 py-3 bg-white text-sahel-earth font-medium rounded-lg border border-sahel-earth/20 shadow-sm hover:bg-sahel-earth/5 transition-all">
+              <a 
+                href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-6 py-3 bg-white text-sahel-earth font-medium rounded-lg border border-sahel-earth/20 shadow-sm hover:bg-sahel-earth/5 transition-all"
+              >
                 <Play size={16} className="mr-2" />
                 Watch Overview
-              </button>
+              </a>
             </motion.div>
           </motion.div>
           

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -633,13 +634,15 @@ This regional analysis is essential for targeted water resource management and c
                           />
                         </div>
                         <div className="text-center mt-3">
-                          <Link 
-                            to="/map" 
+                          <a 
+                            href="/sahel_map.html" 
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
                           >
                             <ZoomIn size={14} className="mr-1" /> 
                             Open full map view
-                          </Link>
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -684,13 +687,15 @@ This regional analysis is essential for targeted water resource management and c
                           />
                         </div>
                         <div className="text-center mt-3">
-                          <Link 
-                            to="/map" 
+                          <a 
+                            href="/sahel_map.html" 
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
                           >
                             <ZoomIn size={14} className="mr-1" /> 
                             Open full map view
-                          </Link>
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -735,13 +740,15 @@ This regional analysis is essential for targeted water resource management and c
                           />
                         </div>
                         <div className="text-center mt-3">
-                          <Link 
-                            to="/map" 
+                          <a 
+                            href="/sahel_map.html" 
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
                           >
                             <ZoomIn size={14} className="mr-1" /> 
                             Open full map view
-                          </Link>
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -791,13 +798,15 @@ This regional analysis is essential for targeted water resource management and c
                           />
                         </div>
                         <div className="text-center mt-3">
-                          <Link 
-                            to="/map" 
+                          <a 
+                            href="/sahel_map.html" 
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
                           >
                             <ZoomIn size={14} className="mr-1" /> 
                             Open full map view
-                          </Link>
+                          </a>
                         </div>
                       </div>
                     </div>
