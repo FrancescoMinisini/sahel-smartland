@@ -879,7 +879,7 @@ These demographic shifts have important implications for land use planning, reso
                         <h4 className="text-sm font-medium mb-3">Vegetation Type Productivity ({year})</h4>
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart
-                            data={vegetationChartData}
+                            data={getVegetationChartData()}
                             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                           >
                             <CartesianGrid strokeDasharray="3 3" />
@@ -888,7 +888,7 @@ These demographic shifts have important implications for land use planning, reso
                             <Tooltip />
                             <Legend />
                             <Bar dataKey="value" name="Productivity (GPP)">
-                              {vegetationChartData.map((entry, index) => (
+                              {getVegetationChartData().map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.color} />
                               ))}
                             </Bar>
@@ -989,7 +989,7 @@ These demographic shifts have important implications for land use planning, reso
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
                             <Pie
-                              data={populationChartData.filter(item => item.name !== 'Total')}
+                              data={getPopulationChartData().filter(item => item.name !== 'Total')}
                               cx="50%"
                               cy="50%"
                               labelLine={false}
@@ -998,7 +998,7 @@ These demographic shifts have important implications for land use planning, reso
                               fill="#8884d8"
                               dataKey="value"
                             >
-                              {populationChartData.filter(item => item.name !== 'Total').map((entry, index) => (
+                              {getPopulationChartData().filter(item => item.name !== 'Total').map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.color} />
                               ))}
                             </Pie>
