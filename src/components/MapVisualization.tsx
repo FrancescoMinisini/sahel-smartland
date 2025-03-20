@@ -499,7 +499,7 @@ const MapVisualization = ({
         {year}
       </div>
       
-      <div className="absolute inset-0 bg-sahel-sandLight overflow-hidden">
+      <div className="absolute inset-0 bg-[#504c4c] overflow-hidden">
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="flex flex-col items-center">
