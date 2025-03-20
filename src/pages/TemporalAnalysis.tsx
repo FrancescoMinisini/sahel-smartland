@@ -7,10 +7,22 @@ import YearSlider from '@/components/YearSlider';
 import MapVisualization from '@/components/MapVisualization';
 import Navbar from '@/components/Navbar';
 import { Info, Calendar, Map, BarChartHorizontal } from 'lucide-react';
+import { landCoverClasses, landCoverColors, getAvailableYears } from '@/lib/geospatialUtils';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer 
+} from 'recharts';
 
 const TemporalAnalysis = () => {
   const [selectedYear, setSelectedYear] = useState(2010);
   const [activeTab, setActiveTab] = useState("map");
+  const availableYears = getAvailableYears();
   
   // Page transition animation
   const pageVariants = {
@@ -22,6 +34,15 @@ const TemporalAnalysis = () => {
   const handleYearChange = (year: number) => {
     setSelectedYear(year);
   };
+
+  // Sample chart data
+  const chartData = Object.entries(landCoverClasses)
+    .filter(([key]) => key !== '0') // Filter out "No Data" class
+    .map(([key, label]) => ({
+      name: label,
+      value: Math.floor(Math.random() * 1000) + 100, // Random data for demonstration
+      color: landCoverColors[Number(key) as keyof typeof landCoverColors]
+    }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -53,7 +74,7 @@ const TemporalAnalysis = () => {
               Adjust the slider to see land use changes from 1985 to 2023
             </p>
             <YearSlider 
-              minYear={1985} 
+              minYear={2010} 
               maxYear={2023} 
               initialValue={selectedYear}
               onChange={handleYearChange}
@@ -92,8 +113,44 @@ const TemporalAnalysis = () => {
               <TabsContent value="charts" className="mt-0">
                 <Card className="p-6">
                   <h3 className="text-lg font-medium mb-4">Land Cover Changes ({selectedYear})</h3>
-                  <div className="h-[400px] flex items-center justify-center bg-muted rounded-lg">
-                    <p className="text-muted-foreground">Interactive charts will appear here based on selected year.</p>
+                  <div className="h-[400px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={chartData}
+                        margin={{
+                          top: 20,
+                          right: 30,
+                          left: 20,
+                          bottom: 60,
+                        }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="name" 
+                          angle={-45} 
+                          textAnchor="end" 
+                          height={60} 
+                        />
+                        <YAxis />
+                        <Tooltip 
+                          formatter={(value) => [
+                            `${value} km²`, 
+                            "Area"
+                          ]}
+                        />
+                        <Legend />
+                        <Bar 
+                          dataKey="value" 
+                          name="Area (km²)" 
+                          fill="#8884d8"
+                          label={{ position: 'top', formatter: (val) => `${val}` }}
+                        >
+                          {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 </Card>
               </TabsContent>
@@ -108,16 +165,29 @@ const TemporalAnalysis = () => {
                       <h4 className="font-medium mb-2">Key Observations</h4>
                       <p className="text-sm text-muted-foreground">
                         The {selectedYear} data shows significant changes in land cover patterns across the Sahel region.
-                        {selectedYear > 2000 ? " Reforestation efforts are visible in certain areas." : " Desertification is the primary trend visible."}
+                        {selectedYear > 2018 ? " Recent reforestation efforts are visible in certain areas." : 
+                         selectedYear > 2015 ? " Moderate vegetation recovery observed in parts of the region." :
+                         " Earlier periods show more extensive desertification trends."}
                       </p>
                     </div>
                     
                     <div className="rounded-lg bg-primary/10 p-4">
                       <h4 className="font-medium mb-2">Climate Impact</h4>
                       <p className="text-sm text-muted-foreground">
-                        {selectedYear > 2010 
-                          ? "Recent climate initiatives show positive impact on vegetation recovery."
-                          : "Limited climate intervention programs were in place during this period."}
+                        {selectedYear > 2020 
+                          ? "Recent climate initiatives show positive impact on vegetation recovery in selected areas."
+                          : selectedYear > 2015
+                          ? "Mid-decade climate intervention programs started showing limited impact."
+                          : "Early decade showed more limited climate intervention programs."}
+                      </p>
+                    </div>
+                    
+                    <div className="rounded-lg bg-accent/20 p-4">
+                      <h4 className="font-medium mb-2">Land Cover Distribution</h4>
+                      <p className="text-sm text-muted-foreground">
+                        The predominant land cover types in {selectedYear} include variations of grasslands and shrublands,
+                        with {selectedYear > 2018 ? "increasing" : "limited"} forest coverage in highland areas.
+                        Urban expansion is {selectedYear > 2015 ? "accelerating" : "gradual"} during this period.
                       </p>
                     </div>
                   </div>

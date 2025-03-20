@@ -1,7 +1,17 @@
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
-import { Layers, MapPin, ZoomIn, ZoomOut, RotateCcw, Eye, CornerUpRight, Calendar } from 'lucide-react';
+import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2 } from 'lucide-react';
+import { 
+  loadTIFF, 
+  renderTIFFToCanvas, 
+  interpolateData, 
+  landCoverColors, 
+  landCoverClasses,
+  getAvailableYears,
+  calculateLandCoverStats
+} from '@/lib/geospatialUtils';
+import { useToast } from '@/components/ui/use-toast';
 
 interface MapVisualizationProps {
   className?: string;
@@ -9,20 +19,116 @@ interface MapVisualizationProps {
 }
 
 const MapVisualization = ({ className, year = 2023 }: MapVisualizationProps) => {
-  const mapRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeLayer, setActiveLayer] = useState('landCover');
   const [zoomLevel, setZoomLevel] = useState(1);
-
-  // Simulate map loading when year changes
-  useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
+  const [mapData, setMapData] = useState<{
+    [year: number]: { data: number[], width: number, height: number }
+  }>({});
+  const [currentStats, setCurrentStats] = useState<Record<string, number>>({});
+  
+  // Find the closest available years for interpolation
+  const { prevYear, nextYear, progress } = useMemo(() => {
+    const availableYears = getAvailableYears();
     
-    return () => clearTimeout(timer);
+    if (availableYears.includes(year)) {
+      return { prevYear: year, nextYear: year, progress: 0 };
+    }
+    
+    // Find the closest previous and next years
+    const prevYear = Math.max(...availableYears.filter(y => y <= year));
+    const nextYear = Math.min(...availableYears.filter(y => y >= year));
+    
+    // Calculate interpolation progress (0-1)
+    const yearRange = nextYear - prevYear;
+    const progress = yearRange > 0 ? (year - prevYear) / yearRange : 0;
+    
+    return { prevYear, nextYear, progress };
   }, [year]);
+
+  // Load the data for the closest years
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      
+      try {
+        // Load data for both years needed for interpolation
+        if (!mapData[prevYear]) {
+          const data = await loadTIFF(prevYear);
+          setMapData(prev => ({ ...prev, [prevYear]: data }));
+        }
+        
+        if (prevYear !== nextYear && !mapData[nextYear]) {
+          const data = await loadTIFF(nextYear);
+          setMapData(prev => ({ ...prev, [nextYear]: data }));
+        }
+      } catch (error) {
+        console.error('Error loading TIFF data:', error);
+        toast({
+          title: 'Error loading map data',
+          description: 'Could not load the land cover data for the selected year.',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [prevYear, nextYear, toast]);
+
+  // Render the data to the canvas with interpolation
+  useEffect(() => {
+    if (isLoading || !canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const prevYearData = mapData[prevYear];
+    const nextYearData = mapData[nextYear];
+    
+    if (!prevYearData || prevYearData.data.length === 0) return;
+    
+    // Set canvas dimensions
+    canvas.width = prevYearData.width;
+    canvas.height = prevYearData.height;
+    
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // If we have both years of data and they're different, interpolate
+    if (nextYearData && prevYear !== nextYear) {
+      const interpolatedData = interpolateData(
+        prevYearData.data,
+        nextYearData.data,
+        progress
+      );
+      
+      renderTIFFToCanvas(
+        ctx, 
+        interpolatedData, 
+        prevYearData.width, 
+        prevYearData.height
+      );
+      
+      // Update statistics
+      setCurrentStats(calculateLandCoverStats(interpolatedData));
+    } else {
+      // Just render the previous year's data
+      renderTIFFToCanvas(
+        ctx, 
+        prevYearData.data, 
+        prevYearData.width, 
+        prevYearData.height
+      );
+      
+      // Update statistics
+      setCurrentStats(calculateLandCoverStats(prevYearData.data));
+    }
+  }, [mapData, prevYear, nextYear, progress, isLoading]);
 
   const handleZoomIn = () => {
     setZoomLevel(prev => Math.min(prev + 0.2, 3));
@@ -51,43 +157,27 @@ const MapVisualization = ({ className, year = 2023 }: MapVisualizationProps) => 
     <div className={cn("relative rounded-xl overflow-hidden shadow-lg", className)}>
       {/* Year indicator */}
       <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-10 bg-white/80 dark:bg-muted/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium flex items-center gap-1.5 shadow-sm">
-        <Calendar size={12} />
         {year}
       </div>
       
       {/* Map Container */}
-      <div 
-        ref={mapRef} 
-        className="w-full aspect-[4/3] bg-sahel-sandLight"
-        style={{ transform: `scale(${zoomLevel})`, transition: 'transform 0.3s ease' }}
-      >
+      <div className="w-full aspect-[4/3] bg-sahel-sandLight overflow-hidden relative">
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="flex flex-col items-center">
-              <div className="w-8 h-8 border-4 border-t-sahel-green border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mb-3"></div>
+              <Loader2 className="w-8 h-8 text-sahel-green animate-spin mb-3" />
               <p className="text-sm text-sahel-earth">Loading map data...</p>
             </div>
           </div>
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-b from-sahel-sandLight to-sahel-sand">
-            {/* This is a placeholder for the actual map visualization */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-sahel-earth/40 text-lg font-medium">
-                Map Visualization Placeholder
-              </div>
-            </div>
-            
-            {/* Sample map elements */}
-            <div className="absolute top-1/4 left-1/3 w-4 h-4 rounded-full bg-sahel-green animate-pulse"></div>
-            <div className="absolute top-1/3 left-1/2 w-3 h-3 rounded-full bg-sahel-blue animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-            <div className="absolute top-1/2 left-1/4 w-5 h-5 rounded-full bg-sahel-earth animate-pulse" style={{ animationDelay: '1s' }}></div>
-            
-            {/* Geographic features */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-1/4 left-1/3 right-1/3 h-0.5 bg-sahel-blue rounded-full"></div>
-              <div className="absolute top-1/3 left-1/4 right-1/4 h-0.5 bg-sahel-blue rounded-full"></div>
-              <div className="absolute top-1/2 left-1/5 right-1/5 h-0.5 bg-sahel-blue rounded-full"></div>
-            </div>
+          <div 
+            className="absolute inset-0 flex items-center justify-center transition-transform duration-300 ease-out" 
+            style={{ transform: `scale(${zoomLevel})` }}
+          >
+            <canvas 
+              ref={canvasRef} 
+              className="max-w-full max-h-full object-contain"
+            />
           </div>
         )}
       </div>
@@ -140,54 +230,6 @@ const MapVisualization = ({ className, year = 2023 }: MapVisualizationProps) => 
               </button>
             ))}
           </div>
-        </div>
-      </div>
-      
-      {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-md p-3">
-        <div className="flex items-center gap-2 mb-2">
-          <CornerUpRight size={14} className="text-sahel-earth" />
-          <span className="text-xs font-medium">Legend</span>
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-sahel-green"></span>
-            <span className="text-xs">Restored Areas</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-sahel-blue"></span>
-            <span className="text-xs">Water Bodies</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-sahel-sand"></span>
-            <span className="text-xs">Degraded Land</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-sahel-earth"></span>
-            <span className="text-xs">Urban Areas</span>
-          </div>
-        </div>
-      </div>
-      
-      {/* Locations */}
-      <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-md p-3">
-        <div className="flex items-center gap-2 mb-2">
-          <MapPin size={14} className="text-sahel-earth" />
-          <span className="text-xs font-medium">Focus Areas</span>
-        </div>
-        <div className="space-y-2">
-          <button className="flex items-center gap-2 text-xs hover:text-sahel-green transition-colors">
-            <span className="w-2 h-2 rounded-full bg-sahel-green"></span>
-            Senegal River Basin
-          </button>
-          <button className="flex items-center gap-2 text-xs hover:text-sahel-green transition-colors">
-            <span className="w-2 h-2 rounded-full bg-sahel-blue"></span>
-            Lake Chad
-          </button>
-          <button className="flex items-center gap-2 text-xs hover:text-sahel-green transition-colors">
-            <span className="w-2 h-2 rounded-full bg-sahel-earth"></span>
-            Niger Delta
-          </button>
         </div>
       </div>
     </div>
