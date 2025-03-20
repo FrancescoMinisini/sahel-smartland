@@ -1,4 +1,3 @@
-
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -78,6 +77,16 @@ export const populationDensityScale = [
   '#7f2704'  // Dark red - highest density
 ];
 
+// Gradient color scales
+export const landCoverGradientColors = {
+  // For negative transitions (degradation)
+  '-2': '#ef4444', // Severe degradation - bright red
+  '-1': '#f97316', // Moderate degradation - orange
+  '0': '#3b82f6',  // Stable - blue
+  '1': '#84cc16',  // Moderate improvement - light green
+  '2': '#22c55e',  // Significant improvement - green
+};
+
 // Load and process a GeoTIFF file
 export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{ 
   data: number[], 
@@ -91,10 +100,19 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
     
     if (dataType === 'landCover') {
       filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
+    } else if (dataType === 'landCoverGradient') {
+      // Point to the land cover gradient/transition files if they exist
+      filePath = `/Datasets_Hackathon/land_cover_transition/${year}GRAD.tif`;
     } else if (dataType === 'precipitation') {
       filePath = `/Datasets_Hackathon/Climate_Precipitation_Data/${year}R.tif`;
+    } else if (dataType === 'precipitationGradient') {
+      // Point to precipitation gradient files
+      filePath = `/Datasets_Hackathon/precipitation_gradient/${year}PRGRAD.tif`;
     } else if (dataType === 'vegetation') {
       filePath = `/Datasets_Hackathon/MODIS_Gross_Primary_Production_GPP/${year}_GP.tif`;
+    } else if (dataType === 'vegetationGradient') {
+      // Point to vegetation gradient files
+      filePath = `/Datasets_Hackathon/vegetation_gradient/${year}VEGGRAD.tif`;
     } else if (dataType === 'population') {
       // We only have data for 2010, 2015, and 2020, so match the closest year
       const availableYears = [2010, 2015, 2020];
@@ -103,45 +121,136 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
       );
       filePath = `/Datasets_Hackathon/Gridded_Population_Density_Data/Assaba_Pop_${closestYear}.tif`;
     } else {
-      // Default to land cover
-      filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
+      // If gradient files don't exist, fall back to regular files
+      console.warn(`Gradient files for ${dataType} not found, falling back to standard files`);
+      if (dataType === 'landCoverGradient') {
+        filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
+      } else if (dataType === 'precipitationGradient') {
+        filePath = `/Datasets_Hackathon/Climate_Precipitation_Data/${year}R.tif`;
+      } else if (dataType === 'vegetationGradient') {
+        filePath = `/Datasets_Hackathon/MODIS_Gross_Primary_Production_GPP/${year}_GP.tif`;
+      } else {
+        // Default to land cover
+        filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
+      }
     }
     
-    const response = await fetch(filePath);
-    const arrayBuffer = await response.arrayBuffer();
-    const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
-    const image = await tiff.getImage();
-    const width = image.getWidth();
-    const height = image.getHeight();
-    const values = await image.readRasters();
-    
-    // Convert the TypedArray to a regular Array
-    const data = Array.from(values[0] as Uint8Array | Float32Array);
-    
-    // For precipitation, vegetation, and population we need min/max to normalize values for color scale
-    if (dataType === 'precipitation' || dataType === 'vegetation' || dataType === 'population') {
-      // Filter out no-data values (typically negative or very high values in GPP data)
-      let validData;
+    try {
+      const response = await fetch(filePath);
       
-      if (dataType === 'vegetation') {
-        validData = data.filter(val => val > 0 && val < 3000);
-      } else if (dataType === 'population') {
-        validData = data.filter(val => val >= 0);
-      } else {
-        validData = data.filter(val => val > 0);
+      if (!response.ok) {
+        console.warn(`File not found at ${filePath}, trying fallback`);
+        throw new Error(`File not found at ${filePath}`);
       }
       
-      const min = validData.length > 0 ? Math.min(...validData) : 0;
-      const max = validData.length > 0 ? Math.max(...validData) : 500;
+      const arrayBuffer = await response.arrayBuffer();
+      const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
+      const image = await tiff.getImage();
+      const width = image.getWidth();
+      const height = image.getHeight();
+      const values = await image.readRasters();
       
-      return { data, width, height, min, max };
+      // Convert the TypedArray to a regular Array
+      const data = Array.from(values[0] as Uint8Array | Float32Array);
+      
+      // For precipitation, vegetation, and population we need min/max to normalize values for color scale
+      if (dataType === 'precipitation' || dataType === 'vegetationGradient' || dataType === 'precipitationGradient' || dataType === 'vegetation' || dataType === 'population') {
+        // Filter out no-data values (typically negative or very high values in GPP data)
+        let validData;
+        
+        if (dataType === 'vegetation' || dataType === 'vegetationGradient') {
+          validData = data.filter(val => val > 0 && val < 3000);
+        } else if (dataType === 'population') {
+          validData = data.filter(val => val >= 0);
+        } else {
+          validData = data.filter(val => val > 0);
+        }
+        
+        const min = validData.length > 0 ? Math.min(...validData) : 0;
+        const max = validData.length > 0 ? Math.max(...validData) : 500;
+        
+        return { data, width, height, min, max };
+      }
+      
+      return { data, width, height };
+    } catch (error) {
+      console.error(`Error loading specific file ${filePath}, falling back to standard data:`, error);
+      
+      // Fallback to standard files if gradient files don't exist
+      let fallbackPath;
+      if (dataType.includes('landCover')) {
+        fallbackPath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
+      } else if (dataType.includes('precipitation')) {
+        fallbackPath = `/Datasets_Hackathon/Climate_Precipitation_Data/${year}R.tif`;
+      } else if (dataType.includes('vegetation')) {
+        fallbackPath = `/Datasets_Hackathon/MODIS_Gross_Primary_Production_GPP/${year}_GP.tif`;
+      } else {
+        fallbackPath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
+      }
+      
+      const response = await fetch(fallbackPath);
+      const arrayBuffer = await response.arrayBuffer();
+      const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
+      const image = await tiff.getImage();
+      const width = image.getWidth();
+      const height = image.getHeight();
+      const values = await image.readRasters();
+      
+      // Convert the TypedArray to a regular Array
+      const data = Array.from(values[0] as Uint8Array | Float32Array);
+      
+      // Handle min/max for visualization scaling
+      if (dataType.includes('precipitation') || dataType.includes('vegetation') || dataType === 'population') {
+        let validData;
+        
+        if (dataType.includes('vegetation')) {
+          validData = data.filter(val => val > 0 && val < 3000);
+        } else if (dataType === 'population') {
+          validData = data.filter(val => val >= 0);
+        } else {
+          validData = data.filter(val => val > 0);
+        }
+        
+        const min = validData.length > 0 ? Math.min(...validData) : 0;
+        const max = validData.length > 0 ? Math.max(...validData) : 500;
+        
+        return { data, width, height, min, max };
+      }
+      
+      return { data, width, height };
     }
-    
-    return { data, width, height };
   } catch (error) {
     console.error(`Error loading TIFF for year ${year} and type ${dataType}:`, error);
     return { data: [], width: 0, height: 0 };
   }
+};
+
+// Get color for gradient data
+export const getGradientColor = (value: number, dataType: string): string => {
+  if (dataType === 'landCoverGradient') {
+    // Map values to our gradient colors
+    if (value <= -2) return landCoverGradientColors['-2'];
+    if (value < 0) return landCoverGradientColors['-1'];
+    if (value === 0) return landCoverGradientColors['0'];
+    if (value <= 1) return landCoverGradientColors['1'];
+    return landCoverGradientColors['2'];
+  } else if (dataType === 'vegetationGradient') {
+    // For vegetation gradient, use the vegetation scale but invert for degradation
+    if (value < -20) return '#ef4444'; // Significant decrease
+    if (value < -5) return '#f97316'; // Moderate decrease
+    if (value >= -5 && value <= 5) return '#3b82f6'; // Stable
+    if (value > 5 && value <= 20) return '#84cc16'; // Moderate increase
+    return '#22c55e'; // Significant increase
+  } else if (dataType === 'precipitationGradient') {
+    // For precipitation gradient, similar to vegetation
+    if (value < -20) return '#ef4444';
+    if (value < -5) return '#f97316';
+    if (value >= -5 && value <= 5) return '#3b82f6';
+    if (value > 5 && value <= 20) return '#84cc16';
+    return '#22c55e';
+  }
+  
+  return '#808080'; // Default gray
 };
 
 // Improved interpolation between two years of data
@@ -205,7 +314,7 @@ export const getPopulationColor = (value: number, min: number, max: number): str
   return populationDensityScale[index];
 };
 
-// Enhanced rendering function that handles land cover, precipitation, vegetation, and population data
+// Enhanced rendering function that handles land cover, precipitation, vegetation, population, and gradient data
 export const renderTIFFToCanvas = (
   ctx: CanvasRenderingContext2D,
   data: number[],
@@ -232,8 +341,10 @@ export const renderTIFFToCanvas = (
   } = options;
 
   // Set image smoothing property based on the data type
-  // For precipitation, vegetation, and population we want smoothing, for land cover we don't
-  ctx.imageSmoothingEnabled = dataType === 'precipitation' || dataType === 'vegetation' || dataType === 'population' ? true : smoothing;
+  ctx.imageSmoothingEnabled = dataType.includes('precipitation') || 
+                               dataType.includes('vegetation') || 
+                               dataType.includes('Gradient') ||
+                               dataType === 'population' ? true : smoothing;
   ctx.imageSmoothingQuality = 'high';
 
   // Create an ImageData object
@@ -245,7 +356,10 @@ export const renderTIFFToCanvas = (
     const value = data[i];
     let color;
     
-    if (dataType === 'precipitation') {
+    if (dataType.includes('Gradient')) {
+      // Handle gradient data types
+      color = getGradientColor(value, dataType);
+    } else if (dataType === 'precipitation') {
       color = getPrecipitationColor(value, min, max);
     } else if (dataType === 'vegetation') {
       // Skip no data values (65533)
@@ -283,7 +397,7 @@ export const renderTIFFToCanvas = (
   ctx.putImageData(imageData, 0, 0);
   
   // If we're rendering precipitation, vegetation, or population, apply post-processing for smoother appearance
-  if (dataType === 'precipitation' || dataType === 'vegetation' || dataType === 'population') {
+  if (dataType.includes('precipitation') || dataType.includes('vegetation') || dataType.includes('Gradient') || dataType === 'population') {
     // Create a temporary canvas for post-processing
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = width;
@@ -307,7 +421,7 @@ export const renderTIFFToCanvas = (
 
 // Get a list of available years for data
 export const getAvailableYears = (dataType = 'landCover'): number[] => {
-  if (dataType === 'population') {
+  if (dataType === 'population' || dataType.includes('population')) {
     return [2010, 2015, 2020]; // Only these years are available for population data
   }
   return Array.from({ length: 14 }, (_, i) => 2010 + i);
@@ -726,4 +840,3 @@ export const getPopulationEnvironmentCorrelation = (): Array<{ category: string,
     }
   ];
 };
-

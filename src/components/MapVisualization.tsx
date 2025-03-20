@@ -23,7 +23,7 @@ interface MapVisualizationProps {
   year?: number;
   onStatsChange?: (stats: Record<string, number>) => void;
   expandedView?: boolean;
-  dataType?: 'landCover' | 'precipitation' | 'vegetation' | 'population';
+  dataType?: 'landCover' | 'vegetation' | 'precipitation' | 'population' | 'landCoverGradient' | 'vegetationGradient' | 'precipitationGradient';
 }
 
 const MapVisualization = ({ 
@@ -53,7 +53,10 @@ const MapVisualization = ({
     landCover: {},
     precipitation: {},
     vegetation: {},
-    population: {}
+    population: {},
+    landCoverGradient: {},
+    vegetationGradient: {},
+    precipitationGradient: {}
   });
   const [currentStats, setCurrentStats] = useState<Record<string, number>>({});
   const [transitionAnimationId, setTransitionAnimationId] = useState<number | null>(null);
@@ -388,14 +391,21 @@ const MapVisualization = ({
     setZoomLevel(1);
   };
 
-  const handleLayerChange = (layer: 'landCover' | 'precipitation' | 'vegetation' | 'population') => {
+  const handleLayerChange = (layer: 'landCover' | 'precipitation' | 'vegetation' | 'population' | 'landCoverGradient' | 'vegetationGradient' | 'precipitationGradient') => {
     setActiveLayer(layer);
+  };
+
+  const getMapDataType = () => {
+    return activeLayer;
   };
 
   const mapLayers = [
     { id: 'landCover' as const, name: 'Land Cover', color: 'bg-sahel-green' },
+    { id: 'landCoverGradient' as const, name: 'Land Cover Gradient', color: 'bg-sahel-greenLight' },
     { id: 'vegetation' as const, name: 'Vegetation', color: 'bg-sahel-greenLight' },
+    { id: 'vegetationGradient' as const, name: 'Vegetation Gradient', color: 'bg-sahel-earth' },
     { id: 'precipitation' as const, name: 'Rainfall', color: 'bg-sahel-blue' },
+    { id: 'precipitationGradient' as const, name: 'Rainfall Gradient', color: 'bg-sahel-earthLight' },
     { id: 'population' as const, name: 'Population', color: 'bg-sahel-earth' },
   ];
 
@@ -429,6 +439,28 @@ const MapVisualization = ({
           </div>
         </div>
       );
+    } else if (dataType === 'landCoverGradient') {
+      return (
+        <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 shadow-md">
+          <div className="flex flex-col">
+            <span className="text-xs font-medium mb-1">Land Cover Change</span>
+            <div className="flex h-4 w-full">
+              {['#ef4444', '#f97316', '#3b82f6', '#84cc16', '#22c55e'].map((color, i) => (
+                <div 
+                  key={i} 
+                  className="h-full flex-1" 
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+            <div className="flex justify-between text-xs mt-1">
+              <span>Degradation</span>
+              <span>Stable</span>
+              <span>Improvement</span>
+            </div>
+          </div>
+        </div>
+      );
     } else if (dataType === 'precipitation') {
       return (
         <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 shadow-md">
@@ -450,6 +482,28 @@ const MapVisualization = ({
           </div>
         </div>
       );
+    } else if (dataType === 'precipitationGradient') {
+      return (
+        <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 shadow-md">
+          <div className="flex flex-col">
+            <span className="text-xs font-medium mb-1">Precipitation Change</span>
+            <div className="flex h-4 w-full">
+              {['#ef4444', '#f97316', '#3b82f6', '#84cc16', '#22c55e'].map((color, i) => (
+                <div 
+                  key={i} 
+                  className="h-full flex-1" 
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+            <div className="flex justify-between text-xs mt-1">
+              <span>Decrease</span>
+              <span>Stable</span>
+              <span>Increase</span>
+            </div>
+          </div>
+        </div>
+      );
     } else if (dataType === 'vegetation') {
       return (
         <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 shadow-md">
@@ -467,6 +521,28 @@ const MapVisualization = ({
             <div className="flex justify-between text-xs mt-1">
               <span>0</span>
               <span>3000</span>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (dataType === 'vegetationGradient') {
+      return (
+        <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 shadow-md">
+          <div className="flex flex-col">
+            <span className="text-xs font-medium mb-1">Vegetation Change</span>
+            <div className="flex h-4 w-full">
+              {['#ef4444', '#f97316', '#3b82f6', '#84cc16', '#22c55e'].map((color, i) => (
+                <div 
+                  key={i} 
+                  className="h-full flex-1" 
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+            <div className="flex justify-between text-xs mt-1">
+              <span>Decrease</span>
+              <span>Stable</span>
+              <span>Increase</span>
             </div>
           </div>
         </div>

@@ -450,10 +450,10 @@ These rainfall gradients correlate strongly with vegetation changes and suggest 
   };
   
   const getMapDataType = () => {
-    if (activeTab === 'landCover') return "landCover";
-    if (activeTab === 'vegetation') return "vegetation";
-    if (activeTab === 'precipitation') return "precipitation";
-    return "landCover";
+    if (activeTab === 'landCover') return "landCoverGradient";
+    if (activeTab === 'vegetation') return "vegetationGradient";
+    if (activeTab === 'precipitation') return "precipitationGradient";
+    return "landCoverGradient";
   };
   
   const getLegendItems = () => {
