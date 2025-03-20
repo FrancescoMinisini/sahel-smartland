@@ -72,7 +72,7 @@ const HeroSection = () => {
               </Link>
               
               <a 
-                href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" 
+                href="https://www.youtube.com/watch?v=BYJe7MZKumM" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center px-6 py-3 bg-white text-sahel-earth font-medium rounded-lg border border-sahel-earth/20 shadow-sm hover:bg-sahel-earth/5 transition-all"
