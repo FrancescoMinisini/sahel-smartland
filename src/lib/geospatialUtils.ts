@@ -1,4 +1,3 @@
-
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -38,7 +37,6 @@ export const loadTIFF = async (year: number): Promise<{
   height: number 
 }> => {
   try {
-    console.log(`Loading TIFF data for year ${year}`);
     const response = await fetch(`/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`);
     const arrayBuffer = await response.arrayBuffer();
     const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
@@ -49,7 +47,6 @@ export const loadTIFF = async (year: number): Promise<{
     
     // Convert the TypedArray to a regular Array
     const data = Array.from(values[0] as Uint8Array);
-    console.log(`Successfully loaded data for year ${year}: ${width}x${height}, ${data.length} pixels`);
     
     return { data, width, height };
   } catch (error) {
@@ -94,50 +91,22 @@ export const renderTIFFToCanvas = (
   opacity: number = 1
 ): void => {
   if (!ctx || data.length === 0 || width === 0 || height === 0) {
-    console.warn("Invalid rendering parameters:", { dataLength: data.length, width, height });
     return;
   }
 
-  const canvas = ctx.canvas;
-  
-  // Clear the canvas first
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
-  // Calculate scaling to fit the data to the canvas
-  const scaleX = canvas.width / width;
-  const scaleY = canvas.height / height;
-  const scale = Math.min(scaleX, scaleY);
-  
-  // Calculate centered position
-  const offsetX = (canvas.width - (width * scale)) / 2;
-  const offsetY = (canvas.height - (height * scale)) / 2;
-  
-  console.log(`Rendering ${width}x${height} data to ${canvas.width}x${canvas.height} canvas with scale ${scale}`);
-  
-  // Create an off-screen canvas for the original resolution image
-  const offscreenCanvas = document.createElement('canvas');
-  offscreenCanvas.width = width;
-  offscreenCanvas.height = height;
-  const offscreenCtx = offscreenCanvas.getContext('2d');
-  
-  if (!offscreenCtx) {
-    console.error("Could not create offscreen canvas context");
-    return;
-  }
-  
-  // Create an ImageData object for the original resolution
-  const imageData = offscreenCtx.createImageData(width, height);
+  // Create an ImageData object
+  const imageData = ctx.createImageData(width, height);
   const pixels = imageData.data;
 
-  // Map the data values to RGBA values
+  // Map the data values to RGBA values with improved color mapping
   for (let i = 0; i < data.length; i++) {
     const value = data[i];
-    const color = landCoverColors[value as keyof typeof landCoverColors];
+    const color = landCoverColors[value as keyof typeof landCoverColors] || landCoverColors[0];
     
-    // If no valid color is found, use a distinctive color for debugging (magenta)
-    const r = color ? parseInt(color.slice(1, 3), 16) : 255;
-    const g = color ? parseInt(color.slice(3, 5), 16) : 0;
-    const b = color ? parseInt(color.slice(5, 7), 16) : 255;
+    // Convert hex color to RGB
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
     
     // Set RGBA values in the ImageData
     const pixelIndex = i * 4;
@@ -147,11 +116,8 @@ export const renderTIFFToCanvas = (
     pixels[pixelIndex + 3] = opacity * 255; // Alpha channel
   }
 
-  // Put the ImageData onto the offscreen canvas
-  offscreenCtx.putImageData(imageData, 0, 0);
-  
-  // Draw the offscreen canvas onto the main canvas with scaling
-  ctx.drawImage(offscreenCanvas, offsetX, offsetY, width * scale, height * scale);
+  // Put the ImageData onto the canvas
+  ctx.putImageData(imageData, 0, 0);
 };
 
 // Get a list of available years for land cover data

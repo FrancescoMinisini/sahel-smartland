@@ -26,7 +26,6 @@ const MapVisualization = ({
 }: MapVisualizationProps) => {
   const { toast } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeLayer, setActiveLayer] = useState('landCover');
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -62,54 +61,6 @@ const MapVisualization = ({
       onStatsChange(currentStats);
     }
   }, [currentStats, onStatsChange]);
-
-  // Set up resize observer to keep canvas size matched to container
-  useEffect(() => {
-    if (!containerRef.current || !canvasRef.current) return;
-    
-    const handleResize = () => {
-      if (!containerRef.current || !canvasRef.current) return;
-      
-      // Get the container dimensions
-      const { width, height } = containerRef.current.getBoundingClientRect();
-      
-      // Set actual canvas dimensions to match container
-      canvasRef.current.width = width;
-      canvasRef.current.height = height;
-      
-      // Also update style dimensions
-      canvasRef.current.style.width = '100%';
-      canvasRef.current.style.height = '100%';
-      
-      // Re-render if we have data
-      const prevYearData = mapData[prevYear];
-      if (prevYearData && prevYearData.data.length > 0) {
-        const ctx = canvasRef.current.getContext('2d');
-        if (ctx) {
-          renderTIFFToCanvas(
-            ctx,
-            prevYearData.data,
-            prevYearData.width,
-            prevYearData.height
-          );
-        }
-      }
-    };
-    
-    // Initial sizing
-    handleResize();
-    
-    // Set up resize observer
-    const resizeObserver = new ResizeObserver(handleResize);
-    resizeObserver.observe(containerRef.current);
-    
-    return () => {
-      if (containerRef.current) {
-        resizeObserver.unobserve(containerRef.current);
-      }
-      resizeObserver.disconnect();
-    };
-  }, [mapData, prevYear]);
 
   // Preload data for all years when the component mounts
   useEffect(() => {
@@ -161,12 +112,13 @@ const MapVisualization = ({
     const prevYearData = mapData[prevYear];
     const nextYearData = mapData[nextYear];
     
-    if (!prevYearData || prevYearData.data.length === 0) {
-      console.log("No data available for year:", prevYear);
-      return;
-    }
+    if (!prevYearData || prevYearData.data.length === 0) return;
     
-    console.log(`Rendering map for year ${year} (using data from ${prevYear})`);
+    // Set canvas dimensions if not already set
+    if (canvas.width !== prevYearData.width || canvas.height !== prevYearData.height) {
+      canvas.width = prevYearData.width;
+      canvas.height = prevYearData.height;
+    }
     
     // Handle smooth transition when year changes
     if (previousYearRef.current !== null && previousYearRef.current !== year) {
@@ -301,14 +253,14 @@ const MapVisualization = ({
   ];
 
   return (
-    <div className={cn("relative rounded-xl overflow-hidden shadow-lg w-full h-full", className)}>
+    <div className={cn("relative rounded-xl overflow-hidden shadow-lg", className)}>
       {/* Year indicator */}
       <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-10 bg-white/80 dark:bg-muted/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium flex items-center gap-1.5 shadow-sm">
         {year}
       </div>
       
-      {/* Map Container - expanded to take full space */}
-      <div ref={containerRef} className="w-full h-full bg-sahel-sandLight overflow-hidden relative">
+      {/* Map Container */}
+      <div className="w-full aspect-[4/3] bg-sahel-sandLight overflow-hidden relative">
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="flex flex-col items-center">
@@ -323,7 +275,7 @@ const MapVisualization = ({
           >
             <canvas 
               ref={canvasRef} 
-              className="w-full h-full object-contain"
+              className="max-w-full max-h-full object-contain"
             />
           </div>
         )}
