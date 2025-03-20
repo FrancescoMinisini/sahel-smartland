@@ -5,7 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import YearSlider from '@/components/YearSlider';
 import MapVisualization from '@/components/MapVisualization';
 import Navbar from '@/components/Navbar';
-import { Info, Calendar, Map, BarChartHorizontal, TrendingUp, TrendingDown, HelpCircle } from 'lucide-react';
+import { Info, Calendar, Map, BarChartHorizontal, TrendingUp, TrendingDown, HelpCircle, Droplets, Leaf } from 'lucide-react';
 import { landCoverClasses, landCoverColors } from '@/lib/geospatialUtils';
 import { 
   BarChart, 
@@ -22,6 +22,7 @@ import {
   Area,
   AreaChart
 } from 'recharts';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const TemporalAnalysis = () => {
   const [selectedYear, setSelectedYear] = useState(2010);
@@ -29,6 +30,7 @@ const TemporalAnalysis = () => {
   const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
   const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
   const [timeSeriesData, setTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
+  const [selectedLayer, setSelectedLayer] = useState<'landCover' | 'precipitation' | 'vegetation'>('landCover');
   
   // Page transition animation
   const pageVariants = {
@@ -236,6 +238,20 @@ const TemporalAnalysis = () => {
     return analysisText;
   };
 
+  // Get layer description based on selected layer
+  const getLayerDescription = () => {
+    switch (selectedLayer) {
+      case 'landCover':
+        return "Land cover classification showing different types of land use in the Sahel region";
+      case 'precipitation':
+        return "Annual precipitation patterns measured in millimeters (mm)";
+      case 'vegetation':
+        return "Vegetation productivity (GPP) measured in gC/m²/year";
+      default:
+        return "";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -256,24 +272,66 @@ const TemporalAnalysis = () => {
             </p>
           </div>
           
-          {/* Year Slider */}
+          {/* Layer Selection and Year Slider */}
           <Card className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Calendar className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-semibold">Time Period</h2>
+            <div className="flex flex-wrap justify-between items-start gap-4">
+              <div className="flex-1 min-w-[250px]">
+                <div className="flex items-center gap-2 mb-4">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  <h2 className="text-xl font-semibold">Time Period</h2>
+                </div>
+                <p className="text-muted-foreground mb-6">
+                  Adjust the slider to see changes from 2010 to 2023
+                </p>
+                <YearSlider 
+                  minYear={2010} 
+                  maxYear={2023} 
+                  initialValue={selectedYear}
+                  onChange={handleYearChange}
+                  autoPlay={true}
+                  autoPlayInterval={1200}
+                  className="max-w-4xl"
+                />
+              </div>
+              
+              <div className="w-full sm:w-auto">
+                <div className="flex items-center gap-2 mb-4">
+                  <Map className="h-5 w-5 text-primary" />
+                  <h2 className="text-xl font-semibold">Layer Selection</h2>
+                </div>
+                <p className="text-muted-foreground mb-4">
+                  Choose data type to visualize
+                </p>
+                <Select value={selectedLayer} onValueChange={(value) => setSelectedLayer(value as any)}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Select layer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="landCover" className="flex items-center gap-2">
+                      <span className="flex items-center gap-2">
+                        <Map className="h-4 w-4 text-sahel-green" />
+                        Land Cover
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="precipitation" className="flex items-center gap-2">
+                      <span className="flex items-center gap-2">
+                        <Droplets className="h-4 w-4 text-sahel-blue" />
+                        Precipitation
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="vegetation" className="flex items-center gap-2">
+                      <span className="flex items-center gap-2">
+                        <Leaf className="h-4 w-4 text-sahel-greenLight" />
+                        Vegetation
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {getLayerDescription()}
+                </p>
+              </div>
             </div>
-            <p className="text-muted-foreground mb-6">
-              Adjust the slider to see land use changes from 1985 to 2023
-            </p>
-            <YearSlider 
-              minYear={2010} 
-              maxYear={2023} 
-              initialValue={selectedYear}
-              onChange={handleYearChange}
-              autoPlay={true}
-              autoPlayInterval={1200}
-              className="max-w-4xl mx-auto"
-            />
           </Card>
           
           {/* Visualization Tabs */}
@@ -302,6 +360,7 @@ const TemporalAnalysis = () => {
                       className="w-full h-full" 
                       year={selectedYear} 
                       onStatsChange={handleStatsChange}
+                      dataType={selectedLayer}
                     />
                   </div>
                 </Card>
