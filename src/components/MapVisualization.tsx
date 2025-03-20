@@ -1,21 +1,19 @@
+
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
 import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info } from 'lucide-react';
 import { 
   loadTIFF, 
   renderTIFFToCanvas, 
-  renderVectorLayer,
   interpolateData, 
   landCoverColors, 
   landCoverClasses,
   getAvailableYears,
   calculateLandCoverStats,
   calculatePrecipitationStats,
-  precipitationColorScale,
-  vectorLayerColors
+  precipitationColorScale
 } from '@/lib/geospatialUtils';
 import { useToast } from '@/components/ui/use-toast';
-import LayersControl from './LayersControl';
 
 interface MapVisualizationProps {
   className?: string;
@@ -38,14 +36,6 @@ const MapVisualization = ({
   const [isLoading, setIsLoading] = useState(true);
   const [activeLayer, setActiveLayer] = useState(dataType);
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [activeLayers, setActiveLayers] = useState<Record<string, boolean>>({
-    landCover: true,
-    precipitation: false,
-    regionBoundaries: false,
-    districtBoundaries: false,
-    roadNetwork: false,
-    riverNetwork: false
-  });
   const [mapData, setMapData] = useState<{
     [dataType: string]: {
       [year: number]: { 
@@ -60,11 +50,7 @@ const MapVisualization = ({
     landCover: {},
     precipitation: {},
     vegetation: {},
-    population: {},
-    regionBoundaries: {},
-    districtBoundaries: {},
-    roadNetwork: {},
-    riverNetwork: {}
+    population: {}
   });
   const [currentStats, setCurrentStats] = useState<Record<string, number>>({});
   const [transitionAnimationId, setTransitionAnimationId] = useState<number | null>(null);
@@ -96,18 +82,10 @@ const MapVisualization = ({
   useEffect(() => {
     setActiveLayer(dataType);
     previousDataTypeRef.current = dataType;
-    
-    setActiveLayers(prev => ({
-      ...prev,
-      landCover: dataType === 'landCover',
-      precipitation: dataType === 'precipitation',
-      vegetation: dataType === 'vegetation',
-      population: dataType === 'population'
-    }));
   }, [dataType]);
 
   useEffect(() => {
-    const preloadMainDataLayers = async () => {
+    const preloadAllYears = async () => {
       setIsLoading(true);
       
       try {
@@ -138,7 +116,7 @@ const MapVisualization = ({
     };
     
     if (!mapData[dataType] || Object.keys(mapData[dataType]).length === 0) {
-      preloadMainDataLayers();
+      preloadAllYears();
     } else {
       setIsLoading(false);
     }
@@ -150,48 +128,7 @@ const MapVisualization = ({
     };
   }, [dataType]);
 
-  useEffect(() => {
-    const loadVectorLayers = async () => {
-      const vectorLayers = ['regionBoundaries', 'districtBoundaries', 'roadNetwork', 'riverNetwork'];
-      let loadingStarted = false;
-      
-      for (const layerType of vectorLayers) {
-        if (activeLayers[layerType] && !mapData[layerType]?.[0]) {
-          if (!loadingStarted) {
-            setIsLoading(true);
-            loadingStarted = true;
-          }
-          
-          try {
-            console.log(`Loading vector layer: ${layerType}`);
-            const data = await loadTIFF(0, layerType);
-            console.log(`Loaded ${layerType} data:`, data);
-            
-            setMapData(prev => ({
-              ...prev,
-              [layerType]: {
-                0: data
-              }
-            }));
-          } catch (error) {
-            console.error(`Error loading ${layerType}:`, error);
-            toast({
-              title: `Error loading ${layerType}`,
-              description: `Could not load the ${layerType} layer.`,
-              variant: 'destructive'
-            });
-          }
-        }
-      }
-      
-      if (loadingStarted) {
-        setIsLoading(false);
-      }
-    };
-    
-    loadVectorLayers();
-  }, [activeLayers]);
-
+  // Resize handler to maintain proper canvas dimensions
   useEffect(() => {
     const handleResize = () => {
       if (isLoading || !canvasRef.current || !containerRef.current) return;
@@ -216,36 +153,34 @@ const MapVisualization = ({
     const containerHeight = container.clientHeight;
     const dataAspectRatio = prevYearData.width / prevYearData.height;
     
+    // Set canvas display size to fill the container while maintaining aspect ratio
     let displayWidth, displayHeight;
     
     if (containerWidth / containerHeight > dataAspectRatio) {
+      // Container is wider than data
       displayHeight = containerHeight;
       displayWidth = displayHeight * dataAspectRatio;
     } else {
+      // Container is taller than data
       displayWidth = containerWidth;
       displayHeight = displayWidth / dataAspectRatio;
     }
     
+    // Apply CSS sizing (this is what's visually shown)
     canvas.style.width = `${displayWidth}px`;
     canvas.style.height = `${displayHeight}px`;
     
-    const scaleFactor = dataType === 'precipitation' ? 2 : 1;
+    // For better rendering quality, set canvas dimensions higher than display size
+    const scaleFactor = dataType === 'precipitation' ? 2 : 1; // Higher resolution for precipitation
     canvas.width = prevYearData.width * scaleFactor; 
     canvas.height = prevYearData.height * scaleFactor;
     
+    // Render with the adjusted canvas
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.scale(scaleFactor, scaleFactor);
       renderCurrentData();
     }
-  };
-
-  const renderCurrentData = () => {
-    if (!canvasRef.current) return;
-    const ctx = canvasRef.current.getContext('2d');
-    if (!ctx) return;
-    
-    renderAllLayers();
   };
 
   useEffect(() => {
@@ -262,59 +197,29 @@ const MapVisualization = ({
       const dataTypeChanged = previousDataTypeRef.current !== dataType;
       
       if (dataTypeChanged) {
-        renderAllLayers();
+        renderCurrentData();
       } else {
         animateYearTransition();
       }
     } else {
-      renderAllLayers();
+      renderCurrentData();
     }
     
     previousYearRef.current = year;
     previousDataTypeRef.current = dataType;
-  }, [mapData, prevYear, nextYear, progress, isLoading, year, dataType, transitionAnimationId, activeLayers]);
+  }, [mapData, prevYear, nextYear, progress, isLoading, year, dataType, transitionAnimationId]);
 
-  const renderAllLayers = () => {
+  const renderCurrentData = () => {
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
     
-    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    
-    if (activeLayers.landCover) {
-      renderLayer('landCover', ctx);
-    } else if (activeLayers.precipitation) {
-      renderLayer('precipitation', ctx);
-    }
-    
-    if (activeLayers.regionBoundaries) {
-      console.log("Rendering region boundaries:", mapData.regionBoundaries?.[0]);
-      renderVectorLayerOnCanvas('regionBoundaries', ctx);
-    }
-    
-    if (activeLayers.districtBoundaries) {
-      console.log("Rendering district boundaries:", mapData.districtBoundaries?.[0]);
-      renderVectorLayerOnCanvas('districtBoundaries', ctx);
-    }
-    
-    if (activeLayers.roadNetwork) {
-      console.log("Rendering road network:", mapData.roadNetwork?.[0]);
-      renderVectorLayerOnCanvas('roadNetwork', ctx);
-    }
-    
-    if (activeLayers.riverNetwork) {
-      console.log("Rendering river network:", mapData.riverNetwork?.[0]);
-      renderVectorLayerOnCanvas('riverNetwork', ctx);
-    }
-  };
-
-  const renderLayer = (layerType: string, ctx: CanvasRenderingContext2D) => {
-    const dataForType = mapData[layerType] || {};
+    const dataForType = mapData[dataType] || {};
     const prevYearData = dataForType[prevYear];
     const nextYearData = dataForType[nextYear];
     
     if (!prevYearData || prevYearData.data.length === 0) {
-      console.error(`No data for ${layerType} for year ${prevYear}`);
+      console.error(`No data for ${dataType} for year ${prevYear}`);
       return;
     }
     
@@ -329,7 +234,7 @@ const MapVisualization = ({
         progress
       );
       
-      if (layerType === 'precipitation') {
+      if (dataType === 'precipitation') {
         min = 0;
         max = 500;
       }
@@ -337,6 +242,7 @@ const MapVisualization = ({
       renderData = prevYearData.data;
     }
     
+    // Use the enhanced rendering with appropriate options for each data type
     renderTIFFToCanvas(
       ctx, 
       renderData, 
@@ -344,39 +250,20 @@ const MapVisualization = ({
       prevYearData.height,
       {
         opacity: 1,
-        dataType: layerType,
+        dataType,
         min,
         max,
-        smoothing: layerType === 'precipitation'
+        smoothing: dataType === 'precipitation'
       }
     );
     
-    if (layerType === 'landCover') {
+    if (dataType === 'landCover') {
       const stats = calculateLandCoverStats(renderData);
       setCurrentStats(stats);
-    } else if (layerType === 'precipitation') {
+    } else if (dataType === 'precipitation') {
       const stats = calculatePrecipitationStats(renderData);
       setCurrentStats(stats);
     }
-  };
-
-  const renderVectorLayerOnCanvas = (layerType: string, ctx: CanvasRenderingContext2D) => {
-    const layerData = mapData[layerType]?.[0];
-    
-    if (!layerData || layerData.data.length === 0) {
-      console.error(`No data for vector layer ${layerType}`);
-      return;
-    }
-    
-    console.log(`Rendering vector layer ${layerType} with data width ${layerData.width}, height ${layerData.height}`);
-    
-    renderVectorLayer(
-      ctx,
-      layerData.data,
-      layerData.width,
-      layerData.height,
-      layerType
-    );
   };
 
   const animateYearTransition = () => {
@@ -461,24 +348,15 @@ const MapVisualization = ({
     setZoomLevel(1);
   };
 
-  const handleLayerToggle = (layerId: string) => {
-    if (layerId === 'landCover' || layerId === 'precipitation') {
-      setActiveLayers(prev => ({
-        ...prev,
-        landCover: layerId === 'landCover',
-        precipitation: layerId === 'precipitation'
-      }));
-    } else {
-      setActiveLayers(prev => ({
-        ...prev,
-        [layerId]: !prev[layerId]
-      }));
-    }
+  const handleLayerChange = (layer: 'landCover' | 'precipitation' | 'vegetation' | 'population') => {
+    setActiveLayer(layer);
   };
 
   const mapLayers = [
     { id: 'landCover' as const, name: 'Land Cover', color: 'bg-sahel-green' },
+    { id: 'vegetation' as const, name: 'Vegetation', color: 'bg-sahel-greenLight' },
     { id: 'precipitation' as const, name: 'Rainfall', color: 'bg-sahel-blue' },
+    { id: 'population' as const, name: 'Population', color: 'bg-sahel-earth' },
   ];
 
   const getCurrentLayerName = () => {
@@ -487,7 +365,7 @@ const MapVisualization = ({
   };
 
   const renderLegend = () => {
-    if (activeLayers.landCover) {
+    if (dataType === 'landCover') {
       return (
         <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 max-w-xs max-h-36 overflow-auto text-xs shadow-md">
           <div className="grid grid-cols-2 gap-1">
@@ -505,7 +383,7 @@ const MapVisualization = ({
           </div>
         </div>
       );
-    } else if (activeLayers.precipitation) {
+    } else if (dataType === 'precipitation') {
       return (
         <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 shadow-md">
           <div className="flex flex-col">
@@ -526,36 +404,7 @@ const MapVisualization = ({
           </div>
         </div>
       );
-    } else {
-      const vectorLayersActive = Object.entries(activeLayers)
-        .filter(([key, isActive]) => isActive && ['regionBoundaries', 'districtBoundaries', 'roadNetwork', 'riverNetwork'].includes(key));
-      
-      if (vectorLayersActive.length > 0) {
-        return (
-          <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 shadow-md">
-            <div className="flex flex-col">
-              <span className="text-xs font-medium mb-1">Map Features</span>
-              <div className="space-y-1">
-                {vectorLayersActive.map(([key]) => (
-                  <div key={key} className="flex items-center">
-                    <div 
-                      className="w-3 h-3 mr-1"
-                      style={{ backgroundColor: vectorLayerColors[key as keyof typeof vectorLayerColors] }}
-                    />
-                    <span className="text-xs">
-                      {key === 'regionBoundaries' ? 'Region Boundaries' : 
-                       key === 'districtBoundaries' ? 'District Boundaries' :
-                       key === 'roadNetwork' ? 'Road Network' : 'River Network'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-      }
     }
-    
     return null;
   };
 
@@ -612,11 +461,6 @@ const MapVisualization = ({
           <RotateCcw size={14} />
         </button>
       </div>
-      
-      <LayersControl 
-        activeLayers={activeLayers} 
-        onLayerToggle={handleLayerToggle} 
-      />
       
       <div className="absolute top-3 left-3">
         <div className="bg-white rounded-lg shadow-md p-1.5">

@@ -1,4 +1,3 @@
-
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -44,36 +43,6 @@ export const precipitationColorScale = [
   '#08306b'  // Dark blue - highest precipitation
 ];
 
-// Colors for vector layers
-export const vectorLayerColors = {
-  regionBoundaries: '#ff7800',
-  districtBoundaries: '#ffb700',
-  roadNetwork: '#000000',
-  riverNetwork: '#0078ff'
-};
-
-// Vector layer rendering function
-export const renderVectorLayer = (
-  ctx: CanvasRenderingContext2D,
-  data: number[],
-  width: number,
-  height: number,
-  layerType: string
-): void => {
-  // Use the renderTIFFToCanvas function but with vector layer specific options
-  renderTIFFToCanvas(
-    ctx,
-    data,
-    width,
-    height,
-    {
-      opacity: 0.7,
-      dataType: layerType,
-      isVectorLayer: true
-    }
-  );
-};
-
 // Load and process a GeoTIFF file
 export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{ 
   data: number[], 
@@ -89,24 +58,12 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
       filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
     } else if (dataType === 'precipitation') {
       filePath = `/Datasets_Hackathon/Climate_Precipitation_Data/${year}R.tif`;
-    } else if (dataType === 'regionBoundaries') {
-      filePath = `/Datasets_Hackathon/Admin_layers/Assaba_Region_layer.tif`;
-    } else if (dataType === 'districtBoundaries') {
-      filePath = `/Datasets_Hackathon/Admin_layers/Assaba_Districts_layer.tif`;
-    } else if (dataType === 'roadNetwork') {
-      filePath = `/Datasets_Hackathon/Streamwater_Line_Road_Network/Road_Network.tif`;
-    } else if (dataType === 'riverNetwork') {
-      filePath = `/Datasets_Hackathon/Streamwater_Line_Road_Network/River_Network.tif`;
     } else {
       // Default to land cover
       filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
     }
     
     const response = await fetch(filePath);
-    if (!response.ok) {
-      throw new Error(`Failed to load TIFF: ${response.statusText} for ${filePath}`);
-    }
-    
     const arrayBuffer = await response.arrayBuffer();
     const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
     const image = await tiff.getImage();
@@ -126,53 +83,7 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
     
     return { data, width, height };
   } catch (error) {
-    console.error(`Error loading TIFF for ${dataType}:`, error);
-    
-    // For testing purposes, create and return dummy data for vector layers
-    if (['regionBoundaries', 'districtBoundaries', 'roadNetwork', 'riverNetwork'].includes(dataType)) {
-      const width = 256;
-      const height = 256;
-      const data = new Array(width * height).fill(0);
-      
-      // Create some dummy features for visualization
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          const index = y * width + x;
-          
-          // Draw border
-          if (x < 5 || x > width - 5 || y < 5 || y > height - 5) {
-            data[index] = 1;
-          }
-          
-          // Draw some lines for roads or rivers
-          if (dataType === 'roadNetwork' && (x % 50 === 0 || y % 50 === 0)) {
-            data[index] = 1;
-          }
-          
-          // Draw some curved lines for rivers
-          if (dataType === 'riverNetwork' && 
-             ((Math.sin(x/20) * 20 + height/2) | 0) === y) {
-            data[index] = 1;
-          }
-          
-          // Draw regions
-          if (dataType === 'regionBoundaries' && 
-             ((x-width/2)**2 + (y-height/2)**2 < (width/3)**2)) {
-            data[index] = 1;
-          }
-          
-          // Draw districts
-          if (dataType === 'districtBoundaries' && 
-             (x > width/4 && x < 3*width/4 && y > height/4 && y < 3*height/4)) {
-            data[index] = 1;
-          }
-        }
-      }
-      
-      console.log(`Created dummy data for ${dataType}: ${width}x${height}`);
-      return { data, width, height };
-    }
-    
+    console.error(`Error loading TIFF for year ${year}:`, error);
     return { data: [], width: 0, height: 0 };
   }
 };
@@ -214,7 +125,7 @@ export const getPrecipitationColor = (value: number, min: number, max: number): 
   return precipitationColorScale[index];
 };
 
-// Enhanced rendering function that handles multiple layer types
+// Enhanced rendering function that handles both land cover and precipitation data
 export const renderTIFFToCanvas = (
   ctx: CanvasRenderingContext2D,
   data: number[],
@@ -225,8 +136,7 @@ export const renderTIFFToCanvas = (
     dataType?: string,
     min?: number,
     max?: number,
-    smoothing?: boolean,
-    isVectorLayer?: boolean
+    smoothing?: boolean
   } = {}
 ): void => {
   if (!ctx || data.length === 0 || width === 0 || height === 0) {
@@ -238,11 +148,11 @@ export const renderTIFFToCanvas = (
     dataType = 'landCover',
     min = 0,
     max = 500,
-    smoothing = false,
-    isVectorLayer = false
+    smoothing = false
   } = options;
 
   // Set image smoothing property based on the data type
+  // For precipitation we want smoothing, for land cover we don't
   ctx.imageSmoothingEnabled = dataType === 'precipitation' ? true : smoothing;
   ctx.imageSmoothingQuality = 'high';
 
@@ -254,19 +164,9 @@ export const renderTIFFToCanvas = (
   for (let i = 0; i < data.length; i++) {
     const value = data[i];
     let color;
-    let alpha = opacity * 255;
     
     if (dataType === 'precipitation') {
       color = getPrecipitationColor(value, min, max);
-    } else if (isVectorLayer) {
-      if (value > 0) {
-        // For vector layers, only show features (non-zero values)
-        color = vectorLayerColors[dataType as keyof typeof vectorLayerColors] || '#ff0000';
-        alpha = 180; // Semi-transparent
-      } else {
-        color = '#000000';
-        alpha = 0; // Transparent for background
-      }
     } else {
       // Land cover coloring
       color = landCoverColors[value as keyof typeof landCoverColors] || landCoverColors[0];
@@ -282,7 +182,7 @@ export const renderTIFFToCanvas = (
     pixels[pixelIndex] = r;
     pixels[pixelIndex + 1] = g;
     pixels[pixelIndex + 2] = b;
-    pixels[pixelIndex + 3] = alpha; // Alpha channel
+    pixels[pixelIndex + 3] = opacity * 255; // Alpha channel
   }
 
   // Put the ImageData onto the canvas
@@ -392,7 +292,7 @@ export const getAccuratePrecipitationData = (year: number): Record<string, numbe
 };
 
 // Function to generate the full time series data for precipitation
-export const getPrecipitationTimeSeriesData = (): Array<{ year: number, [key: string]: number }> => {
+export const getPrecipitationTimeSeriesData = (): Array<Record<string, number>> => {
   return [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023].map(year => {
     const data = getAccuratePrecipitationData(year);
     return {
@@ -405,5 +305,3 @@ export const getPrecipitationTimeSeriesData = (): Array<{ year: number, [key: st
     };
   });
 };
-
-// Support
