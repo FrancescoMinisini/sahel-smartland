@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import YearSlider from '@/components/YearSlider';
 import MapVisualization from '@/components/MapVisualization';
 import Navbar from '@/components/Navbar';
-import { Info, Calendar, Map, BarChartHorizontal, TrendingUp, TrendingDown } from 'lucide-react';
+import { Info, Calendar, Map, BarChartHorizontal, TrendingUp, TrendingDown, HelpCircle } from 'lucide-react';
 import { landCoverClasses, landCoverColors } from '@/lib/geospatialUtils';
 import { 
   BarChart, 
@@ -17,7 +17,11 @@ import {
   Tooltip, 
   Legend, 
   ResponsiveContainer,
-  Cell
+  Cell,
+  Line,
+  LineChart,
+  Area,
+  AreaChart
 } from 'recharts';
 
 const TemporalAnalysis = () => {
@@ -25,6 +29,7 @@ const TemporalAnalysis = () => {
   const [activeTab, setActiveTab] = useState("map");
   const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
   const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
+  const [timeSeriesData, setTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
   
   // Page transition animation
   const pageVariants = {
@@ -41,6 +46,33 @@ const TemporalAnalysis = () => {
 
   const handleStatsChange = (stats: Record<string, number>) => {
     setLandCoverStats(stats);
+    
+    // Update time series data for historical tracking
+    setTimeSeriesData(prevData => {
+      // Check if we already have data for this year
+      const existingIndex = prevData.findIndex(item => item.year === selectedYear);
+      
+      // Create new data point with converted values (thousand pixels)
+      const newDataPoint = { year: selectedYear };
+      
+      // Add each land cover class as a separate data point
+      Object.entries(stats)
+        .filter(([key]) => key !== '0') // Filter out "No Data" class
+        .forEach(([key, value]) => {
+          const className = landCoverClasses[Number(key) as keyof typeof landCoverClasses] || `Class ${key}`;
+          newDataPoint[className] = Math.round(value / 1000); // Convert to 1000s of pixels
+        });
+      
+      if (existingIndex >= 0) {
+        // Replace existing data for this year
+        const newData = [...prevData];
+        newData[existingIndex] = newDataPoint;
+        return newData;
+      } else {
+        // Add new data point for this year
+        return [...prevData, newDataPoint].sort((a, b) => a.year - b.year);
+      }
+    });
   };
 
   // Transform the statistics into chart-compatible data
@@ -144,6 +176,67 @@ const TemporalAnalysis = () => {
   
   const insights = getAnalysisInsights();
 
+  // Generate trend analysis text based on time series data
+  const getTrendAnalysis = () => {
+    if (timeSeriesData.length < 2) {
+      return "Insufficient data to analyze trends. Please select multiple years to build trend data.";
+    }
+    
+    const forestData = timeSeriesData
+      .filter(d => d.Forests !== undefined)
+      .map(d => ({ year: d.year, value: d.Forests }));
+      
+    const barrenData = timeSeriesData
+      .filter(d => d.Barren !== undefined)
+      .map(d => ({ year: d.year, value: d.Barren }));
+    
+    const urbanData = timeSeriesData
+      .filter(d => d.Urban !== undefined)
+      .map(d => ({ year: d.year, value: d.Urban }));
+    
+    // Simple linear trend analysis
+    let forestTrend = "stable";
+    let barrenTrend = "stable";
+    let urbanTrend = "stable";
+    
+    if (forestData.length >= 2) {
+      const firstForest = forestData[0].value;
+      const lastForest = forestData[forestData.length - 1].value;
+      if (lastForest > firstForest * 1.05) forestTrend = "increasing";
+      else if (lastForest < firstForest * 0.95) forestTrend = "decreasing";
+    }
+    
+    if (barrenData.length >= 2) {
+      const firstBarren = barrenData[0].value;
+      const lastBarren = barrenData[barrenData.length - 1].value;
+      if (lastBarren > firstBarren * 1.05) barrenTrend = "increasing";
+      else if (lastBarren < firstBarren * 0.95) barrenTrend = "decreasing";
+    }
+    
+    if (urbanData.length >= 2) {
+      const firstUrban = urbanData[0].value;
+      const lastUrban = urbanData[urbanData.length - 1].value;
+      if (lastUrban > firstUrban * 1.05) urbanTrend = "increasing";
+      else if (lastUrban < firstUrban * 0.95) urbanTrend = "decreasing";
+    }
+    
+    let analysisText = `Based on the observed data from ${timeSeriesData[0].year} to ${timeSeriesData[timeSeriesData.length - 1].year}:\n\n`;
+    
+    analysisText += `• Forest coverage is ${forestTrend === "stable" ? "relatively stable" : forestTrend}`;
+    analysisText += forestTrend === "decreasing" ? ", indicating potential deforestation concerns.\n" : 
+                    forestTrend === "increasing" ? ", suggesting successful conservation efforts.\n" : ".\n";
+    
+    analysisText += `• Barren land is ${barrenTrend === "stable" ? "relatively stable" : barrenTrend}`;
+    analysisText += barrenTrend === "increasing" ? ", which may indicate desertification processes.\n" : 
+                    barrenTrend === "decreasing" ? ", suggesting land rehabilitation success.\n" : ".\n";
+    
+    analysisText += `• Urban areas are ${urbanTrend === "stable" ? "relatively stable" : urbanTrend}`;
+    analysisText += urbanTrend === "increasing" ? ", indicating expansion of human settlements and infrastructure.\n" : 
+                    urbanTrend === "decreasing" ? ", which is unusual and may warrant verification.\n" : ".\n";
+    
+    return analysisText;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -215,60 +308,130 @@ const TemporalAnalysis = () => {
               
               {/* Charts View */}
               <TabsContent value="charts" className="mt-0">
-                <Card className="p-6">
-                  <h3 className="text-lg font-medium mb-4">Land Cover Distribution ({selectedYear})</h3>
-                  <div className="h-[400px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={chartData}
-                        margin={{
-                          top: 20,
-                          right: 30,
-                          left: 20,
-                          bottom: 60,
-                        }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          dataKey="name" 
-                          angle={-45} 
-                          textAnchor="end" 
-                          height={60} 
-                        />
-                        <YAxis 
-                          label={{ 
-                            value: 'Area (thousand pixels)', 
-                            angle: -90, 
-                            position: 'insideLeft',
-                            style: { textAnchor: 'middle' }
-                          }} 
-                        />
-                        <Tooltip 
-                          formatter={(value, name, props) => {
-                            if (name === "Area (thousand pixels)") {
-                              const change = props.payload.change;
-                              return [
-                                `${value} thousand pixels ${change !== 0 ? `(${change > 0 ? '+' : ''}${change}%)` : ''}`, 
-                                name
-                              ];
-                            }
-                            return [value, name];
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card className="p-6">
+                    <h3 className="text-lg font-medium mb-4">Land Cover Distribution ({selectedYear})</h3>
+                    <div className="h-[400px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={chartData}
+                          margin={{
+                            top: 20,
+                            right: 30,
+                            left: 20,
+                            bottom: 60,
                           }}
-                        />
-                        <Legend verticalAlign="top" height={36} />
-                        <Bar 
-                          dataKey="value" 
-                          name="Area (thousand pixels)" 
-                          fill="#8884d8"
                         >
-                          {chartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </Card>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="name" 
+                            angle={-45} 
+                            textAnchor="end" 
+                            height={60} 
+                          />
+                          <YAxis 
+                            label={{ 
+                              value: 'Area (thousand pixels)', 
+                              angle: -90, 
+                              position: 'insideLeft',
+                              style: { textAnchor: 'middle' }
+                            }} 
+                          />
+                          <Tooltip 
+                            formatter={(value, name, props) => {
+                              if (name === "Area (thousand pixels)") {
+                                const change = props.payload.change;
+                                return [
+                                  `${value} thousand pixels ${change !== 0 ? `(${change > 0 ? '+' : ''}${change}%)` : ''}`, 
+                                  name
+                                ];
+                              }
+                              return [value, name];
+                            }}
+                          />
+                          <Legend verticalAlign="top" height={36} />
+                          <Bar 
+                            dataKey="value" 
+                            name="Area (thousand pixels)" 
+                            fill="#8884d8"
+                          >
+                            {chartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="mt-4 text-sm text-muted-foreground">
+                      <div className="flex items-start gap-2 mb-2">
+                        <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                        <p>
+                          The chart displays the distribution of land cover types measured in thousands of pixels. Each pixel represents approximately 500m², with colors matching the map visualization.
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Historical Trend Chart */}
+                  <Card className="p-6">
+                    <h3 className="text-lg font-medium mb-4">Land Cover Change Over Time</h3>
+                    <div className="h-[400px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart
+                          data={timeSeriesData}
+                          margin={{
+                            top: 20,
+                            right: 30,
+                            left: 20,
+                            bottom: 20,
+                          }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="year" 
+                            label={{ 
+                              value: 'Year', 
+                              position: 'insideBottom',
+                              offset: -10
+                            }}
+                          />
+                          <YAxis 
+                            label={{ 
+                              value: 'Area (thousand pixels)', 
+                              angle: -90, 
+                              position: 'insideLeft',
+                              style: { textAnchor: 'middle' }
+                            }} 
+                          />
+                          <Tooltip />
+                          <Legend />
+                          
+                          {/* Show the key land cover types only to avoid overcrowding */}
+                          <Area type="monotone" dataKey="Forests" stackId="1" stroke="#1a9850" fill="#1a9850" fillOpacity={0.7} />
+                          <Area type="monotone" dataKey="Shrublands" stackId="1" stroke="#91cf60" fill="#91cf60" fillOpacity={0.7} />
+                          <Area type="monotone" dataKey="Grasslands" stackId="1" stroke="#fee08b" fill="#fee08b" fillOpacity={0.7} />
+                          <Area type="monotone" dataKey="Croplands" stackId="1" stroke="#fc8d59" fill="#fc8d59" fillOpacity={0.7} />
+                          <Area type="monotone" dataKey="Urban" stackId="1" stroke="#d73027" fill="#d73027" fillOpacity={0.7} />
+                          <Area type="monotone" dataKey="Barren" stackId="1" stroke="#bababa" fill="#bababa" fillOpacity={0.7} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="mt-4 text-sm text-muted-foreground">
+                      <div className="flex items-start gap-2 mb-2">
+                        <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                        <p>
+                          This chart accumulates data as you explore different years. The stacked area chart shows how the proportion of each land cover type changes over time, which can reveal patterns of land conversion, urbanization, or environmental recovery.
+                        </p>
+                      </div>
+                      <div className="mt-3 p-3 bg-muted rounded-md">
+                        <h4 className="font-medium mb-2">Trend Analysis:</h4>
+                        <p className="whitespace-pre-line">
+                          {getTrendAnalysis()}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
               </TabsContent>
               
               {/* Analysis View */}
@@ -277,6 +440,27 @@ const TemporalAnalysis = () => {
                   <h3 className="text-lg font-medium mb-4">Environmental Analysis ({selectedYear})</h3>
                   
                   <div className="space-y-6">
+                    {/* Background Info on Metrics */}
+                    <div className="rounded-lg bg-muted/50 p-4 mb-6">
+                      <h4 className="font-medium mb-3">How Metrics Are Calculated</h4>
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <p>
+                          <span className="font-medium">Land Cover Classification:</span> Based on MODIS land use data with 500m resolution. Each land cover class is counted in pixels and converted to approximate area.
+                        </p>
+                        <p>
+                          <span className="font-medium">Change Detection:</span> Calculated as percentage change from previous year's values. Significant changes are those exceeding 5% or 1000 pixels.
+                        </p>
+                        <p>
+                          <span className="font-medium">Environmental Impact:</span> Assessed by analyzing trends in key indicators:
+                        </p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li>Deforestation: Measured by decrease in forest cover (class 7)</li>
+                          <li>Urbanization: Measured by increase in urban areas (class 13)</li>
+                          <li>Desertification: Measured by increase in barren land (class 16)</li>
+                        </ul>
+                      </div>
+                    </div>
+                    
                     {/* Major Changes Section */}
                     <div className="rounded-lg bg-muted p-4">
                       <h4 className="font-medium mb-3">Key Land Cover Changes</h4>
