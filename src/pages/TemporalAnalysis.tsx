@@ -8,7 +8,6 @@ import YearSlider from '@/components/YearSlider';
 import MapVisualization from '@/components/MapVisualization';
 import { Separator } from '@/components/ui/separator';
 import { Link, useSearchParams } from 'react-router-dom';
-import ChartCarousel from '@/components/ChartCarousel';
 import {
   AreaChart,
   Area,
@@ -23,7 +22,9 @@ import {
   Legend,
   ResponsiveContainer,
   Cell,
-  TooltipProps
+  TooltipProps,
+  PieChart,
+  Pie
 } from 'recharts';
 import {
   ChartContainer,
@@ -526,6 +527,19 @@ These demographic shifts have important implications for land use planning, reso
     
     return null;
   };
+
+  // Custom renderer for the pie chart label
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
+    const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
+    
+    return percent > 0.05 ? (
+      <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+        {`${name.split(' ')[0]} ${(percent * 100).toFixed(0)}%`}
+      </text>
+    ) : null;
+  };
   
   return (
     <div className="container py-6 max-w-screen-2xl">
@@ -594,7 +608,7 @@ These demographic shifts have important implications for land use planning, reso
           <Card className="mb-6">
             <CardContent className="pt-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-1 aspect-[4/3] md:aspect-auto rounded-lg overflow-hidden">
+                <div className="md:col-span-1 md:h-[400px] aspect-square md:aspect-auto rounded-lg overflow-hidden">
                   <MapVisualization 
                     year={year} 
                     dataType={activeDataType}
@@ -646,12 +660,72 @@ These demographic shifts have important implications for land use planning, reso
               <CardContent>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   <div className="lg:col-span-2 space-y-6">
-                    <div className="h-[350px]">
-                      <ChartCarousel 
-                        data={getLandCoverChartData()} 
-                        timeSeriesData={landCoverData} 
-                        dataType="landCover"
-                      />
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="h-[350px]">
+                        <h4 className="text-sm font-medium mb-3">Distribution by Category ({year})</h4>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={getLandCoverChartData()}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              label={renderCustomizedLabel}
+                              outerRadius={120}
+                              fill="#8884d8"
+                              dataKey="value"
+                            >
+                              {getLandCoverChartData().map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip 
+                              formatter={(value: any) => [Number(value).toLocaleString(), 'Pixels']}
+                              labelFormatter={(label) => `${label}`}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      
+                      <div className="h-[350px]">
+                        <h4 className="text-sm font-medium mb-3">Historical Trends (2010-2023)</h4>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart
+                            data={landCoverData}
+                            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="year" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            {landCoverData.length > 0 && 
+                              Object.keys(landCoverData[0])
+                                .filter(key => key !== 'year' && ['Forests', 'Grasslands', 'Croplands', 'Barren'].includes(key))
+                                .map((key, index) => (
+                                  <Area 
+                                    key={key}
+                                    type="monotone" 
+                                    dataKey={key} 
+                                    stackId="1"
+                                    stroke={
+                                      key === 'Forests' ? '#1a9850' :
+                                      key === 'Grasslands' ? '#fee08b' :
+                                      key === 'Croplands' ? '#fc8d59' :
+                                      key === 'Barren' ? '#969696' : '#cccccc'
+                                    }
+                                    fill={
+                                      key === 'Forests' ? '#1a9850' :
+                                      key === 'Grasslands' ? '#fee08b' :
+                                      key === 'Croplands' ? '#fc8d59' :
+                                      key === 'Barren' ? '#969696' : '#cccccc'
+                                    }
+                                  />
+                                ))
+                            }
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
                   </div>
                   
@@ -701,12 +775,46 @@ These demographic shifts have important implications for land use planning, reso
               <CardContent>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   <div className="lg:col-span-2 space-y-6">
-                    <div className="h-[350px]">
-                      <ChartCarousel 
-                        data={getPrecipitationChartData()} 
-                        timeSeriesData={regionalPrecipitationData} 
-                        dataType="precipitation"
-                      />
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="h-[350px]">
+                        <h4 className="text-sm font-medium mb-3">Regional Distribution ({year})</h4>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={regionalPrecipitationData.filter(d => d.year === year)}
+                            layout="vertical"
+                            margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis type="number" />
+                            <YAxis type="category" dataKey="name" />
+                            <Tooltip />
+                            <Legend />
+                            <Bar dataKey="North" name="Northern Region" fill={regionalPrecipitationColors.North} />
+                            <Bar dataKey="Center" name="Central Region" fill={regionalPrecipitationColors.Center} />
+                            <Bar dataKey="South" name="Southern Region" fill={regionalPrecipitationColors.South} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      
+                      <div className="h-[350px]">
+                        <h4 className="text-sm font-medium mb-3">Annual Precipitation Trends (2010-2023)</h4>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart 
+                            data={regionalPrecipitationData}
+                            margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="year" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Line type="monotone" dataKey="Overall" name="Overall" stroke={regionalPrecipitationColors.Overall} activeDot={{ r: 8 }} />
+                            <Line type="monotone" dataKey="South" name="Southern Region" stroke={regionalPrecipitationColors.South} />
+                            <Line type="monotone" dataKey="Center" name="Central Region" stroke={regionalPrecipitationColors.Center} />
+                            <Line type="monotone" dataKey="North" name="Northern Region" stroke={regionalPrecipitationColors.North} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
                   </div>
                   
@@ -766,12 +874,47 @@ These demographic shifts have important implications for land use planning, reso
               <CardContent>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   <div className="lg:col-span-2 space-y-6">
-                    <div className="h-[350px]">
-                      <ChartCarousel 
-                        data={getVegetationChartData()} 
-                        timeSeriesData={vegetationData} 
-                        dataType="vegetation"
-                      />
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="h-[350px]">
+                        <h4 className="text-sm font-medium mb-3">Vegetation Type Productivity ({year})</h4>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={vegetationChartData}
+                            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" />
+                            <YAxis label={{ value: 'GPP (gC/m²/year)', angle: -90, position: 'insideLeft' }} />
+                            <Tooltip />
+                            <Legend />
+                            <Bar dataKey="value" name="Productivity (GPP)">
+                              {vegetationChartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      
+                      <div className="h-[350px]">
+                        <h4 className="text-sm font-medium mb-3">Historical Productivity Trends (2010-2023)</h4>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart
+                            data={vegetationData}
+                            margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="year" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Line type="monotone" dataKey="Forest" stroke="#1a9850" activeDot={{ r: 8 }} />
+                            <Line type="monotone" dataKey="Grassland" stroke="#fee08b" />
+                            <Line type="monotone" dataKey="Cropland" stroke="#fc8d59" />
+                            <Line type="monotone" dataKey="Shrubland" stroke="#91cf60" />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
                   </div>
                   
@@ -840,16 +983,57 @@ These demographic shifts have important implications for land use planning, reso
               <CardContent>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   <div className="lg:col-span-2 space-y-6">
-                    <div className="h-[350px]">
-                      <ChartCarousel 
-                        data={getPopulationChartData()} 
-                        timeSeriesData={[
-                          { year: 2010, Urban: 1900000, Rural: 3500000, Nomadic: 850000, Total: 6250000 },
-                          { year: 2015, Urban: 2100000, Rural: 3650000, Nomadic: 820000, Total: 6570000 },
-                          { year: 2020, Urban: 2350000, Rural: 3850000, Nomadic: 780000, Total: 6980000 }
-                        ]} 
-                        dataType="population"
-                      />
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="h-[350px]">
+                        <h4 className="text-sm font-medium mb-3">Population Distribution ({year})</h4>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={populationChartData.filter(item => item.name !== 'Total')}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              label={renderCustomizedLabel}
+                              outerRadius={120}
+                              fill="#8884d8"
+                              dataKey="value"
+                            >
+                              {populationChartData.filter(item => item.name !== 'Total').map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip 
+                              formatter={(value: any) => [Number(value).toLocaleString(), 'People']}
+                              labelFormatter={(label) => `${label}`}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      
+                      <div className="h-[350px]">
+                        <h4 className="text-sm font-medium mb-3">Population Growth Trends (2010-2023)</h4>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart
+                            data={[
+                              { year: 2010, Urban: 1900000, Rural: 3500000, Nomadic: 850000, Total: 6250000 },
+                              { year: 2015, Urban: 2100000, Rural: 3650000, Nomadic: 820000, Total: 6570000 },
+                              { year: 2020, Urban: 2350000, Rural: 3850000, Nomadic: 780000, Total: 6980000 },
+                              { year: 2023, Urban: 2450000, Rural: 3950000, Nomadic: 750000, Total: 7150000 }
+                            ]}
+                            margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="year" />
+                            <YAxis />
+                            <Tooltip formatter={(value) => [Number(value).toLocaleString(), 'Population']} />
+                            <Legend />
+                            <Line type="monotone" dataKey="Urban" name="Urban" stroke="#1e88e5" activeDot={{ r: 8 }} />
+                            <Line type="monotone" dataKey="Rural" name="Rural" stroke="#43a047" />
+                            <Line type="monotone" dataKey="Nomadic" name="Nomadic" stroke="#ff7043" />
+                            <Line type="monotone" dataKey="Total" name="Total" stroke="#5e35b1" strokeDasharray="5 5" />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
                   </div>
                   
