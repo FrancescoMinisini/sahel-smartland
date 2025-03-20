@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
@@ -17,6 +18,7 @@ type CarouselProps = {
   plugins?: CarouselPlugin
   orientation?: "horizontal" | "vertical"
   setApi?: (api: CarouselApi) => void
+  onSelect?: (selectedIndex: number) => void
 }
 
 type CarouselContextProps = {
@@ -26,6 +28,7 @@ type CarouselContextProps = {
   scrollNext: () => void
   canScrollPrev: boolean
   canScrollNext: boolean
+  onSelectProp?: (selectedIndex: number) => void
 } & CarouselProps
 
 const CarouselContext = React.createContext<CarouselContextProps | null>(null)
@@ -52,6 +55,7 @@ const Carousel = React.forwardRef<
       plugins,
       className,
       children,
+      onSelect,
       ...props
     },
     ref
@@ -66,14 +70,19 @@ const Carousel = React.forwardRef<
     const [canScrollPrev, setCanScrollPrev] = React.useState(false)
     const [canScrollNext, setCanScrollNext] = React.useState(false)
 
-    const onSelect = React.useCallback((api: CarouselApi) => {
+    const onSelectCallback = React.useCallback((api: CarouselApi) => {
       if (!api) {
         return
       }
 
+      if (onSelect) {
+        const selectedIndex = api.selectedScrollSnap();
+        onSelect(selectedIndex);
+      }
+
       setCanScrollPrev(api.canScrollPrev())
       setCanScrollNext(api.canScrollNext())
-    }, [])
+    }, [onSelect])
 
     const scrollPrev = React.useCallback(() => {
       api?.scrollPrev()
@@ -109,14 +118,14 @@ const Carousel = React.forwardRef<
         return
       }
 
-      onSelect(api)
-      api.on("reInit", onSelect)
-      api.on("select", onSelect)
+      onSelectCallback(api)
+      api.on("reInit", onSelectCallback)
+      api.on("select", onSelectCallback)
 
       return () => {
-        api?.off("select", onSelect)
+        api?.off("select", onSelectCallback)
       }
-    }, [api, onSelect])
+    }, [api, onSelectCallback])
 
     return (
       <CarouselContext.Provider
@@ -130,6 +139,7 @@ const Carousel = React.forwardRef<
           scrollNext,
           canScrollPrev,
           canScrollNext,
+          onSelectProp: onSelect,
         }}
       >
         <div
