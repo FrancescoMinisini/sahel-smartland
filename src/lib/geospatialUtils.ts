@@ -1,3 +1,4 @@
+
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -55,7 +56,7 @@ export const loadTIFF = async (year: number): Promise<{
   }
 };
 
-// Improved interpolation between two years of data
+// Improved interpolation between two years of data with enhanced transition effects
 export const interpolateData = (
   startData: number[], 
   endData: number[], 
@@ -65,9 +66,8 @@ export const interpolateData = (
     return endData;
   }
   
-  // For land cover data, use a smarter transition approach:
-  // - For areas that don't change between years, keep the class
-  // - For areas that do change, blend based on progress
+  // Enhanced interpolation with better transition visualization:
+  // For areas that change, create a more dramatic visual transition
   return startData.map((startValue, index) => {
     const endValue = endData[index];
     
@@ -76,13 +76,14 @@ export const interpolateData = (
       return startValue;
     }
     
-    // Otherwise, use progress to determine which value to show
-    // This creates a more natural-looking transition
-    return Math.random() < progress ? endValue : startValue;
+    // For changing areas, use probability weighted by progress
+    // This creates a more visually distinctive transition pattern
+    const threshold = Math.pow(progress, 1.5); // Non-linear transition for more visual impact
+    return Math.random() < threshold ? endValue : startValue;
   });
 };
 
-// Enhanced rendering function with better color blending
+// Enhanced rendering function with improved visual clarity
 export const renderTIFFToCanvas = (
   ctx: CanvasRenderingContext2D,
   data: number[],
@@ -94,21 +95,35 @@ export const renderTIFFToCanvas = (
     return;
   }
 
+  // Clear the canvas with the site's background color
+  ctx.fillStyle = "hsl(var(--background))";
+  ctx.fillRect(0, 0, width, height);
+
   // Create an ImageData object
   const imageData = ctx.createImageData(width, height);
   const pixels = imageData.data;
 
-  // Map the data values to RGBA values with improved color mapping
+  // Enhanced color mapping with better contrast
   for (let i = 0; i < data.length; i++) {
     const value = data[i];
     const color = landCoverColors[value as keyof typeof landCoverColors] || landCoverColors[0];
     
-    // Convert hex color to RGB
-    const r = parseInt(color.slice(1, 3), 16);
-    const g = parseInt(color.slice(3, 5), 16);
-    const b = parseInt(color.slice(5, 7), 16);
+    // Convert hex color to RGB with enhanced saturation
+    let r = parseInt(color.slice(1, 3), 16);
+    let g = parseInt(color.slice(3, 5), 16);
+    let b = parseInt(color.slice(5, 7), 16);
     
-    // Set RGBA values in the ImageData
+    // Boost color saturation for better visibility of distinctions
+    const enhanceFactor = 1.2;
+    const maxChannel = Math.max(r, g, b);
+    if (maxChannel > 0) {
+      const scale = Math.min(255 / maxChannel, enhanceFactor);
+      r = Math.min(255, Math.round(r * scale));
+      g = Math.min(255, Math.round(g * scale));
+      b = Math.min(255, Math.round(b * scale));
+    }
+    
+    // Set RGBA values in the ImageData with enhanced alpha for better visibility
     const pixelIndex = i * 4;
     pixels[pixelIndex] = r;
     pixels[pixelIndex + 1] = g;
