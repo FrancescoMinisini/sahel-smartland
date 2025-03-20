@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   BarChart, 
@@ -69,7 +68,6 @@ const TRANSITION_TYPES = {
   'Other': { color: '#a855f7', isNegative: false },
 };
 
-// Mock data generator 
 const generateGradientData = (): GradientData[] => {
   const years = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023];
   
@@ -168,7 +166,6 @@ const generateGradientData = (): GradientData[] => {
   });
 };
 
-// Generates data for vegetation gradient analysis
 const generateVegetationGradientData = (year: number): any[] => {
   return [
     {
@@ -204,7 +201,6 @@ const generateVegetationGradientData = (year: number): any[] => {
   ];
 };
 
-// Generates data for precipitation gradient analysis
 const generatePrecipitationGradientData = (year: number): any[] => {
   return [
     {
@@ -241,14 +237,12 @@ const generatePrecipitationGradientData = (year: number): any[] => {
 };
 
 const getProcessedChartData = (gradientData: GradientData[], selectedYear: number) => {
-  // Find data for the selected year
   const yearData = getClosestYearData(gradientData, selectedYear);
   
   if (!yearData || !yearData.transitions.length) {
     return { transitionData: [], degradationData: [], recoveryData: [] };
   }
   
-  // Process transition data for charts
   const transitionData = yearData.transitions.map(t => ({
     name: `${t.from} to ${t.to}`,
     value: t.area,
@@ -257,7 +251,6 @@ const getProcessedChartData = (gradientData: GradientData[], selectedYear: numbe
     isNegative: t.isNegative
   }));
   
-  // Process hotspot data
   const degradationData = yearData.hotspots.map(h => ({
     name: h.region,
     value: h.area,
@@ -266,7 +259,6 @@ const getProcessedChartData = (gradientData: GradientData[], selectedYear: numbe
     color: '#ef4444'
   }));
   
-  // Process recovery data
   const recoveryData = yearData.recovery.map(r => ({
     name: r.region,
     value: r.area,
@@ -281,11 +273,9 @@ const getProcessedChartData = (gradientData: GradientData[], selectedYear: numbe
 const getClosestYearData = (data: GradientData[], targetYear: number): GradientData | undefined => {
   if (!data || data.length === 0) return undefined;
   
-  // Find exact match
   const exactMatch = data.find(d => d.year === targetYear);
   if (exactMatch) return exactMatch;
   
-  // Find closest year (convert strings to numbers if needed)
   return data.reduce((prev, curr) => {
     const prevDiff = Math.abs(prev.year - Number(targetYear));
     const currDiff = Math.abs(curr.year - Number(targetYear));
@@ -302,9 +292,7 @@ const GradientAnalysis: React.FC<{ year: number }> = ({ year }) => {
   const [precipitationGradientData, setPrecipitationGradientData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Load gradient data
   useEffect(() => {
-    // In a real implementation, we would load actual data from the land_cover_transition directory
     setIsLoading(true);
     setTimeout(() => {
       const landCoverData = generateGradientData();
@@ -320,7 +308,6 @@ const GradientAnalysis: React.FC<{ year: number }> = ({ year }) => {
   
   const { transitionData, degradationData, recoveryData } = getProcessedChartData(gradientData, year);
   
-  // Calculate totals for each category
   const totalDegradationArea = transitionData
     .filter(t => t.isNegative)
     .reduce((sum, t) => sum + t.value, 0);
@@ -331,7 +318,6 @@ const GradientAnalysis: React.FC<{ year: number }> = ({ year }) => {
     
   const netChange = totalRecoveryArea - totalDegradationArea;
   
-  // Get the active data for current tab
   const getActiveData = () => {
     if (activeTab === 'landCover') {
       if (subTab === 'transitions') return transitionData;
@@ -463,15 +449,13 @@ These rainfall gradients correlate strongly with vegetation changes and suggest 
     return "No gradient data available for analysis.";
   };
   
-  // Get appropriate dataType for MapVisualization based on active tab
   const getMapDataType = () => {
-    if (activeTab === 'landCover') return "gradientTransition";
-    if (activeTab === 'vegetation') return "vegetationGradient";
-    if (activeTab === 'precipitation') return "precipitationGradient";
-    return "gradientTransition";
+    if (activeTab === 'landCover') return "landCover";
+    if (activeTab === 'vegetation') return "vegetation";
+    if (activeTab === 'precipitation') return "precipitation";
+    return "landCover";
   };
   
-  // Get the legend items for the current active tab
   const getLegendItems = () => {
     if (activeTab === 'landCover') {
       return Object.entries(TRANSITION_TYPES).slice(0, 8).map(([name, { color }]) => ({
