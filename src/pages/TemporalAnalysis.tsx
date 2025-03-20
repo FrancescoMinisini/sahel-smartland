@@ -4,9 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import YearSlider from '@/components/YearSlider';
 import MapVisualization from '@/components/MapVisualization';
-import LayerSelector from '@/components/LayerSelector';
 import Navbar from '@/components/Navbar';
-import { Info, Calendar, Map, BarChartHorizontal, TrendingUp, TrendingDown, HelpCircle, Layers } from 'lucide-react';
+import { Info, Calendar, Map, BarChartHorizontal, TrendingUp, TrendingDown, HelpCircle } from 'lucide-react';
 import { landCoverClasses, landCoverColors } from '@/lib/geospatialUtils';
 import { 
   BarChart, 
@@ -30,12 +29,8 @@ const TemporalAnalysis = () => {
   const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
   const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
   const [timeSeriesData, setTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
-  const [selectedLayer, setSelectedLayer] = useState<string>('landCover');
-  const [showRegionBoundaries, setShowRegionBoundaries] = useState(false);
-  const [showDistrictBoundaries, setShowDistrictBoundaries] = useState(false);
-  const [showRoadNetwork, setShowRoadNetwork] = useState(false);
-  const [showRiverNetwork, setShowRiverNetwork] = useState(false);
   
+  // Page transition animation
   const pageVariants = {
     initial: { opacity: 0, y: 20 },
     in: { opacity: 1, y: 0 },
@@ -43,6 +38,7 @@ const TemporalAnalysis = () => {
   };
 
   const handleYearChange = (year: number) => {
+    // Store the previous year's stats before updating to the new year
     setPreviousYearStats({...landCoverStats});
     setSelectedYear(year);
   };
@@ -50,50 +46,37 @@ const TemporalAnalysis = () => {
   const handleStatsChange = (stats: Record<string, number>) => {
     setLandCoverStats(stats);
     
+    // Update time series data for historical tracking
     setTimeSeriesData(prevData => {
+      // Check if we already have data for this year
       const existingIndex = prevData.findIndex(item => item.year === selectedYear);
       
+      // Create new data point with converted values (thousand pixels)
       const newDataPoint = { year: selectedYear };
       
+      // Add each land cover class as a separate data point
       Object.entries(stats)
-        .filter(([key]) => key !== '0')
+        .filter(([key]) => key !== '0') // Filter out "No Data" class
         .forEach(([key, value]) => {
           const className = landCoverClasses[Number(key) as keyof typeof landCoverClasses] || `Class ${key}`;
-          newDataPoint[className] = Math.round(value / 1000);
+          newDataPoint[className] = Math.round(value / 1000); // Convert to 1000s of pixels
         });
       
       if (existingIndex >= 0) {
+        // Replace existing data for this year
         const newData = [...prevData];
         newData[existingIndex] = newDataPoint;
         return newData;
       } else {
+        // Add new data point for this year
         return [...prevData, newDataPoint].sort((a, b) => a.year - b.year);
       }
     });
   };
 
-  const handleLayerChange = (layer: string) => {
-    setSelectedLayer(layer);
-  };
-
-  const toggleAdminLayer = (layerType: string) => {
-    if (layerType === 'region') {
-      setShowRegionBoundaries(!showRegionBoundaries);
-    } else if (layerType === 'districts') {
-      setShowDistrictBoundaries(!showDistrictBoundaries);
-    }
-  };
-
-  const toggleNetworkLayer = (layerType: string) => {
-    if (layerType === 'roads') {
-      setShowRoadNetwork(!showRoadNetwork);
-    } else if (layerType === 'rivers') {
-      setShowRiverNetwork(!showRiverNetwork);
-    }
-  };
-
+  // Transform the statistics into chart-compatible data
   const chartData = Object.entries(landCoverStats)
-    .filter(([key]) => key !== '0')
+    .filter(([key]) => key !== '0') // Filter out "No Data" class
     .map(([key, value]) => {
       const landCoverKey = Number(key);
       const previousValue = previousYearStats[key] || value;
@@ -101,93 +84,98 @@ const TemporalAnalysis = () => {
       
       return {
         name: landCoverClasses[landCoverKey as keyof typeof landCoverClasses] || `Class ${key}`,
-        value: Math.round(value / 1000),
+        value: Math.round(value / 1000), // Convert to 1000s of pixels (approximate km²)
         color: landCoverColors[landCoverKey as keyof typeof landCoverColors] || '#cccccc',
-        change: Math.round((changeValue / (previousValue || 1)) * 100),
+        change: Math.round((changeValue / (previousValue || 1)) * 100), // Percent change
         rawChange: changeValue
       };
     })
-    .sort((a, b) => b.value - a.value);
-
+    .sort((a, b) => b.value - a.value); // Sort by descending value
+    
+  // Calculate analysis insights based on land cover stats
   const getAnalysisInsights = () => {
     if (Object.keys(landCoverStats).length === 0) {
       return {
         majorChanges: [],
-        environmentalImpact: "No data available for analysis. Please select a year and explore the map to generate insights.",
+        environmentalImpact: "",
         recommendedActions: []
       };
     }
-
-    const majorChanges = Object.entries(landCoverStats)
-      .filter(([key]) => key !== '0' && previousYearStats[key] !== undefined)
-      .map(([key, value]) => {
-        const previousValue = previousYearStats[key] || value;
-        const change = previousValue > 0 ? Math.round((value - previousValue) / previousValue * 100) : 0;
-        const landCoverKey = Number(key);
-        
-        return {
-          name: landCoverClasses[landCoverKey as keyof typeof landCoverClasses] || `Class ${key}`,
-          color: landCoverColors[landCoverKey as keyof typeof landCoverColors] || '#cccccc',
-          change,
-          value: Math.round(value / 1000)
-        };
-      })
-      .filter(item => Math.abs(item.change) >= 5)
-      .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
-      .slice(0, 3);
-
+    
+    // Find significant changes (over 5% or 1000 pixels)
+    const significantChanges = chartData
+      .filter(item => Math.abs(item.rawChange) > 1000 || Math.abs(item.change) > 5)
+      .sort((a, b) => Math.abs(b.rawChange) - Math.abs(a.rawChange))
+      .slice(0, 3); // Get top 3 changes
+      
+    // Determine overall environmental impact
+    let deforestationLevel = 0;
+    let urbanizationLevel = 0;
+    let desertificationLevel = 0;
+    
+    // Check for deforestation (decrease in forests, class 7)
+    const forestsChange = chartData.find(item => item.name === "Forests")?.change || 0;
+    if (forestsChange < -5) deforestationLevel = 2; // High deforestation
+    else if (forestsChange < 0) deforestationLevel = 1; // Moderate deforestation
+    
+    // Check for urbanization (increase in urban areas, class 13)
+    const urbanChange = chartData.find(item => item.name === "Urban")?.change || 0;
+    if (urbanChange > 10) urbanizationLevel = 2; // High urbanization
+    else if (urbanChange > 0) urbanizationLevel = 1; // Moderate urbanization
+    
+    // Check for desertification (increase in barren land, class 16)
+    const barrenChange = chartData.find(item => item.name === "Barren")?.change || 0;
+    if (barrenChange > 10) desertificationLevel = 2; // High desertification
+    else if (barrenChange > 0) desertificationLevel = 1; // Moderate desertification
+    
+    // Generate impact text
     let environmentalImpact = "";
-    
-    const forestChange = majorChanges.find(change => change.name === 'Forests');
-    const urbanChange = majorChanges.find(change => change.name === 'Urban');
-    const barrenChange = majorChanges.find(change => change.name === 'Barren');
-    
-    if (forestChange && forestChange.change < 0) {
-      environmentalImpact += `Deforestation detected: Forest cover decreased by ${Math.abs(forestChange.change)}%. `;
-    } else if (forestChange && forestChange.change > 0) {
-      environmentalImpact += `Forest recovery observed: Forest cover increased by ${forestChange.change}%. `;
+    if (deforestationLevel > 0 && urbanizationLevel > 0 && desertificationLevel > 0) {
+      environmentalImpact = "Critical environmental degradation detected with significant deforestation, urbanization, and desertification.";
+    } else if (deforestationLevel > 0 && (urbanizationLevel > 0 || desertificationLevel > 0)) {
+      environmentalImpact = "Moderate to high environmental stress with observable deforestation and land use changes.";
+    } else if (deforestationLevel > 0 || urbanizationLevel > 0 || desertificationLevel > 0) {
+      environmentalImpact = "Early indications of environmental changes that require monitoring.";
+    } else if (forestsChange > 5) {
+      environmentalImpact = "Positive environmental trends with increasing forest coverage.";
+    } else {
+      environmentalImpact = "Stable environmental conditions with minimal land cover changes.";
     }
     
-    if (urbanChange && urbanChange.change > 0) {
-      environmentalImpact += `Urbanization detected: Urban areas expanded by ${urbanChange.change}%. `;
-    }
-    
-    if (barrenChange && barrenChange.change > 0) {
-      environmentalImpact += `Potential desertification: Barren land increased by ${barrenChange.change}%. `;
-    } else if (barrenChange && barrenChange.change < 0) {
-      environmentalImpact += `Land rehabilitation: Barren land decreased by ${Math.abs(barrenChange.change)}%. `;
-    }
-    
-    if (!environmentalImpact) {
-      environmentalImpact = "No significant environmental impact detected in the current period.";
-    }
-    
+    // Generate recommended actions
     const recommendedActions = [];
     
-    if (forestChange && forestChange.change < -5) {
-      recommendedActions.push("Implement stricter deforestation controls and reforestation programs");
-      recommendedActions.push("Monitor logging activities more closely in affected areas");
+    if (deforestationLevel > 0) {
+      recommendedActions.push(deforestationLevel > 1 
+        ? "Implement immediate reforestation initiatives in affected areas"
+        : "Monitor forest degradation and plan targeted conservation efforts");
     }
     
-    if (urbanChange && urbanChange.change > 10) {
-      recommendedActions.push("Develop sustainable urban planning policies for rapidly expanding areas");
-      recommendedActions.push("Ensure green spaces are incorporated into new urban developments");
+    if (desertificationLevel > 0) {
+      recommendedActions.push(desertificationLevel > 1
+        ? "Deploy advanced soil conservation techniques to combat severe desertification"
+        : "Introduce sustainable land management practices to prevent further soil degradation");
     }
     
-    if (barrenChange && barrenChange.change > 8) {
-      recommendedActions.push("Implement soil conservation and anti-desertification measures");
-      recommendedActions.push("Consider drought-resistant vegetation planting programs");
+    if (urbanizationLevel > 0) {
+      recommendedActions.push(urbanizationLevel > 1
+        ? "Develop comprehensive urban planning strategies to minimize environmental impact"
+        : "Encourage green infrastructure in developing urban areas");
     }
+    
+    // Always add a general recommendation
+    recommendedActions.push("Continue monitoring land cover changes for early detection of environmental issues");
     
     return {
-      majorChanges,
+      majorChanges: significantChanges,
       environmentalImpact,
-      recommendedActions
+      recommendedActions: recommendedActions.slice(0, 3) // Limit to top 3 recommendations
     };
   };
-
+  
   const insights = getAnalysisInsights();
 
+  // Generate trend analysis text based on time series data
   const getTrendAnalysis = () => {
     if (timeSeriesData.length < 2) {
       return "Insufficient data to analyze trends. Please select multiple years to build trend data.";
@@ -205,6 +193,7 @@ const TemporalAnalysis = () => {
       .filter(d => d.Urban !== undefined)
       .map(d => ({ year: d.year, value: d.Urban }));
     
+    // Simple linear trend analysis
     let forestTrend = "stable";
     let barrenTrend = "stable";
     let urbanTrend = "stable";
@@ -267,6 +256,7 @@ const TemporalAnalysis = () => {
             </p>
           </div>
           
+          {/* Year Slider */}
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <Calendar className="h-5 w-5 text-primary" />
@@ -286,16 +276,13 @@ const TemporalAnalysis = () => {
             />
           </Card>
           
+          {/* Visualization Tabs */}
           <div className="grid grid-cols-1 gap-6">
             <Tabs defaultValue="map" className="w-full" onValueChange={setActiveTab}>
               <TabsList className="mb-4">
                 <TabsTrigger value="map" className="flex gap-1.5">
                   <Map className="h-4 w-4" />
                   Map View
-                </TabsTrigger>
-                <TabsTrigger value="layers" className="flex gap-1.5">
-                  <Layers className="h-4 w-4" />
-                  Layer Control
                 </TabsTrigger>
                 <TabsTrigger value="charts" className="flex gap-1.5">
                   <BarChartHorizontal className="h-4 w-4" />
@@ -307,6 +294,7 @@ const TemporalAnalysis = () => {
                 </TabsTrigger>
               </TabsList>
               
+              {/* Map View */}
               <TabsContent value="map" className="mt-0">
                 <Card className="overflow-hidden">
                   <div className="h-[500px] w-full">
@@ -314,37 +302,12 @@ const TemporalAnalysis = () => {
                       className="w-full h-full" 
                       year={selectedYear} 
                       onStatsChange={handleStatsChange}
-                      dataType={selectedLayer as 'landCover' | 'precipitation' | 'vegetation' | 'population'}
-                      showRegionBoundaries={showRegionBoundaries}
-                      showDistrictBoundaries={showDistrictBoundaries}
-                      showRoadNetwork={showRoadNetwork}
-                      showRiverNetwork={showRiverNetwork}
                     />
                   </div>
                 </Card>
               </TabsContent>
               
-              <TabsContent value="layers" className="mt-0">
-                <Card className="p-6">
-                  <h3 className="text-lg font-medium mb-4">Layer Control</h3>
-                  <div className="mb-6">
-                    <p className="text-muted-foreground mb-4">
-                      Select the map layers you want to visualize. You can combine a base layer with vector overlays such as administrative boundaries or network data.
-                    </p>
-                  </div>
-                  <LayerSelector 
-                    onLayerChange={handleLayerChange} 
-                    currentLayer={selectedLayer}
-                    onToggleAdminLayer={toggleAdminLayer}
-                    onToggleNetworkLayer={toggleNetworkLayer}
-                    showRegionBoundaries={showRegionBoundaries}
-                    showDistrictBoundaries={showDistrictBoundaries}
-                    showRoadNetwork={showRoadNetwork}
-                    showRiverNetwork={showRiverNetwork}
-                  />
-                </Card>
-              </TabsContent>
-              
+              {/* Charts View */}
               <TabsContent value="charts" className="mt-0">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <Card className="p-6">
@@ -410,6 +373,7 @@ const TemporalAnalysis = () => {
                     </div>
                   </Card>
 
+                  {/* Historical Trend Chart */}
                   <Card className="p-6">
                     <h3 className="text-lg font-medium mb-4">Land Cover Change Over Time</h3>
                     <div className="h-[400px]">
@@ -443,6 +407,7 @@ const TemporalAnalysis = () => {
                           <Tooltip />
                           <Legend />
                           
+                          {/* Show the key land cover types only to avoid overcrowding */}
                           <Area type="monotone" dataKey="Forests" stackId="1" stroke="#1a9850" fill="#1a9850" fillOpacity={0.7} />
                           <Area type="monotone" dataKey="Shrublands" stackId="1" stroke="#91cf60" fill="#91cf60" fillOpacity={0.7} />
                           <Area type="monotone" dataKey="Grasslands" stackId="1" stroke="#fee08b" fill="#fee08b" fillOpacity={0.7} />
@@ -470,11 +435,13 @@ const TemporalAnalysis = () => {
                 </div>
               </TabsContent>
               
+              {/* Analysis View */}
               <TabsContent value="info" className="mt-0">
                 <Card className="p-6">
                   <h3 className="text-lg font-medium mb-4">Environmental Analysis ({selectedYear})</h3>
                   
                   <div className="space-y-6">
+                    {/* Background Info on Metrics */}
                     <div className="rounded-lg bg-muted/50 p-4 mb-6">
                       <h4 className="font-medium mb-3">How Metrics Are Calculated</h4>
                       <div className="space-y-2 text-sm text-muted-foreground">
@@ -495,6 +462,7 @@ const TemporalAnalysis = () => {
                       </div>
                     </div>
                     
+                    {/* Major Changes Section */}
                     <div className="rounded-lg bg-muted p-4">
                       <h4 className="font-medium mb-3">Key Land Cover Changes</h4>
                       
@@ -526,6 +494,7 @@ const TemporalAnalysis = () => {
                       )}
                     </div>
                     
+                    {/* Environmental Impact Assessment */}
                     <div className="rounded-lg bg-primary/10 p-4">
                       <h4 className="font-medium mb-2">Environmental Impact Assessment</h4>
                       <p className="text-sm text-muted-foreground">
@@ -533,6 +502,7 @@ const TemporalAnalysis = () => {
                       </p>
                     </div>
                     
+                    {/* Recommended Actions */}
                     <div className="rounded-lg bg-accent/20 p-4">
                       <h4 className="font-medium mb-2">Recommended Actions</h4>
                       {insights.recommendedActions.length > 0 ? (

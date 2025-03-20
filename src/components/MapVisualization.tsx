@@ -21,10 +21,6 @@ interface MapVisualizationProps {
   onStatsChange?: (stats: Record<string, number>) => void;
   expandedView?: boolean;
   dataType?: 'landCover' | 'precipitation' | 'vegetation' | 'population';
-  showRegionBoundaries?: boolean;
-  showDistrictBoundaries?: boolean;
-  showRoadNetwork?: boolean;
-  showRiverNetwork?: boolean;
 }
 
 const MapVisualization = ({ 
@@ -32,15 +28,10 @@ const MapVisualization = ({
   year = 2023, 
   onStatsChange,
   expandedView = false,
-  dataType = 'landCover',
-  showRegionBoundaries = false,
-  showDistrictBoundaries = false,
-  showRoadNetwork = false,
-  showRiverNetwork = false
+  dataType = 'landCover'
 }: MapVisualizationProps) => {
   const { toast } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const vectorLayerCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeLayer, setActiveLayer] = useState(dataType);
@@ -184,95 +175,11 @@ const MapVisualization = ({
     canvas.width = prevYearData.width * scaleFactor; 
     canvas.height = prevYearData.height * scaleFactor;
     
-    // Set the same size for the vector layer canvas
-    if (vectorLayerCanvasRef.current) {
-      vectorLayerCanvasRef.current.style.width = `${displayWidth}px`;
-      vectorLayerCanvasRef.current.style.height = `${displayHeight}px`;
-      vectorLayerCanvasRef.current.width = prevYearData.width * scaleFactor;
-      vectorLayerCanvasRef.current.height = prevYearData.height * scaleFactor;
-    }
-    
     // Render with the adjusted canvas
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.scale(scaleFactor, scaleFactor);
       renderCurrentData();
-    }
-    
-    // Render vector layers if needed
-    renderVectorLayers();
-  };
-
-  // New function to render vector layers (DBF, SHP files)
-  const renderVectorLayers = () => {
-    if (!vectorLayerCanvasRef.current) return;
-    
-    const ctx = vectorLayerCanvasRef.current.getContext('2d');
-    if (!ctx) return;
-    
-    // Clear previous vector layers
-    ctx.clearRect(0, 0, vectorLayerCanvasRef.current.width, vectorLayerCanvasRef.current.height);
-    
-    // Scale the context to match the data canvas
-    const scaleFactor = dataType === 'precipitation' ? 2 : 1;
-    ctx.scale(scaleFactor, scaleFactor);
-    
-    // Set line styles for different vector layers
-    ctx.lineWidth = 1;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    
-    // Draw region boundaries if enabled
-    if (showRegionBoundaries) {
-      ctx.strokeStyle = 'rgba(65, 105, 225, 0.8)'; // Royal blue
-      ctx.beginPath();
-      // Here we would draw the region boundaries
-      // This would involve parsing the SHP or other vector files
-      // For now, let's draw a placeholder
-      ctx.rect(10, 10, vectorLayerCanvasRef.current.width / scaleFactor - 20, 
-               vectorLayerCanvasRef.current.height / scaleFactor - 20);
-      ctx.stroke();
-    }
-    
-    // Draw district boundaries if enabled
-    if (showDistrictBoundaries) {
-      ctx.strokeStyle = 'rgba(255, 140, 0, 0.7)'; // Dark orange
-      ctx.beginPath();
-      // Here we would draw the district boundaries
-      // For now, let's draw a placeholder
-      for (let i = 0; i < 3; i++) {
-        const x = 30 + i * 50;
-        const y = 30 + i * 40;
-        const width = 100;
-        const height = 80;
-        ctx.rect(x, y, width, height);
-      }
-      ctx.stroke();
-    }
-    
-    // Draw road network if enabled
-    if (showRoadNetwork) {
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)'; // Black
-      ctx.beginPath();
-      // Here we would draw the road network
-      // For now, let's draw a placeholder
-      ctx.moveTo(10, 50);
-      ctx.lineTo(vectorLayerCanvasRef.current.width / scaleFactor - 10, 50);
-      ctx.moveTo(50, 10);
-      ctx.lineTo(50, vectorLayerCanvasRef.current.height / scaleFactor - 10);
-      ctx.stroke();
-    }
-    
-    // Draw river network if enabled
-    if (showRiverNetwork) {
-      ctx.strokeStyle = 'rgba(30, 144, 255, 0.8)'; // Dodger blue
-      ctx.beginPath();
-      // Here we would draw the river network
-      // For now, let's draw a placeholder
-      ctx.moveTo(10, 100);
-      ctx.bezierCurveTo(50, 70, 100, 120, 150, 80);
-      ctx.bezierCurveTo(200, 40, 250, 90, 300, 60);
-      ctx.stroke();
     }
   };
 
@@ -301,13 +208,6 @@ const MapVisualization = ({
     previousYearRef.current = year;
     previousDataTypeRef.current = dataType;
   }, [mapData, prevYear, nextYear, progress, isLoading, year, dataType, transitionAnimationId]);
-
-  // Update vector layers when relevant props change
-  useEffect(() => {
-    if (!isLoading) {
-      renderVectorLayers();
-    }
-  }, [showRegionBoundaries, showDistrictBoundaries, showRoadNetwork, showRiverNetwork, isLoading]);
 
   const renderCurrentData = () => {
     if (!canvasRef.current) return;
@@ -448,6 +348,22 @@ const MapVisualization = ({
     setZoomLevel(1);
   };
 
+  const handleLayerChange = (layer: 'landCover' | 'precipitation' | 'vegetation' | 'population') => {
+    setActiveLayer(layer);
+  };
+
+  const mapLayers = [
+    { id: 'landCover' as const, name: 'Land Cover', color: 'bg-sahel-green' },
+    { id: 'vegetation' as const, name: 'Vegetation', color: 'bg-sahel-greenLight' },
+    { id: 'precipitation' as const, name: 'Rainfall', color: 'bg-sahel-blue' },
+    { id: 'population' as const, name: 'Population', color: 'bg-sahel-earth' },
+  ];
+
+  const getCurrentLayerName = () => {
+    const currentLayer = mapLayers.find(layer => layer.id === activeLayer);
+    return currentLayer ? currentLayer.name : 'Layer';
+  };
+
   const renderLegend = () => {
     if (dataType === 'landCover') {
       return (
@@ -518,10 +434,6 @@ const MapVisualization = ({
               ref={canvasRef} 
               className="max-w-full max-h-full object-contain"
             />
-            <canvas
-              ref={vectorLayerCanvasRef}
-              className="absolute inset-0 pointer-events-none max-w-full max-h-full object-contain"
-            />
           </div>
         )}
       </div>
@@ -554,7 +466,7 @@ const MapVisualization = ({
         <div className="bg-white rounded-lg shadow-md p-1.5">
           <div className="flex items-center gap-1 px-1.5">
             <Layers size={12} className="text-sahel-earth" />
-            <span className="text-xs font-medium">{dataType}</span>
+            <span className="text-xs font-medium">{getCurrentLayerName()}</span>
           </div>
         </div>
       </div>

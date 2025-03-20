@@ -1,4 +1,3 @@
-
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -59,8 +58,6 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
       filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
     } else if (dataType === 'precipitation') {
       filePath = `/Datasets_Hackathon/Climate_Precipitation_Data/${year}R.tif`;
-    } else if (dataType === 'vegetation') {
-      filePath = `/Datasets_Hackathon/MODIS_Gross_Primary_Production_GPP/${year}_GP.tif`;
     } else {
       // Default to land cover
       filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
@@ -88,42 +85,6 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
   } catch (error) {
     console.error(`Error loading TIFF for year ${year}:`, error);
     return { data: [], width: 0, height: 0 };
-  }
-};
-
-// Load vector data from shapefile or other vector source
-export const loadVectorData = async (vectorType: string): Promise<any> => {
-  try {
-    let filePath = '';
-    
-    switch (vectorType) {
-      case 'region':
-        filePath = '/Datasets_Hackathon/Admin_layers/Assaba_Region_layer.shp';
-        break;
-      case 'districts':
-        filePath = '/Datasets_Hackathon/Admin_layers/Assaba_Districts_layer.shp';
-        break;
-      case 'roads':
-        filePath = '/Datasets_Hackathon/Streamwater_Line_Road_Network/Main_Road.shp';
-        break;
-      case 'rivers':
-        filePath = '/Datasets_Hackathon/Streamwater_Line_Road_Network/Streamwater.shp';
-        break;
-      default:
-        throw new Error(`Unknown vector type: ${vectorType}`);
-    }
-    
-    // In a real implementation, we would use a library like shpjs to parse the shapefile
-    // Since this is a simplified example, we'll return placeholder data
-    return {
-      type: vectorType,
-      features: [
-        // Example features would go here
-      ]
-    };
-  } catch (error) {
-    console.error(`Error loading vector data for ${vectorType}:`, error);
-    return null;
   }
 };
 
@@ -252,10 +213,6 @@ export const renderTIFFToCanvas = (
 
 // Get a list of available years for land cover data
 export const getAvailableYears = (dataType = 'landCover'): number[] => {
-  if (dataType === 'population') {
-    // Population data only available for specific years
-    return [2010, 2015, 2020];
-  }
   return Array.from({ length: 14 }, (_, i) => 2010 + i);
 };
 
@@ -335,7 +292,7 @@ export const getAccuratePrecipitationData = (year: number): Record<string, numbe
 };
 
 // Function to generate the full time series data for precipitation
-export const getPrecipitationTimeSeriesData = (): Array<{year: number, [key: string]: number}> => {
+export const getPrecipitationTimeSeriesData = (): Array<Record<string, number>> => {
   return [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023].map(year => {
     const data = getAccuratePrecipitationData(year);
     return {
