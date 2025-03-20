@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -31,6 +32,83 @@ const Dashboard = () => {
   const [selectedYear, setSelectedYear] = useState(2023);
   const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
   const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
+  
+  // Add precipitation data
+  const [precipitationData] = useState([
+    {
+      name: 'Annual Rainfall',
+      value: selectedYear > 2020 ? 685 : selectedYear > 2015 ? 710 : 745,
+      color: '#4575b4',
+      change: selectedYear > 2020 ? -3.5 : selectedYear > 2015 ? -2.1 : -1.2,
+      rawChange: selectedYear > 2020 ? -25 : selectedYear > 2015 ? -15 : -10
+    },
+    {
+      name: 'Dry Season',
+      value: selectedYear > 2020 ? 85 : selectedYear > 2015 ? 95 : 110,
+      color: '#74add1',
+      change: selectedYear > 2020 ? -10.5 : selectedYear > 2015 ? -7.5 : -4.5,
+      rawChange: selectedYear > 2020 ? -10 : selectedYear > 2015 ? -5 : -3
+    },
+    {
+      name: 'Wet Season',
+      value: selectedYear > 2020 ? 600 : selectedYear > 2015 ? 615 : 635,
+      color: '#91bfdb',
+      change: selectedYear > 2020 ? -2.4 : selectedYear > 2015 ? -1.6 : -0.8,
+      rawChange: selectedYear > 2020 ? -15 : selectedYear > 2015 ? -10 : -5
+    }
+  ]);
+  
+  // Add precipitation time series data
+  const [precipTimeSeriesData] = useState([
+    {
+      year: 2010,
+      Annual: 780,
+      'Dry Season': 110,
+      'Wet Season': 670
+    },
+    {
+      year: 2012,
+      Annual: 765,
+      'Dry Season': 105,
+      'Wet Season': 660
+    },
+    {
+      year: 2014,
+      Annual: 752,
+      'Dry Season': 102,
+      'Wet Season': 650
+    },
+    {
+      year: 2016,
+      Annual: 740,
+      'Dry Season': 100,
+      'Wet Season': 640
+    },
+    {
+      year: 2018,
+      Annual: 725,
+      'Dry Season': 98,
+      'Wet Season': 627
+    },
+    {
+      year: 2020,
+      Annual: 710,
+      'Dry Season': 95,
+      'Wet Season': 615
+    },
+    {
+      year: 2022,
+      Annual: 695,
+      'Dry Season': 90,
+      'Wet Season': 605
+    },
+    {
+      year: 2023,
+      Annual: 685,
+      'Dry Season': 85,
+      'Wet Season': 600
+    }
+  ]);
   
   const [timeSeriesData] = useState([
     {
@@ -429,7 +507,11 @@ const Dashboard = () => {
                       <div className="lg:col-span-2 space-y-6">
                         <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
                           <h3 className="text-lg font-medium mb-4">Land Cover Distribution ({selectedYear})</h3>
-                          <ChartCarousel data={chartData} timeSeriesData={timeSeriesData} />
+                          <ChartCarousel 
+                            data={chartData} 
+                            timeSeriesData={timeSeriesData} 
+                            dataType="landCover"
+                          />
                           <div className="mt-4 text-sm text-muted-foreground">
                             <div className="flex items-start gap-2 mb-2">
                               <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
@@ -483,13 +565,95 @@ const Dashboard = () => {
                   )}
                   
                   {activeTab === 'precipitation' && (
-                    <div className="text-center p-8">
-                      <h3 className="text-xl font-semibold mb-4">Precipitation Patterns (2010-2023)</h3>
-                      <p className="text-muted-foreground mb-6">
-                        Visualization of annual rainfall data across the Sahel region.
-                      </p>
-                      <div className="h-48 bg-sahel-blue/10 rounded-lg flex items-center justify-center">
-                        <CloudRain size={48} className="text-sahel-blue/30" />
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                      <div className="lg:col-span-2 space-y-6">
+                        <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
+                          <h3 className="text-lg font-medium mb-4">Precipitation Distribution ({selectedYear})</h3>
+                          <ChartCarousel 
+                            data={precipitationData} 
+                            timeSeriesData={precipTimeSeriesData}
+                            dataType="precipitation"
+                          />
+                          <div className="mt-4 text-sm text-muted-foreground">
+                            <div className="flex items-start gap-2 mb-2">
+                              <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                              <p>
+                                Precipitation data is visualized as water volume (cubic meters) based on rainfall measurements (mm)
+                                across the region. The time series shows how rainfall patterns have changed over time.
+                              </p>
+                            </div>
+                            <div className="mt-3 p-3 bg-muted rounded-md">
+                              <h4 className="font-medium mb-2">Trend Analysis:</h4>
+                              <p className="whitespace-pre-line">
+                                Based on the data from 2010 to 2023, there has been a consistent decrease in annual rainfall
+                                in the Sahel region, with approximately 12% reduction over this period. This trend 
+                                correlates with observed changes in vegetation patterns and may contribute to desertification
+                                in vulnerable areas.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="lg:col-span-1 h-full">
+                        <div className="h-[400px] bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
+                          <h3 className="text-lg font-medium mb-4">Key Indicators</h3>
+                          <div className="space-y-6">
+                            <div>
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-medium">Annual Rainfall</span>
+                                <span className="text-sm text-sahel-blue font-semibold">
+                                  {selectedYear > 2020 ? '685' : selectedYear > 2015 ? '710' : '745'} mm
+                                </span>
+                              </div>
+                              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-sahel-blue" 
+                                  style={{ width: `${(selectedYear > 2020 ? 685 : selectedYear > 2015 ? 710 : 745) / 10}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-medium">Rainy Days</span>
+                                <span className="text-sm text-sahel-blue font-semibold">
+                                  {selectedYear > 2020 ? '34' : selectedYear > 2015 ? '39' : '45'} days
+                                </span>
+                              </div>
+                              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-sahel-blue" 
+                                  style={{ width: `${(selectedYear > 2020 ? 34 : selectedYear > 2015 ? 39 : 45) / 0.6}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-medium">Drought Severity</span>
+                                <span className="text-sm text-sahel-earth font-semibold">
+                                  {selectedYear > 2020 ? 'High' : selectedYear > 2015 ? 'Moderate' : 'Low'}
+                                </span>
+                              </div>
+                              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-sahel-earth" 
+                                  style={{ width: `${selectedYear > 2020 ? 75 : selectedYear > 2015 ? 50 : 25}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                            
+                            <div className="mt-6 pt-6 border-t border-border/40">
+                              <h4 className="text-sm font-medium mb-4">Impact on Vegetation</h4>
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span>Lower soil moisture</span>
+                                <span>Decreased productivity</span>
+                              </div>
+                              <div className="h-1.5 w-full bg-gradient-to-r from-sahel-blue to-sahel-earth/80 rounded-full mt-2"></div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}

@@ -13,41 +13,88 @@ interface ChartCarouselProps {
   }>;
   className?: string;
   timeSeriesData?: Array<{year: number, [key: string]: number}>;
+  dataType?: 'landCover' | 'precipitation' | 'vegetation' | 'population';
 }
 
 // Conversion factors based on MODIS pixel resolution (approximately 463m per pixel)
 const PIXEL_TO_SQ_KM = 0.2144; // One MODIS pixel is about 0.2144 sq km (463m × 463m / 1000000)
 const DISPLAY_IN_THOUSANDS = 1000; // Threshold to display in thousands of sq km
 
-const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselProps) => {
+// Precipitation specific conversion (mm to volume)
+const PRECIP_MM_TO_VOLUME = (mm: number, area: number) => mm * area; // Precipitation in mm * area in sq km = volume in thousand cubic meters
+
+const ChartCarousel = ({ 
+  data, 
+  timeSeriesData = [], 
+  className, 
+  dataType = 'landCover' 
+}: ChartCarouselProps) => {
   // Filter out any data points with zero values
   const filteredData = data.filter(item => item.value > 0);
   
-  // Determine if we need to display in thousands based on max value
-  const maxValue = Math.max(...filteredData.map(item => item.value * PIXEL_TO_SQ_KM));
-  const useThousands = maxValue > DISPLAY_IN_THOUSANDS;
-  const displayDivisor = useThousands ? 1000 : 1;
-  const displayUnit = useThousands ? 'thousand sq km' : 'sq km';
+  let convertedData = filteredData;
+  let convertedTimeSeriesData = timeSeriesData;
+  let displayUnit = 'sq km';
   
-  // Convert pixel data to square kilometers for display
-  const convertedData = filteredData.map(item => ({
-    ...item,
-    value: Math.round((item.value * PIXEL_TO_SQ_KM) / displayDivisor * 10) / 10, // Round to 1 decimal place
-    rawSqKm: item.value * PIXEL_TO_SQ_KM,
-  }));
-  
-  // Convert time series data to square kilometers
-  const convertedTimeSeriesData = timeSeriesData.map(yearData => {
-    const convertedYearData: {year: number, [key: string]: number} = { year: yearData.year };
+  // Process based on data type
+  if (dataType === 'landCover') {
+    // Determine if we need to display in thousands based on max value
+    const maxValue = Math.max(...filteredData.map(item => item.value * PIXEL_TO_SQ_KM));
+    const useThousands = maxValue > DISPLAY_IN_THOUSANDS;
+    const displayDivisor = useThousands ? 1000 : 1;
+    displayUnit = useThousands ? 'thousand sq km' : 'sq km';
     
-    Object.keys(yearData).forEach(key => {
-      if (key !== 'year') {
-        convertedYearData[key] = Math.round((yearData[key] * PIXEL_TO_SQ_KM) / displayDivisor * 10) / 10;
-      }
+    // Convert pixel data to square kilometers for display
+    convertedData = filteredData.map(item => ({
+      ...item,
+      value: Math.round((item.value * PIXEL_TO_SQ_KM) / displayDivisor * 10) / 10, // Round to 1 decimal place
+      rawSqKm: item.value * PIXEL_TO_SQ_KM,
+    }));
+    
+    // Convert time series data to square kilometers
+    convertedTimeSeriesData = timeSeriesData.map(yearData => {
+      const convertedYearData: {year: number, [key: string]: number} = { year: yearData.year };
+      
+      Object.keys(yearData).forEach(key => {
+        if (key !== 'year') {
+          convertedYearData[key] = Math.round((yearData[key] * PIXEL_TO_SQ_KM) / displayDivisor * 10) / 10;
+        }
+      });
+      
+      return convertedYearData;
     });
+  } else if (dataType === 'precipitation') {
+    // For precipitation, convert mm values to volume (cubic meters)
+    // Assuming each pixel is also roughly the same area in the precipitation data
+    const totalLandArea = 100; // Approximated area in sq km for the region of interest
     
-    return convertedYearData;
-  });
+    const maxValue = Math.max(...filteredData.map(item => PRECIP_MM_TO_VOLUME(item.value, totalLandArea)));
+    const useThousands = maxValue > DISPLAY_IN_THOUSANDS;
+    const displayDivisor = useThousands ? 1000 : 1;
+    displayUnit = useThousands ? 'million cubic meters' : 'thousand cubic meters';
+    
+    // Convert precipitation data (mm) to water volume
+    convertedData = filteredData.map(item => ({
+      ...item,
+      value: Math.round(PRECIP_MM_TO_VOLUME(item.value, totalLandArea) / displayDivisor * 10) / 10,
+      originalValue: item.value,
+      rawVolume: PRECIP_MM_TO_VOLUME(item.value, totalLandArea),
+    }));
+    
+    // Convert time series data 
+    convertedTimeSeriesData = timeSeriesData.map(yearData => {
+      const convertedYearData: {year: number, [key: string]: number} = { year: yearData.year };
+      
+      Object.keys(yearData).forEach(key => {
+        if (key !== 'year') {
+          convertedYearData[key] = Math.round(PRECIP_MM_TO_VOLUME(yearData[key], totalLandArea) / displayDivisor * 10) / 10;
+        }
+      });
+      
+      return convertedYearData;
+    });
+  }
+  // Add additional data type handling (vegetation, population) here if needed
   
   // Get all land cover types that appear in the time series data
   const getAllLandCoverTypes = () => {
@@ -77,6 +124,10 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
       'Wetlands': '#74add1',
       'Savannas': '#f46d43',
       'Snow and Ice': '#ffffff',
+      // Precipitation specific colors
+      'Annual': '#4575b4',
+      'Seasonal': '#74add1',
+      'Monthly': '#91bfdb',
     };
     
     return colorMap[type] || `#${Math.floor(Math.random()*16777215).toString(16)}`;
@@ -91,6 +142,7 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
     
     // Log all data for verification
     console.log('All chart data:', filteredData);
+    console.log('Converted chart data:', convertedData);
   };
 
   // Call the check function
@@ -98,6 +150,11 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
 
   // Custom tooltip formatter for square kilometers display
   const formatTooltip = (value: number, name: string) => {
+    if (dataType === 'precipitation') {
+      // For precipitation, show water volume
+      return [`${value.toLocaleString()} ${displayUnit}`, name];
+    }
+    // For land cover, show area
     return [`${value.toLocaleString()} ${displayUnit}`, name];
   };
 
@@ -133,7 +190,7 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
                   />
                   <YAxis 
                     label={{ 
-                      value: `Area (${displayUnit})`, 
+                      value: dataType === 'precipitation' ? `Volume (${displayUnit})` : `Area (${displayUnit})`, 
                       angle: -90, 
                       position: 'insideLeft',
                       style: { textAnchor: 'middle' }
@@ -143,7 +200,7 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
                   <Legend verticalAlign="top" height={36} />
                   <Bar 
                     dataKey="value" 
-                    name={`Area (${displayUnit})`}
+                    name={dataType === 'precipitation' ? `Volume (${displayUnit})` : `Area (${displayUnit})`}
                   >
                     {convertedData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -203,7 +260,7 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
                   />
                   <YAxis 
                     label={{ 
-                      value: `Area (${displayUnit})`, 
+                      value: dataType === 'precipitation' ? `Volume (${displayUnit})` : `Area (${displayUnit})`, 
                       angle: -90, 
                       position: 'insideLeft',
                       style: { textAnchor: 'middle' }
@@ -213,14 +270,24 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
                   <Legend />
                   
                   {/* Show the key land cover types with stacked area like in TemporalAnalysis */}
-                  <Area type="monotone" dataKey="Forests" stackId="1" stroke="#1a9850" fill="#1a9850" fillOpacity={0.7} />
-                  <Area type="monotone" dataKey="Shrublands" stackId="1" stroke="#91cf60" fill="#91cf60" fillOpacity={0.7} />
-                  <Area type="monotone" dataKey="Grasslands" stackId="1" stroke="#fee08b" fill="#fee08b" fillOpacity={0.7} />
-                  <Area type="monotone" dataKey="Croplands" stackId="1" stroke="#fc8d59" fill="#fc8d59" fillOpacity={0.7} />
-                  <Area type="monotone" dataKey="Urban" stackId="1" stroke="#d73027" fill="#d73027" fillOpacity={0.7} />
-                  <Area type="monotone" dataKey="Barren" stackId="1" stroke="#bababa" fill="#bababa" fillOpacity={0.7} />
-                  <Area type="monotone" dataKey="Water" stackId="1" stroke="#4575b4" fill="#4575b4" fillOpacity={0.7} />
-                  <Area type="monotone" dataKey="Wetlands" stackId="1" stroke="#74add1" fill="#74add1" fillOpacity={0.7} />
+                  {dataType === 'landCover' ? (
+                    <>
+                      <Area type="monotone" dataKey="Forests" stackId="1" stroke="#1a9850" fill="#1a9850" fillOpacity={0.7} />
+                      <Area type="monotone" dataKey="Shrublands" stackId="1" stroke="#91cf60" fill="#91cf60" fillOpacity={0.7} />
+                      <Area type="monotone" dataKey="Grasslands" stackId="1" stroke="#fee08b" fill="#fee08b" fillOpacity={0.7} />
+                      <Area type="monotone" dataKey="Croplands" stackId="1" stroke="#fc8d59" fill="#fc8d59" fillOpacity={0.7} />
+                      <Area type="monotone" dataKey="Urban" stackId="1" stroke="#d73027" fill="#d73027" fillOpacity={0.7} />
+                      <Area type="monotone" dataKey="Barren" stackId="1" stroke="#bababa" fill="#bababa" fillOpacity={0.7} />
+                      <Area type="monotone" dataKey="Water" stackId="1" stroke="#4575b4" fill="#4575b4" fillOpacity={0.7} />
+                      <Area type="monotone" dataKey="Wetlands" stackId="1" stroke="#74add1" fill="#74add1" fillOpacity={0.7} />
+                    </>
+                  ) : dataType === 'precipitation' ? (
+                    <>
+                      <Area type="monotone" dataKey="Annual" stroke="#4575b4" fill="#4575b4" fillOpacity={0.7} />
+                      <Area type="monotone" dataKey="Seasonal" stroke="#74add1" fill="#74add1" fillOpacity={0.7} />
+                      <Area type="monotone" dataKey="Monthly" stroke="#91bfdb" fill="#91bfdb" fillOpacity={0.7} />
+                    </>
+                  ) : null}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
