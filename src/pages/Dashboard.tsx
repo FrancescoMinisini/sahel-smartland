@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -280,5 +281,259 @@ const Dashboard = () => {
       
       <main className="flex-1 pt-24 pb-12">
         <div className="container mx-auto px-6">
-          <
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+              
+              <div className="flex items-center gap-2">
+                <div className="bg-white dark:bg-muted rounded-lg border border-border/40 px-4 py-2 flex items-center gap-2">
+                  <Calendar size={16} className="text-muted-foreground" />
+                  <span className="text-sm">{selectedYear}</span>
+                </div>
+                
+                <Link 
+                  to="/reports" 
+                  className="bg-white dark:bg-muted rounded-lg border border-border/40 px-4 py-2 flex items-center gap-2 hover:bg-muted/80 transition-colors"
+                >
+                  <FileText size={16} className="text-muted-foreground" />
+                  <span className="text-sm">Reports</span>
+                </Link>
+                
+                <button className="bg-white dark:bg-muted rounded-lg border border-border/40 px-4 py-2 flex items-center gap-2 hover:bg-muted/80 transition-colors">
+                  <Download size={16} className="text-muted-foreground" />
+                  <span className="text-sm">Export</span>
+                </button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {keyStats.map((stat, index) => (
+                <DataCard 
+                  key={index} 
+                  title={stat.title}
+                  value={stat.value}
+                  description={stat.description}
+                  icon={stat.icon}
+                  trend={stat.trend}
+                  analyticsData={stat.analyticsData}
+                />
+              ))}
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <div className="bg-white dark:bg-muted rounded-lg border border-border/40 overflow-hidden">
+                  <div className="border-b border-border/40 px-6 py-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="font-medium">Data Explorer</h2>
+                      
+                      <div className="flex items-center space-x-1">
+                        {dataTabs.map((tab) => (
+                          <button
+                            key={tab.id}
+                            onClick={() => handleTabChange(tab.id)}
+                            className={`flex items-center px-3 py-2 text-sm rounded-md ${
+                              activeTab === tab.id
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-muted-foreground hover:bg-muted/80'
+                            }`}
+                          >
+                            <span className="flex items-center">
+                              {tab.icon}
+                              <span className="ml-2">{tab.name}</span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-6">
+                    {isLoading ? (
+                      <div className="flex items-center justify-center h-[400px]">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                          <div className="flex items-center gap-2">
+                            <Filter size={16} className="text-muted-foreground" />
+                            <h3 className="text-sm font-medium">Year Filter</h3>
+                          </div>
+                          
+                          <div className="w-full md:w-1/2">
+                            <YearSlider 
+                              minYear={2010} 
+                              maxYear={2023} 
+                              initialValue={selectedYear}
+                              onChange={handleYearChange}
+                              showLabels={true}
+                              autoPlay={false}
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 gap-6">
+                          {activeTab === 'landCover' && (
+                            <>
+                              <div className="aspect-video relative bg-muted/40 rounded-lg overflow-hidden border border-border/40">
+                                <MapVisualization 
+                                  year={selectedYear} 
+                                  dataType="landCover"
+                                  onStatsChange={handleStatsChange}
+                                />
+                                
+                                <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+                                  <button className="bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-sm hover:bg-background/90 transition-colors">
+                                    <ZoomIn size={18} />
+                                  </button>
+                                  <button className="bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-sm hover:bg-background/90 transition-colors">
+                                    <Layers size={18} />
+                                  </button>
+                                  <button className="bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-sm hover:bg-background/90 transition-colors">
+                                    <Info size={18} />
+                                  </button>
+                                </div>
+                              </div>
+                              
+                              <ChartCarousel chartData={chartData} className="mt-4" year={selectedYear} />
+                              
+                              <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
+                                <h3 className="text-lg font-medium mb-4">Trend Analysis</h3>
+                                <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                  {getTrendAnalysis()}
+                                </p>
+                              </div>
+                            </>
+                          )}
+                          
+                          {activeTab === 'vegetation' && (
+                            <div className="aspect-video bg-muted/40 rounded-lg flex items-center justify-center">
+                              <p className="text-muted-foreground">Vegetation data visualization will appear here.</p>
+                            </div>
+                          )}
+                          
+                          {activeTab === 'precipitation' && (
+                            <div className="aspect-video bg-muted/40 rounded-lg flex items-center justify-center">
+                              <p className="text-muted-foreground">Precipitation data visualization will appear here.</p>
+                            </div>
+                          )}
+                          
+                          {activeTab === 'population' && (
+                            <div className="aspect-video bg-muted/40 rounded-lg flex items-center justify-center">
+                              <p className="text-muted-foreground">Population data visualization will appear here.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="lg:col-span-1 space-y-6">
+                <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
+                  <h3 className="text-lg font-medium mb-4">Historical Trends</h3>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={timeSeriesData}
+                        margin={{
+                          top: 10,
+                          right: 30,
+                          left: 0,
+                          bottom: 0,
+                        }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="year" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        {Object.keys(landCoverClasses).map((key, index) => {
+                          const className = landCoverClasses[Number(key) as keyof typeof landCoverClasses];
+                          const color = landCoverColors[Number(key) as keyof typeof landCoverColors] || "#000000";
+                          if (className && timeSeriesData.some(d => d[className] !== undefined)) {
+                            return (
+                              <Area
+                                key={key}
+                                type="monotone"
+                                dataKey={className}
+                                stackId="1"
+                                stroke={color}
+                                fill={color}
+                              />
+                            );
+                          }
+                          return null;
+                        })}
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-4 text-sm text-muted-foreground">
+                    <div className="flex items-start gap-2">
+                      <Clock className="h-4 w-4 mt-0.5 shrink-0" />
+                      <p>
+                        The chart shows how different land cover types have changed over time. 
+                        Add more years of data by selecting different years in the slider above.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
+                  <h3 className="text-lg font-medium mb-4">Key Insights</h3>
+                  <ul className="space-y-4">
+                    <li className="flex items-start gap-3">
+                      <div className="bg-primary/10 text-primary p-2 rounded-md">
+                        <Leaf size={18} />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm">Vegetation Recovery</h4>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Several regions show signs of vegetation recovery, with a 12% increase in forested areas since 2015.
+                        </p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="bg-destructive/10 text-destructive p-2 rounded-md">
+                        <CloudRain size={18} />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm">Declining Rainfall</h4>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Annual precipitation has decreased by 8.5% over the past decade, impacting agricultural productivity.
+                        </p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <div className="bg-warning/10 text-warning p-2 rounded-md">
+                        <Users size={18} />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm">Population Pressure</h4>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Urban expansion has accelerated by 23% in the last 5 years, driving land cover change in surrounding areas.
+                        </p>
+                      </div>
+                    </li>
+                  </ul>
+                  <div className="mt-6">
+                    <Link to="/reports" className="text-sm text-primary flex items-center hover:underline">
+                      View detailed reports
+                      <ArrowRight size={14} className="ml-1" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
+    </div>
+  );
+};
 
+export default Dashboard;
