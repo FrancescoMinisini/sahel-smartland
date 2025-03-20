@@ -64,8 +64,8 @@ const Dashboard = () => {
     }
   ]);
   
-  // Use our utility function to get the complete time series data
-  const [precipTimeSeriesData] = useState(getPrecipitationTimeSeriesData());
+  // Use our utility function to get the complete time series data with the correct type
+  const [precipTimeSeriesData] = useState<Array<{ year: number, [key: string]: number }>>(getPrecipitationTimeSeriesData());
   
   const [timeSeriesData] = useState([
     {
@@ -671,3 +671,4 @@ This trend correlates with observed changes in vegetation patterns and may contr
 };
 
 export default Dashboard;
+
