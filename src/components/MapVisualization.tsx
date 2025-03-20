@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
 import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info } from 'lucide-react';
@@ -511,7 +510,13 @@ const MapVisualization = ({
         ) : (
           <div 
             className="absolute inset-0 flex items-center justify-center transition-transform duration-300 ease-out" 
-            style={{ transform: `scale(${zoomLevel})` }}
+            style={{ 
+              transform: `scale(${zoomLevel})`,
+              maxWidth: "90%", 
+              margin: "0 auto", 
+              left: "5%", 
+              right: "5%" 
+            }}
           >
             <canvas 
               ref={canvasRef} 
