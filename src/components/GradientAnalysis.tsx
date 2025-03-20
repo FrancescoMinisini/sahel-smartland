@@ -1,521 +1,499 @@
 
-import { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { ChevronLeft, ChevronRight, HelpCircle, ExternalLink } from 'lucide-react';
-import { landCoverClasses, landCoverColors } from '@/lib/geospatialUtils';
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useState, useEffect } from 'react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
+import { HelpCircle, Filter, Download, ArrowLeft, ArrowRight } from 'lucide-react';
+import MapVisualization from './MapVisualization';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { TooltipProvider, Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-// This would normally come from a CSV or API
-const transitionMatrix = {
-  2010: {
-    "Forest to Grassland": 1247,
-    "Forest to Barren": 562,
-    "Grassland to Forest": 425,
-    "Grassland to Barren": 3842,
-    "Barren to Grassland": 2985,
-    "Barren to Forest": 212,
-    "Urban to Grassland": 35,
-    "Grassland to Urban": 148,
-    "Water to Grassland": 24,
-    "Grassland to Water": 16
-  },
-  2015: {
-    "Forest to Grassland": 1523,
-    "Forest to Barren": 678,
-    "Grassland to Forest": 312,
-    "Grassland to Barren": 4156,
-    "Barren to Grassland": 2654,
-    "Barren to Forest": 186,
-    "Urban to Grassland": 28,
-    "Grassland to Urban": 213,
-    "Water to Grassland": 19,
-    "Grassland to Water": 12
-  },
-  2020: {
-    "Forest to Grassland": 1842,
-    "Forest to Barren": 745,
-    "Grassland to Forest": 284,
-    "Grassland to Barren": 4578,
-    "Barren to Grassland": 2421,
-    "Barren to Forest": 154,
-    "Urban to Grassland": 19,
-    "Grassland to Urban": 298,
-    "Water to Grassland": 15,
-    "Grassland to Water": 9
-  },
-  2023: {
-    "Forest to Grassland": 2104,
-    "Forest to Barren": 892,
-    "Grassland to Forest": 246,
-    "Grassland to Barren": 4927,
-    "Barren to Grassland": 2165,
-    "Barren to Forest": 118,
-    "Urban to Grassland": 12,
-    "Grassland to Urban": 356,
-    "Water to Grassland": 11,
-    "Grassland to Water": 7
-  }
-};
-
-// Land degradation hotspots
-const landDegradationData = [
-  { id: 1, name: "Southern Region", percentage: 35, description: "High rate of forest to grassland conversion" },
-  { id: 2, name: "Central Plains", percentage: 48, description: "Severe grassland to barren land transition" },
-  { id: 3, name: "Eastern Corridor", percentage: 29, description: "Moderate degradation with urban encroachment" },
-  { id: 4, name: "Northwestern Zone", percentage: 41, description: "Increasing desertification" },
-  { id: 5, name: "Coastal Transition", percentage: 18, description: "Low degradation with stable vegetation" }
-];
-
-// Land improvement areas
-const landImprovementData = [
-  { id: 1, name: "Northern Protected Areas", percentage: 24, description: "Successful reforestation efforts" },
-  { id: 2, name: "Central Watershed", percentage: 19, description: "Barren to grassland conversion" },
-  { id: 3, name: "Eastern Agricultural Belt", percentage: 15, description: "Improved agricultural practices" }
-];
-
-const gradientColors = {
-  "Forest to Grassland": "#91cf60",
-  "Forest to Barren": "#d73027",
-  "Grassland to Forest": "#1a9850",
-  "Grassland to Barren": "#fdae61",
-  "Barren to Grassland": "#a6d96a",
-  "Barren to Forest": "#66bd63",
-  "Urban to Grassland": "#d9ef8b",
-  "Grassland to Urban": "#f46d43",
-  "Water to Grassland": "#fee08b",
-  "Grassland to Water": "#74add1"
-};
-
-interface GradientAnalysisProps {
+type GradientData = {
   year: number;
-}
+  transitions: {
+    from: string;
+    to: string;
+    count: number;
+    area: number;
+    isNegative: boolean;
+  }[];
+  hotspots: {
+    region: string;
+    severity: number;
+    area: number;
+    mainTransition: string;
+  }[];
+  recovery: {
+    region: string;
+    improvement: number;
+    area: number;
+    mainTransition: string;
+  }[];
+};
 
-const GradientAnalysis = ({ year }: GradientAnalysisProps) => {
-  const [chartType, setChartType] = useState<'bar' | 'pie'>('bar');
-  const [activeTab, setActiveTab] = useState("transitions");
+const COLORS = {
+  degradation: '#ef4444',
+  improvement: '#22c55e',
+  stable: '#3b82f6',
+  uncertain: '#f59e0b',
+};
+
+const TRANSITION_TYPES = {
+  'Forest to Barren': { color: '#ef4444', isNegative: true },
+  'Forest to Cropland': { color: '#f97316', isNegative: true },
+  'Forest to Grassland': { color: '#eab308', isNegative: true },
+  'Grassland to Barren': { color: '#ef4444', isNegative: true },
+  'Cropland to Barren': { color: '#ef4444', isNegative: true },
+  'Barren to Grassland': { color: '#22c55e', isNegative: false },
+  'Barren to Cropland': { color: '#16a34a', isNegative: false },
+  'Barren to Forest': { color: '#15803d', isNegative: false },
+  'Cropland to Forest': { color: '#15803d', isNegative: false },
+  'Grassland to Forest': { color: '#15803d', isNegative: false },
+  'Stable Forest': { color: '#3b82f6', isNegative: false },
+  'Stable Grassland': { color: '#3b82f6', isNegative: false },
+  'Stable Cropland': { color: '#3b82f6', isNegative: false },
+  'Stable Barren': { color: '#3b82f6', isNegative: false },
+  'Other': { color: '#a855f7', isNegative: false },
+};
+
+// Mock data generator
+const generateGradientData = (): GradientData[] => {
+  const years = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023];
   
-  // Get the closest year data
-  const getClosestYearData = () => {
-    const availableYears = Object.keys(transitionMatrix).map(Number);
-    const closestYear = availableYears.reduce((prev, curr) => 
-      Math.abs(curr - year) < Math.abs(prev - year) ? curr : prev
-    );
-    return { year: closestYear, data: transitionMatrix[closestYear as keyof typeof transitionMatrix] };
-  };
-  
-  const { year: dataYear, data } = getClosestYearData();
-  
-  // Transform data for charts
-  const chartData = Object.entries(data).map(([transition, value]) => ({
-    name: transition,
-    value,
-    color: gradientColors[transition as keyof typeof gradientColors] || '#cccccc'
-  })).sort((a, b) => b.value - a.value);
-  
-  // Calculate net change by land cover type
-  const netChangeByType: Record<string, number> = {};
-  
-  Object.entries(data).forEach(([transition, value]) => {
-    const [from, to] = transition.split(' to ');
+  return years.map((year, index) => {
+    if (index === 0) return { year, transitions: [], hotspots: [], recovery: [] };
     
-    if (!netChangeByType[from]) netChangeByType[from] = 0;
-    if (!netChangeByType[to]) netChangeByType[to] = 0;
-    
-    netChangeByType[from] -= value;
-    netChangeByType[to] += value;
-  });
-  
-  const netChangeData = Object.entries(netChangeByType).map(([type, value]) => ({
-    name: type,
-    value,
-    color: type === 'Forest' ? '#1a9850' : 
-           type === 'Grassland' ? '#fee08b' : 
-           type === 'Barren' ? '#d73027' :
-           type === 'Urban' ? '#f46d43' :
-           type === 'Water' ? '#74add1' : '#cccccc',
-  })).sort((a, b) => a.value - b.value); // Sort by value ascending
-  
-  const toggleChartType = () => {
-    setChartType(prev => prev === 'bar' ? 'pie' : 'bar');
-  };
-  
-  // Create a heatmap data structure (example data)
-  const generateHeatmapData = () => {
-    const types = ["Forest", "Grassland", "Barren", "Urban", "Water"];
-    const result = [];
-    
-    for (const from of types) {
-      const row: Record<string, number> = { name: from };
-      
-      for (const to of types) {
-        const transitionKey = `${from} to ${to}`;
-        row[to] = data[transitionKey as keyof typeof data] || 0;
-      }
-      
-      result.push(row);
-    }
-    
-    return result;
-  };
-  
-  const heatmapData = generateHeatmapData();
-  
-  // Some insights based on the transition data
-  const getInsights = () => {
-    // Find the most significant transition
-    const maxTransition = Object.entries(data).reduce(
-      (max, [transition, value]) => value > max.value ? { transition, value } : max,
-      { transition: '', value: 0 }
-    );
-    
-    // Calculate total degradation (forest/grassland loss to barren)
-    const degradation = (data["Forest to Barren"] || 0) + (data["Grassland to Barren"] || 0);
-    
-    // Calculate total improvement (barren to vegetated)
-    const improvement = (data["Barren to Forest"] || 0) + (data["Barren to Grassland"] || 0);
-    
-    // Calculate urbanization
-    const urbanization = (data["Grassland to Urban"] || 0) + (data["Forest to Urban"] || 0);
+    const prevYear = years[index - 1];
     
     return {
-      maxTransition,
-      degradation,
-      improvement,
-      urbanization,
-      netBalance: improvement - degradation,
-      yearComparison: dataYear === year ? `Current year (${year})` : `Data from ${dataYear} (closest available to ${year})`,
-      trend: year > 2015 ? 
-        "Increasing land degradation with accelerated transitions from forests and grasslands to barren land" : 
-        "Moderate land cover transitions with some recovery in vegetated areas"
+      year,
+      transitions: [
+        {
+          from: 'Forest',
+          to: 'Barren',
+          count: Math.round(100 + Math.random() * 50 + index * 3),
+          area: Math.round(1200 + Math.random() * 500 + index * 30),
+          isNegative: true
+        },
+        {
+          from: 'Forest',
+          to: 'Cropland',
+          count: Math.round(80 + Math.random() * 40 + index * 2),
+          area: Math.round(950 + Math.random() * 400 + index * 25),
+          isNegative: true
+        },
+        {
+          from: 'Grassland',
+          to: 'Barren',
+          count: Math.round(120 + Math.random() * 60 - index * 2),
+          area: Math.round(1400 + Math.random() * 600 - index * 40),
+          isNegative: true
+        },
+        {
+          from: 'Barren',
+          to: 'Grassland',
+          count: Math.round(70 + Math.random() * 30 + index * 5),
+          area: Math.round(850 + Math.random() * 350 + index * 45),
+          isNegative: false
+        },
+        {
+          from: 'Barren',
+          to: 'Cropland',
+          count: Math.round(50 + Math.random() * 25 + index * 4),
+          area: Math.round(650 + Math.random() * 300 + index * 35),
+          isNegative: false
+        },
+        {
+          from: 'Grassland',
+          to: 'Forest',
+          count: Math.round(30 + Math.random() * 15 + index * 2),
+          area: Math.round(400 + Math.random() * 200 + index * 20),
+          isNegative: false
+        }
+      ],
+      hotspots: [
+        {
+          region: 'Southern Assaba',
+          severity: Math.round(75 + Math.random() * 25),
+          area: Math.round(3500 + Math.random() * 1500),
+          mainTransition: 'Grassland to Barren'
+        },
+        {
+          region: 'Eastern Districts',
+          severity: Math.round(65 + Math.random() * 20),
+          area: Math.round(2800 + Math.random() * 1200),
+          mainTransition: 'Forest to Cropland'
+        },
+        {
+          region: 'Central Watershed',
+          severity: Math.round(55 + Math.random() * 15),
+          area: Math.round(2200 + Math.random() * 1000),
+          mainTransition: 'Forest to Barren'
+        }
+      ],
+      recovery: [
+        {
+          region: 'Northern Assaba',
+          improvement: Math.round(45 + Math.random() * 30),
+          area: Math.round(1800 + Math.random() * 900),
+          mainTransition: 'Barren to Grassland'
+        },
+        {
+          region: 'Western Valleys',
+          improvement: Math.round(35 + Math.random() * 25),
+          area: Math.round(1500 + Math.random() * 800),
+          mainTransition: 'Barren to Cropland'
+        },
+        {
+          region: 'Riverside Areas',
+          improvement: Math.round(55 + Math.random() * 20),
+          area: Math.round(1200 + Math.random() * 600),
+          mainTransition: 'Grassland to Forest'
+        }
+      ]
     };
+  });
+};
+
+const getProcessedChartData = (gradientData: GradientData[], selectedYear: number) => {
+  // Find data for the selected year
+  const yearData = getClosestYearData(gradientData, selectedYear);
+  
+  if (!yearData || !yearData.transitions.length) {
+    return { transitionData: [], degradationData: [], recoveryData: [] };
+  }
+  
+  // Process transition data for charts
+  const transitionData = yearData.transitions.map(t => ({
+    name: `${t.from} to ${t.to}`,
+    value: t.area,
+    count: t.count,
+    color: TRANSITION_TYPES[`${t.from} to ${t.to}` as keyof typeof TRANSITION_TYPES]?.color || '#a855f7',
+    isNegative: t.isNegative
+  }));
+  
+  // Process hotspot data
+  const degradationData = yearData.hotspots.map(h => ({
+    name: h.region,
+    value: h.area,
+    severity: h.severity,
+    transition: h.mainTransition,
+    color: '#ef4444'
+  }));
+  
+  // Process recovery data
+  const recoveryData = yearData.recovery.map(r => ({
+    name: r.region,
+    value: r.area,
+    improvement: r.improvement,
+    transition: r.mainTransition,
+    color: '#22c55e'
+  }));
+  
+  return { transitionData, degradationData, recoveryData };
+};
+
+const getClosestYearData = (data: GradientData[], targetYear: number): GradientData | undefined => {
+  if (!data || data.length === 0) return undefined;
+  
+  // Find exact match
+  const exactMatch = data.find(d => d.year === targetYear);
+  if (exactMatch) return exactMatch;
+  
+  // Find closest year (should convert strings to numbers if needed)
+  return data.reduce((prev, curr) => {
+    const prevDiff = Math.abs(prev.year - Number(targetYear));
+    const currDiff = Math.abs(curr.year - Number(targetYear));
+    return currDiff < prevDiff ? curr : prev;
+  });
+};
+
+const GradientAnalysis: React.FC<{ year: number }> = ({ year }) => {
+  const [activeTab, setActiveTab] = useState('transitions');
+  const [chartType, setChartType] = useState<'bar' | 'pie'>('bar');
+  const [gradientData, setGradientData] = useState<GradientData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Load gradient data
+  useEffect(() => {
+    // In a real implementation, we would load actual data from the land_cover_transition directory
+    // For now, we'll use our mock data generator
+    setIsLoading(true);
+    setTimeout(() => {
+      const data = generateGradientData();
+      setGradientData(data);
+      setIsLoading(false);
+    }, 800);
+  }, []);
+  
+  const { transitionData, degradationData, recoveryData } = getProcessedChartData(gradientData, year);
+  
+  // Calculate totals for each category
+  const totalDegradationArea = transitionData
+    .filter(t => t.isNegative)
+    .reduce((sum, t) => sum + t.value, 0);
+    
+  const totalRecoveryArea = transitionData
+    .filter(t => !t.isNegative)
+    .reduce((sum, t) => sum + t.value, 0);
+    
+  const netChange = totalRecoveryArea - totalDegradationArea;
+  
+  const renderBarChart = (data: any[]) => (
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip 
+          formatter={(value, name, props) => [
+            `${value.toLocaleString()} ha`, 
+            props.payload.name
+          ]}
+          labelFormatter={(value) => `${value}`}
+        />
+        <Legend />
+        <Bar dataKey="value" name="Area (ha)">
+          {data.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.color} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+  
+  const renderPieChart = (data: any[]) => (
+    <ResponsiveContainer width="100%" height={300}>
+      <PieChart>
+        <Pie
+          data={data}
+          cx="50%"
+          cy="50%"
+          labelLine={false}
+          outerRadius={120}
+          fill="#8884d8"
+          dataKey="value"
+          nameKey="name"
+          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+        >
+          {data.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.color || '#8884d8'} />
+          ))}
+        </Pie>
+        <Tooltip formatter={(value) => `${value.toLocaleString()} ha`} />
+        <Legend />
+      </PieChart>
+    </ResponsiveContainer>
+  );
+  
+  const getGradientInsights = () => {
+    if (transitionData.length === 0) return "No gradient data available for analysis.";
+    
+    const degradationTypes = transitionData.filter(t => t.isNegative);
+    const recoveryTypes = transitionData.filter(t => !t.isNegative);
+    
+    const mostCommonDegradation = degradationTypes.sort((a, b) => b.value - a.value)[0];
+    const mostCommonRecovery = recoveryTypes.sort((a, b) => b.value - a.value)[0];
+    
+    const netChangeText = netChange > 0 
+      ? `improving with a net gain of ${netChange.toLocaleString()} ha` 
+      : `degrading with a net loss of ${Math.abs(netChange).toLocaleString()} ha`;
+    
+    return `Based on land cover transition gradient analysis for ${year}:
+    
+• The ecosystem is currently ${netChangeText}.
+• The most significant degradation process is "${mostCommonDegradation?.name}", affecting ${mostCommonDegradation?.value.toLocaleString()} hectares.
+• The most significant recovery process is "${mostCommonRecovery?.name}", affecting ${mostCommonRecovery?.value.toLocaleString()} hectares.
+• Degradation hotspots are concentrated in the Southern Assaba region, primarily due to conversion from grassland to barren land.
+• Recovery is strongest in riverside areas, where restoration efforts have successfully converted barren land to vegetation.
+
+These gradient patterns indicate areas that require immediate intervention to prevent further land degradation, as well as successful restoration models that could be replicated in other regions.`;
   };
   
-  const insights = getInsights();
-
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-1 h-full flex flex-col">
-        <div className="bg-gradient-to-br from-foreground/5 to-muted/50 rounded-lg p-6 flex-1">
-          <h3 className="text-lg font-medium mb-3">Land Cover Transition Map</h3>
-          <div className="h-[300px] flex items-center justify-center bg-muted/50 rounded-md border border-border/40 mb-4">
-            {/* This would be a map visualization - showing a static image for now */}
-            <div className="relative w-full h-full overflow-hidden rounded-md">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#1a9850]/20 via-[#fdae61]/20 to-[#d73027]/20"></div>
-              <div className="absolute inset-0 grid place-items-center">
-                <div className="text-center">
-                  <span className="text-sm text-muted-foreground">Land transition gradient visualization</span>
-                  <div className="mt-2 flex justify-center gap-2">
-                    <span className="inline-block w-4 h-4 bg-[#1a9850] rounded-sm"></span>
-                    <span className="inline-block w-4 h-4 bg-[#fdae61] rounded-sm"></span>
-                    <span className="inline-block w-4 h-4 bg-[#d73027] rounded-sm"></span>
-                  </div>
-                </div>
-              </div>
+    <section className="py-12 bg-gradient-to-b from-white to-sahel-sandLight/20">
+      <div className="container mx-auto px-6">
+        <div className="text-center mb-8">
+          <span className="inline-block px-3 py-1 text-xs font-medium bg-sahel-earth/10 text-sahel-earth rounded-full mb-4">
+            Advanced Analysis
+          </span>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Land Cover Transition & Gradient Analysis
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+            Analyze patterns of land cover change, identify degradation hotspots, and discover areas of ecosystem recovery.
+          </p>
+        </div>
+        
+        <div className="bg-white dark:bg-muted rounded-xl shadow-sm border border-border/40 p-6 mb-8">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="px-3 py-1">Year: {year}</Badge>
+              <Badge variant="outline" className="px-3 py-1 bg-sahel-earth/10">
+                Net Change: {netChange > 0 ? '+' : ''}{netChange.toLocaleString()} ha
+              </Badge>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <TooltipProvider>
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 px-3"
+                      onClick={() => setChartType(chartType === 'bar' ? 'pie' : 'bar')}
+                    >
+                      {chartType === 'bar' ? 'Pie' : 'Bar'} Chart
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Toggle chart type</p>
+                  </TooltipContent>
+                </UITooltip>
+              </TooltipProvider>
+              
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                <Filter className="h-4 w-4" />
+              </Button>
+              
+              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                <Download className="h-4 w-4" />
+              </Button>
             </div>
           </div>
           
-          <div className="bg-card rounded-lg p-4 border border-border/40">
-            <h4 className="font-medium mb-2 flex items-center gap-1">
-              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
-              Insights from {insights.yearComparison}
-            </h4>
-            <ul className="space-y-2 text-sm">
-              <li className="flex items-start gap-2">
-                <span className="rounded-full bg-primary/10 p-1 mt-0.5">
-                  <ChevronRight className="h-3 w-3 text-primary" />
-                </span>
-                <span>Most significant transition: <strong>{insights.maxTransition.transition}</strong> ({insights.maxTransition.value} hectares)</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="rounded-full bg-destructive/10 p-1 mt-0.5">
-                  <ChevronRight className="h-3 w-3 text-destructive" />
-                </span>
-                <span>Land degradation: <strong>{insights.degradation}</strong> hectares</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="rounded-full bg-green-500/10 p-1 mt-0.5">
-                  <ChevronRight className="h-3 w-3 text-green-500" />
-                </span>
-                <span>Land improvement: <strong>{insights.improvement}</strong> hectares</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="rounded-full bg-blue-500/10 p-1 mt-0.5">
-                  <ChevronRight className="h-3 w-3 text-blue-500" />
-                </span>
-                <span>Net balance: <strong className={insights.netBalance >= 0 ? "text-green-500" : "text-destructive"}>{insights.netBalance}</strong> hectares</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="rounded-full bg-orange-500/10 p-1 mt-0.5">
-                  <ChevronRight className="h-3 w-3 text-orange-500" />
-                </span>
-                <span>Urbanization: <strong>{insights.urbanization}</strong> hectares</span>
-              </li>
-            </ul>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1 h-full order-2 lg:order-1">
+              <div className="h-[400px]">
+                <MapVisualization 
+                  className="w-full h-full" 
+                  year={year}
+                  expandedView={true}
+                  dataType="landCover"
+                />
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <Card className="col-span-2">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-medium">Transition Legend</h4>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.entries(TRANSITION_TYPES).slice(0, 8).map(([name, { color }]) => (
+                        <div key={name} className="flex items-center text-xs">
+                          <div className="w-3 h-3 rounded-sm mr-1" style={{ backgroundColor: color }}></div>
+                          <span className="truncate">{name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
             
-            <div className="mt-4 text-sm text-muted-foreground">
-              <h5 className="font-medium text-foreground mb-1">Trend Analysis:</h5>
-              <p>{insights.trend}</p>
+            <div className="lg:col-span-2 space-y-6 order-1 lg:order-2">
+              <Tabs defaultValue="transitions" onValueChange={setActiveTab} className="w-full">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="transitions">Land Transitions</TabsTrigger>
+                  <TabsTrigger value="hotspots">Degradation Hotspots</TabsTrigger>
+                  <TabsTrigger value="recovery">Recovery Areas</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="transitions" className="space-y-4">
+                  {isLoading ? (
+                    <div className="h-[300px] flex items-center justify-center">
+                      <div className="flex flex-col items-center">
+                        <div className="w-8 h-8 border-4 border-t-sahel-green border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mb-3"></div>
+                        <p className="text-sm text-muted-foreground">Loading data...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {chartType === 'bar' ? renderBarChart(transitionData) : renderPieChart(transitionData)}
+                      
+                      <div className="flex items-start gap-2 mt-4 text-sm text-muted-foreground">
+                        <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                        <p>
+                          Transitions show how land cover has changed between consecutive years.
+                          Negative transitions (red/orange) indicate degradation, while positive transitions (green) indicate recovery.
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="hotspots" className="space-y-4">
+                  {isLoading ? (
+                    <div className="h-[300px] flex items-center justify-center">
+                      <div className="flex flex-col items-center">
+                        <div className="w-8 h-8 border-4 border-t-sahel-green border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mb-3"></div>
+                        <p className="text-sm text-muted-foreground">Loading data...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {chartType === 'bar' ? renderBarChart(degradationData) : renderPieChart(degradationData)}
+                      
+                      <div className="flex items-start gap-2 mt-4 text-sm text-muted-foreground">
+                        <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                        <p>
+                          Degradation hotspots are areas with significant negative land cover changes.
+                          These regions require priority intervention to prevent further ecosystem damage.
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="recovery" className="space-y-4">
+                  {isLoading ? (
+                    <div className="h-[300px] flex items-center justify-center">
+                      <div className="flex flex-col items-center">
+                        <div className="w-8 h-8 border-4 border-t-sahel-green border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mb-3"></div>
+                        <p className="text-sm text-muted-foreground">Loading data...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {chartType === 'bar' ? renderBarChart(recoveryData) : renderPieChart(recoveryData)}
+                      
+                      <div className="flex items-start gap-2 mt-4 text-sm text-muted-foreground">
+                        <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                        <p>
+                          Recovery areas show where positive land cover transitions are occurring.
+                          These success stories provide models for restoration efforts elsewhere in the region.
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </TabsContent>
+              </Tabs>
+              
+              <div className="p-4 bg-muted rounded-md">
+                <h4 className="font-medium mb-2">Gradient Analysis Insights:</h4>
+                <p className="whitespace-pre-line text-sm">
+                  {getGradientInsights()}
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </div>
-      
-      <div className="lg:col-span-2 h-full">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-          <div className="flex items-center justify-between mb-4">
-            <TabsList>
-              <TabsTrigger value="transitions">Land Transitions</TabsTrigger>
-              <TabsTrigger value="hotspots">Degradation Hotspots</TabsTrigger>
-              <TabsTrigger value="recovery">Recovery Areas</TabsTrigger>
-            </TabsList>
-            
-            <Button variant="outline" size="sm" onClick={toggleChartType}>
-              {chartType === 'bar' ? 'Show as Pie Chart' : 'Show as Bar Chart'}
-            </Button>
-          </div>
-          
-          <TabsContent value="transitions" className="h-full">
-            <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6 h-full">
-              <h3 className="text-lg font-medium mb-6">Land Cover Transitions ({dataYear})</h3>
-              
-              <div className="h-[400px]">
-                {chartType === 'bar' ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={chartData}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="name" 
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                        tick={{ fontSize: 12 }}
-                      />
-                      <YAxis 
-                        tick={{ fontSize: 12 }}
-                        label={{ value: 'Hectares', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
-                      />
-                      <Tooltip />
-                      <Bar dataKey="value" name="Hectares">
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={chartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={120}
-                        fill="#8884d8"
-                        dataKey="value"
-                        nameKey="name"
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
-                      >
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [`${value} hectares`, 'Area']} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-              
-              <div className="mt-6">
-                <h4 className="font-medium mb-3">Net Change by Land Cover Type</h4>
-                <div className="h-[180px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={netChangeData}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                      layout="vertical"
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" 
-                        label={{ value: 'Net Change (hectares)', position: 'insideBottom', offset: -5 }}
-                      />
-                      <YAxis type="category" dataKey="name" width={80} />
-                      <Tooltip />
-                      <Bar dataKey="value" name="Net Change">
-                        {netChangeData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="hotspots">
-            <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6 h-full">
-              <h3 className="text-lg font-medium mb-6">Land Degradation Hotspots</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  {landDegradationData.map(item => (
-                    <div key={item.id} className="p-4 border border-border/60 rounded-lg">
-                      <div className="flex justify-between items-center mb-2">
-                        <h4 className="font-medium">{item.name}</h4>
-                        <span className="inline-flex items-center rounded-full bg-red-50 dark:bg-red-900/20 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-400">
-                          {item.percentage}% degraded
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{item.description}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={landDegradationData}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 30 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="name" 
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                        tick={{ fontSize: 12 }}
-                      />
-                      <YAxis 
-                        label={{ value: 'Percentage Degraded', angle: -90, position: 'insideLeft' }}
-                      />
-                      <Tooltip />
-                      <Bar dataKey="percentage" name="Degradation %" fill="#ef4444" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              
-              <div className="mt-6 p-4 bg-muted/30 rounded-lg">
-                <h4 className="font-medium mb-2">Key Drivers of Land Degradation</h4>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-start gap-2">
-                    <span className="rounded-full bg-orange-500/10 p-1">
-                      <ChevronRight className="h-3 w-3 text-orange-500" />
-                    </span>
-                    <span><strong>Climate Variability:</strong> Increasing temperatures and precipitation changes contribute to 37% of degradation</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="rounded-full bg-red-500/10 p-1">
-                      <ChevronRight className="h-3 w-3 text-red-500" />
-                    </span>
-                    <span><strong>Agricultural Expansion:</strong> Unsustainable farming practices account for 28% of conversions</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="rounded-full bg-purple-500/10 p-1">
-                      <ChevronRight className="h-3 w-3 text-purple-500" />
-                    </span>
-                    <span><strong>Urbanization:</strong> Urban sprawl contributes to 14% of land cover changes</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="rounded-full bg-blue-500/10 p-1">
-                      <ChevronRight className="h-3 w-3 text-blue-500" />
-                    </span>
-                    <span><strong>Resource Extraction:</strong> Mining and timber harvesting responsible for 12% of degradation</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="recovery">
-            <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6 h-full">
-              <h3 className="text-lg font-medium mb-6">Land Recovery Areas</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  {landImprovementData.map(item => (
-                    <div key={item.id} className="p-4 border border-border/60 rounded-lg">
-                      <div className="flex justify-between items-center mb-2">
-                        <h4 className="font-medium">{item.name}</h4>
-                        <span className="inline-flex items-center rounded-full bg-green-50 dark:bg-green-900/20 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
-                          {item.percentage}% improved
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{item.description}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={landImprovementData}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 30 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis 
-                        label={{ value: 'Percentage Improved', angle: -90, position: 'insideLeft' }}
-                      />
-                      <Tooltip />
-                      <Bar dataKey="percentage" name="Improvement %" fill="#22c55e" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              
-              <div className="mt-6 p-4 bg-muted/30 rounded-lg">
-                <h4 className="font-medium mb-2">Successful Restoration Strategies</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-start gap-2">
-                      <span className="rounded-full bg-green-500/10 p-1 mt-0.5">
-                        <ChevronRight className="h-3 w-3 text-green-500" />
-                      </span>
-                      <div>
-                        <strong className="block">Reforestation Projects</strong>
-                        <span className="text-muted-foreground">Tree planting initiatives have restored 2,400+ hectares</span>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="rounded-full bg-blue-500/10 p-1 mt-0.5">
-                        <ChevronRight className="h-3 w-3 text-blue-500" />
-                      </span>
-                      <div>
-                        <strong className="block">Water Conservation</strong>
-                        <span className="text-muted-foreground">Improved watershed management benefiting 3,200+ hectares</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-start gap-2">
-                      <span className="rounded-full bg-yellow-500/10 p-1 mt-0.5">
-                        <ChevronRight className="h-3 w-3 text-yellow-500" />
-                      </span>
-                      <div>
-                        <strong className="block">Sustainable Agriculture</strong>
-                        <span className="text-muted-foreground">Improved farming techniques in 1,850+ hectares</span>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="rounded-full bg-purple-500/10 p-1 mt-0.5">
-                        <ChevronRight className="h-3 w-3 text-purple-500" />
-                      </span>
-                      <div>
-                        <strong className="block">Protected Area Expansion</strong>
-                        <span className="text-muted-foreground">Newly protected lands covering 4,200+ hectares</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
+    </section>
   );
 };
 
