@@ -1,6 +1,7 @@
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart, LineChart, Line, ComposedChart, Scatter } from 'recharts';
 import { cn } from "@/lib/utils";
+import { regionalPrecipitationColors } from "@/lib/geospatialUtils";
 
 interface ChartCarouselProps {
   data: Array<{
@@ -60,24 +61,13 @@ const ChartCarousel = ({
       return convertedYearData;
     });
   } else if (dataType === 'precipitation') {
-    // Remove Water Stress Index and Extreme Events from the main rainfall data
-    // Keep only rainfall metrics for the bar and pie charts
-    const rainfallOnly = filteredData.filter(item => 
-      item.name === 'Annual Rainfall' || 
-      item.name === 'Dry Season' || 
-      item.name === 'Wet Season'
-    );
+    // For precipitation data, we'll show regional data
+    convertedData = filteredData;
+    displayUnit = 'precipitation index';
     
-    convertedData = rainfallOnly.map(item => {
-      return {
-        ...item,
-        displayUnit: 'mm',
-        originalValue: item.value,
-      };
-    });
-    
-    // Keep time series data as is, since it's already in mm
-    displayUnit = 'mm';
+    // For regional precipitation time series, we keep the data as is
+    // The timeSeriesData should contain regional data (Overall, South, Center, North)
+    convertedTimeSeriesData = timeSeriesData;
   }
   
   // Debug function to ensure proper data
@@ -95,10 +85,9 @@ const ChartCarousel = ({
   const formatTooltip = (value: number, name: string, entry: any) => {
     if (dataType === 'precipitation') {
       if (entry && entry.payload) {
-        if (name === 'Annual' || name === 'Dry Season' || name === 'Wet Season' || 
-            name === 'Annual Rainfall' || name === 'Dry Season' || name === 'Wet Season') {
-          // For rainfall, show mm values
-          return [`${value.toLocaleString()} mm`, name];
+        if (name === 'Overall' || name === 'South' || name === 'Center' || name === 'North') {
+          // For regional precipitation data
+          return [`${value.toLocaleString()} (index)`, name];
         } else if (name === 'Extreme Events') {
           return [`${value.toLocaleString()} events`, name];
         } else if (name === 'Water Stress Index') {
@@ -109,6 +98,11 @@ const ChartCarousel = ({
     }
     // Default for land cover
     return [`${value.toLocaleString()} ${displayUnit}`, name];
+  };
+
+  // Get color for regional data
+  const getRegionalColor = (region: string) => {
+    return regionalPrecipitationColors[region as keyof typeof regionalPrecipitationColors] || '#999999';
   };
 
   return (
@@ -144,7 +138,7 @@ const ChartCarousel = ({
                   <YAxis 
                     label={{ 
                       value: dataType === 'precipitation' ? 
-                        'Rainfall (mm)' : 
+                        'Precipitation Index' : 
                         `Area (${displayUnit})`, 
                       angle: -90, 
                       position: 'insideLeft',
@@ -156,7 +150,7 @@ const ChartCarousel = ({
                   <Bar 
                     dataKey="value" 
                     name={dataType === 'precipitation' ? 
-                      'Rainfall (mm)' : 
+                      'Precipitation Index' : 
                       `Area (${displayUnit})`}
                   >
                     {convertedData.map((entry, index) => (
@@ -218,7 +212,7 @@ const ChartCarousel = ({
                     />
                     <YAxis 
                       label={{ 
-                        value: 'Rainfall (mm)', 
+                        value: 'Precipitation Index', 
                         angle: -90, 
                         position: 'insideLeft',
                         style: { textAnchor: 'middle' }
@@ -227,28 +221,38 @@ const ChartCarousel = ({
                     <Tooltip formatter={formatTooltip} />
                     <Legend />
                     
-                    {/* Rainfall data shown as lines */}
+                    {/* Regional precipitation data shown as lines */}
                     <Line 
                       type="monotone" 
-                      dataKey="Annual" 
-                      stroke="#4575b4" 
+                      dataKey="Overall" 
+                      stroke={getRegionalColor('Overall')} 
                       strokeWidth={2}
                       dot={{ r: 5 }}
-                      name="Annual Rainfall"
+                      name="Overall"
                     />
                     <Line 
                       type="monotone" 
-                      dataKey="Dry Season" 
-                      stroke="#74add1" 
+                      dataKey="South" 
+                      stroke={getRegionalColor('South')} 
                       strokeWidth={2}
                       dot={{ r: 4 }}
+                      name="South"
                     />
                     <Line 
                       type="monotone" 
-                      dataKey="Wet Season" 
-                      stroke="#91bfdb" 
+                      dataKey="Center" 
+                      stroke={getRegionalColor('Center')} 
                       strokeWidth={2}
                       dot={{ r: 4 }}
+                      name="Center"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="North" 
+                      stroke={getRegionalColor('North')} 
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      name="North"
                     />
                   </LineChart>
                 ) : (
@@ -296,7 +300,7 @@ const ChartCarousel = ({
             </div>
             {dataType === 'precipitation' && (
               <div className="text-xs text-center mt-1 text-muted-foreground">
-                Annual and Seasonal Rainfall Trends (2010-2023) in mm
+                Regional Precipitation Index Trends (2010-2023)
               </div>
             )}
           </CarouselItem>
@@ -326,7 +330,7 @@ const ChartCarousel = ({
                     />
                     <YAxis 
                       label={{ 
-                        value: 'Index & Event Values', 
+                        value: 'Regional Variations', 
                         angle: -90, 
                         position: 'insideLeft',
                         style: { textAnchor: 'middle' }
@@ -335,26 +339,15 @@ const ChartCarousel = ({
                     <Tooltip formatter={formatTooltip} />
                     <Legend />
                     
-                    {/* Only show Water Stress Index and Extreme Events */}
-                    <Line 
-                      type="monotone" 
-                      dataKey="Water Stress Index" 
-                      stroke="#fc8d59" 
-                      strokeWidth={2} 
-                      dot={{ r: 5 }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="Extreme Events" 
-                      stroke="#d73027" 
-                      strokeWidth={2} 
-                      dot={{ r: 5 }}
-                    />
+                    {/* Comparison of regional precipitation index */}
+                    <Bar dataKey="South" fill={getRegionalColor('South')} />
+                    <Bar dataKey="Center" fill={getRegionalColor('Center')} />
+                    <Bar dataKey="North" fill={getRegionalColor('North')} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
               <div className="text-xs text-center mt-1 text-muted-foreground">
-                Trend Analysis: Water Stress Index and Extreme Weather Events (2010-2023)
+                Regional Comparison: South, Center, and North Precipitation Indices
               </div>
             </CarouselItem>
           )}

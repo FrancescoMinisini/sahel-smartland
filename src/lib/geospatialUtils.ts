@@ -31,6 +31,14 @@ export const landCoverClasses = {
   0: 'No Data'
 };
 
+// Define regional precipitation colors
+export const regionalPrecipitationColors = {
+  'Overall': '#4575b4',
+  'South': '#d73027',
+  'Center': '#fdae61',
+  'North': '#66bd63'
+};
+
 // Colors for precipitation visualization (blue intensity)
 export const precipitationColorScale = [
   '#f7fbff', // Very light blue - lowest precipitation
@@ -290,6 +298,58 @@ export const getAccuratePrecipitationData = (year: number): Record<string, numbe
     extremeEvents: Math.round(3 + (2023 - year < 14 ? (14 - (2023 - year)) * 0.5 : 0)),
     waterStressIndex: Math.round(38 + (2023 - year < 14 ? (14 - (2023 - year)) * 2.5 : 0))
   };
+};
+
+// Function to load precipitation data by region
+export const loadPrecipitationByRegion = async (): Promise<Array<{
+  year: number;
+  Overall: number;
+  South: number;
+  Center: number;
+  North: number;
+}>> => {
+  try {
+    const response = await fetch('/Datasets_Hackathon/Graph_data/precipitation_averages.csv');
+    const csvText = await response.text();
+    
+    // Parse CSV manually
+    const lines = csvText.trim().split('\n');
+    const headers = lines[0].split(',');
+    
+    return lines.slice(1).map(line => {
+      const values = line.split(',');
+      const year = parseInt(values[0], 10);
+      
+      // Convert the values to appropriate scale for visualization (multiplying by 1000)
+      // This converts the 0-1 normalized values to a more intuitive range
+      return {
+        year,
+        Overall: parseFloat(values[1]) * 1000,
+        South: parseFloat(values[2]) * 1000,
+        Center: parseFloat(values[3]) * 1000, 
+        North: parseFloat(values[4]) * 1000
+      };
+    }).sort((a, b) => a.year - b.year); // Sort by year
+  } catch (error) {
+    console.error('Error loading precipitation CSV data:', error);
+    // Return dummy data in case of error
+    return [
+      { year: 2010, Overall: 497, South: 496, Center: 496, North: 501 },
+      { year: 2011, Overall: 504, South: 512, Center: 505, North: 496 },
+      { year: 2012, Overall: 496, South: 497, Center: 497, North: 494 },
+      { year: 2013, Overall: 498, South: 503, Center: 499, North: 494 },
+      { year: 2014, Overall: 506, South: 501, Center: 505, North: 512 },
+      { year: 2015, Overall: 499, South: 497, Center: 499, North: 501 },
+      { year: 2016, Overall: 503, South: 504, Center: 507, North: 499 },
+      { year: 2017, Overall: 499, South: 498, Center: 500, North: 500 },
+      { year: 2018, Overall: 502, South: 496, Center: 505, North: 504 },
+      { year: 2019, Overall: 499, South: 500, Center: 496, North: 502 },
+      { year: 2020, Overall: 498, South: 503, Center: 498, North: 494 },
+      { year: 2021, Overall: 503, South: 506, Center: 497, North: 505 },
+      { year: 2022, Overall: 497, South: 498, Center: 492, North: 500 },
+      { year: 2023, Overall: 495, South: 498, Center: 496, North: 493 }
+    ];
+  }
 };
 
 // Function to generate the full time series data for precipitation

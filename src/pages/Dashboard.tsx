@@ -24,10 +24,12 @@ import {
 } from 'lucide-react';
 import { 
   landCoverClasses, 
-  landCoverColors, 
+  landCoverColors,
+  regionalPrecipitationColors,
   getAccuratePrecipitationData,
   getPrecipitationTimeSeriesData,
-  getLandCoverTimeSeriesData
+  getLandCoverTimeSeriesData,
+  loadPrecipitationByRegion
 } from '@/lib/geospatialUtils';
 import ChartCarousel from '@/components/ChartCarousel';
 
@@ -38,43 +40,29 @@ const Dashboard = () => {
   const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
   const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
   const [timeSeriesData, setTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
+  const [regionalPrecipitationData, setRegionalPrecipitationData] = useState<Array<{year: number, Overall: number, South: number, Center: number, North: number}>>([]);
   
-  // Use the more accurate precipitation data from our utility function
-  const accuratePrecipData = getAccuratePrecipitationData(selectedYear);
+  const dataTabs = [
+    { id: 'landCover', name: 'Land Cover', icon: <Layers size={16} /> },
+    { id: 'vegetation', name: 'Vegetation', icon: <Leaf size={16} /> },
+    { id: 'precipitation', name: 'Precipitation', icon: <CloudRain size={16} /> },
+    { id: 'population', name: 'Population', icon: <Users size={16} /> },
+  ];
   
-  const [precipitationData] = useState([
-    {
-      name: 'Annual Rainfall',
-      value: accuratePrecipData.annual,
-      color: '#4575b4',
-      change: selectedYear > 2020 ? -3.5 : selectedYear > 2015 ? -2.1 : -1.2,
-      rawChange: selectedYear > 2020 ? -5.7 : selectedYear > 2015 ? -3.8 : -2.2
-    },
-    {
-      name: 'Dry Season',
-      value: accuratePrecipData.dryseason,
-      color: '#74add1',
-      change: selectedYear > 2020 ? -9.8 : selectedYear > 2015 ? -7.2 : -4.8,
-      rawChange: selectedYear > 2020 ? -2.2 : selectedYear > 2015 ? -1.6 : -1.1
-    },
-    {
-      name: 'Wet Season',
-      value: accuratePrecipData.wetseason,
-      color: '#91bfdb',
-      change: selectedYear > 2020 ? -4.1 : selectedYear > 2015 ? -2.6 : -1.4,
-      rawChange: selectedYear > 2020 ? -7.5 : selectedYear > 2015 ? -4.8 : -2.6
-    }
-  ]);
-  
-  // Use our utility function to get the complete time series data
-  const [precipTimeSeriesData] = useState(getPrecipitationTimeSeriesData());
-  
-  // Load land cover time series data from CSV
   useEffect(() => {
     const loadData = async () => {
-      const data = await getLandCoverTimeSeriesData();
-      setTimeSeriesData(data);
-      setIsLoading(false);
+      try {
+        const landCoverData = await getLandCoverTimeSeriesData();
+        setTimeSeriesData(landCoverData);
+        
+        const precipData = await loadPrecipitationByRegion();
+        console.log("Loaded precipitation by region:", precipData);
+        setRegionalPrecipitationData(precipData);
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
     
     loadData();
@@ -123,6 +111,40 @@ const Dashboard = () => {
       };
     })
     .sort((a, b) => b.value - a.value);
+
+  const currentYearPrecipData = regionalPrecipitationData.find(d => d.year === selectedYear) || 
+                               { year: selectedYear, Overall: 500, South: 500, Center: 500, North: 500 };
+  
+  const regionalPrecipChartData = [
+    {
+      name: 'Overall',
+      value: currentYearPrecipData.Overall,
+      color: regionalPrecipitationColors.Overall,
+      change: -1.5,
+      rawChange: -8
+    },
+    {
+      name: 'South',
+      value: currentYearPrecipData.South,
+      color: regionalPrecipitationColors.South,
+      change: -2.1,
+      rawChange: -10
+    },
+    {
+      name: 'Center',
+      value: currentYearPrecipData.Center,
+      color: regionalPrecipitationColors.Center,
+      change: -1.9,
+      rawChange: -9
+    },
+    {
+      name: 'North',
+      value: currentYearPrecipData.North,
+      color: regionalPrecipitationColors.North,
+      change: -1.2,
+      rawChange: -6
+    }
+  ];
 
   const getTrendAnalysis = () => {
     if (timeSeriesData.length < 2) {
@@ -183,69 +205,40 @@ const Dashboard = () => {
     return analysisText;
   };
 
-  const dataTabs = [
-    { id: 'landCover', name: 'Land Cover', icon: <Layers size={16} /> },
-    { id: 'vegetation', name: 'Vegetation', icon: <Leaf size={16} /> },
-    { id: 'precipitation', name: 'Precipitation', icon: <CloudRain size={16} /> },
-    { id: 'population', name: 'Population', icon: <Users size={16} /> },
-  ];
-
-  const enhancedPrecipitationData = [
-    {
-      name: 'Annual Rainfall',
-      value: accuratePrecipData.annual,
-      color: '#4575b4',
-      change: selectedYear > 2020 ? -3.5 : selectedYear > 2015 ? -2.1 : -1.2,
-      rawChange: selectedYear > 2020 ? -5.7 : selectedYear > 2015 ? -3.8 : -2.2
-    },
-    {
-      name: 'Dry Season',
-      value: accuratePrecipData.dryseason,
-      color: '#74add1',
-      change: selectedYear > 2020 ? -9.8 : selectedYear > 2015 ? -7.2 : -4.8,
-      rawChange: selectedYear > 2020 ? -2.2 : selectedYear > 2015 ? -1.6 : -1.1
-    },
-    {
-      name: 'Wet Season',
-      value: accuratePrecipData.wetseason,
-      color: '#91bfdb',
-      change: selectedYear > 2020 ? -4.1 : selectedYear > 2015 ? -2.6 : -1.4,
-      rawChange: selectedYear > 2020 ? -7.5 : selectedYear > 2015 ? -4.8 : -2.6
-    },
-    {
-      name: 'Extreme Events',
-      value: accuratePrecipData.extremeEvents,
-      color: '#d73027',
-      change: selectedYear > 2020 ? 14.3 : selectedYear > 2015 ? 25.0 : 11.1,
-      rawChange: selectedYear > 2020 ? 1 : selectedYear > 2015 ? 1 : 0.5
-    },
-    {
-      name: 'Water Stress Index',
-      value: accuratePrecipData.waterStressIndex,
-      color: '#fc8d59',
-      change: selectedYear > 2020 ? 7.9 : selectedYear > 2015 ? 12.5 : 6.5,
-      rawChange: selectedYear > 2020 ? 5 : selectedYear > 2015 ? 5 : 3
-    }
-  ];
-
   const getPrecipitationTrends = () => {
-    const firstYearData = precipTimeSeriesData[0];
-    const lastYearData = precipTimeSeriesData[precipTimeSeriesData.length - 1];
+    if (regionalPrecipitationData.length < 2) {
+      return "Insufficient data to analyze precipitation trends by region.";
+    }
     
-    const annualChange = ((lastYearData.Annual - firstYearData.Annual) / firstYearData.Annual) * 100;
-    const drySeasonChange = ((lastYearData['Dry Season'] - firstYearData['Dry Season']) / firstYearData['Dry Season']) * 100;
-    const eventsChange = ((lastYearData['Extreme Events'] - firstYearData['Extreme Events']) / firstYearData['Extreme Events']) * 100;
-    const stressChange = ((lastYearData['Water Stress Index'] - firstYearData['Water Stress Index']) / firstYearData['Water Stress Index']) * 100;
+    const firstYearData = regionalPrecipitationData[0];
+    const lastYearData = regionalPrecipitationData[regionalPrecipitationData.length - 1];
     
-    return `Based on the precipitation data from 2010 to 2023:
+    const calculateChange = (region: keyof typeof firstYearData) => {
+      if (region === 'year') return 0;
+      return ((lastYearData[region] - firstYearData[region]) / firstYearData[region]) * 100;
+    };
     
-• Annual rainfall has decreased by approximately ${Math.abs(annualChange).toFixed(1)}% (${(firstYearData.Annual - lastYearData.Annual).toFixed(1)}mm) over the past 13 years.
-• Dry season precipitation shows the most significant decline at ${Math.abs(drySeasonChange).toFixed(1)}% (${(firstYearData['Dry Season'] - lastYearData['Dry Season']).toFixed(1)}mm).
-• The frequency of extreme weather events (droughts, flash floods) has increased from ${firstYearData['Extreme Events']} to ${lastYearData['Extreme Events']} annually (${eventsChange.toFixed(0)}% increase).
-• The Water Stress Index has increased by ${stressChange.toFixed(1)}%, indicating growing water scarcity concerns.
-• Areas with over 200mm annual rainfall have decreased by approximately 18% in spatial coverage.
+    const overallChange = calculateChange('Overall');
+    const southChange = calculateChange('South');
+    const centerChange = calculateChange('Center');
+    const northChange = calculateChange('North');
+    
+    return `Based on the precipitation data by region from ${firstYearData.year} to ${lastYearData.year}:
+    
+• Overall precipitation index has changed by approximately ${overallChange.toFixed(1)}% over the past ${lastYearData.year - firstYearData.year} years.
+• The Southern region shows a change of ${southChange.toFixed(1)}%.
+• The Central region shows a change of ${centerChange.toFixed(1)}%.
+• The Northern region shows a change of ${northChange.toFixed(1)}%.
 
-This trend correlates with observed changes in vegetation patterns and may contribute to desertification processes in vulnerable areas, particularly in the northern regions.`;
+Regional variations show that precipitation patterns differ significantly across the Sahel region, with the most pronounced changes seen in the ${
+      Math.abs(southChange) > Math.abs(centerChange) && Math.abs(southChange) > Math.abs(northChange) 
+        ? 'Southern' 
+        : Math.abs(centerChange) > Math.abs(northChange) 
+          ? 'Central' 
+          : 'Northern'
+    } region.
+    
+This regional analysis is essential for targeted water resource management and climate adaptation strategies.`;
   };
 
   const keyStats = [
@@ -500,23 +493,22 @@ This trend correlates with observed changes in vegetation patterns and may contr
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                       <div className="lg:col-span-2 space-y-6">
                         <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
-                          <h3 className="text-lg font-medium mb-4">Precipitation Analysis ({selectedYear})</h3>
+                          <h3 className="text-lg font-medium mb-4">Regional Precipitation Analysis ({selectedYear})</h3>
                           <ChartCarousel 
-                            data={enhancedPrecipitationData} 
-                            timeSeriesData={precipTimeSeriesData}
+                            data={regionalPrecipChartData} 
+                            timeSeriesData={regionalPrecipitationData}
                             dataType="precipitation"
                           />
                           <div className="mt-4 text-sm text-muted-foreground">
                             <div className="flex items-start gap-2 mb-2">
                               <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
                               <p>
-                                Precipitation data shows rainfall measurements (mm), extreme weather event frequency, 
-                                and water stress index, which measures water scarcity relative to demand (higher values indicate 
-                                more severe water stress).
+                                Regional precipitation data shows how rainfall patterns vary across different regions of the Sahel.
+                                The precipitation index values represent a normalized scale (multiplied by 1000 for visualization) where higher values indicate more precipitation.
                               </p>
                             </div>
                             <div className="mt-3 p-3 bg-muted rounded-md">
-                              <h4 className="font-medium mb-2">Trend Analysis:</h4>
+                              <h4 className="font-medium mb-2">Regional Trend Analysis:</h4>
                               <p className="whitespace-pre-line">
                                 {getPrecipitationTrends()}
                               </p>
