@@ -16,27 +16,33 @@ interface ChartCarouselProps {
 }
 
 // Conversion factors based on MODIS pixel resolution (approximately 463m per pixel)
-const PIXEL_TO_HECTARES = 21.44; // One MODIS pixel is about 21.44 hectares (463m × 463m / 10000)
 const PIXEL_TO_SQ_KM = 0.2144; // One MODIS pixel is about 0.2144 sq km (463m × 463m / 1000000)
+const DISPLAY_IN_THOUSANDS = 1000; // Threshold to display in thousands of sq km
 
 const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselProps) => {
   // Filter out any data points with zero values
   const filteredData = data.filter(item => item.value > 0);
   
-  // Convert pixel data to hectares for display
+  // Determine if we need to display in thousands based on max value
+  const maxValue = Math.max(...filteredData.map(item => item.value * PIXEL_TO_SQ_KM));
+  const useThousands = maxValue > DISPLAY_IN_THOUSANDS;
+  const displayDivisor = useThousands ? 1000 : 1;
+  const displayUnit = useThousands ? 'thousand sq km' : 'sq km';
+  
+  // Convert pixel data to square kilometers for display
   const convertedData = filteredData.map(item => ({
     ...item,
-    value: Math.round(item.value * PIXEL_TO_HECTARES),
-    rawHectares: item.value * PIXEL_TO_HECTARES,
+    value: Math.round((item.value * PIXEL_TO_SQ_KM) / displayDivisor * 10) / 10, // Round to 1 decimal place
+    rawSqKm: item.value * PIXEL_TO_SQ_KM,
   }));
   
-  // Convert time series data to hectares
+  // Convert time series data to square kilometers
   const convertedTimeSeriesData = timeSeriesData.map(yearData => {
     const convertedYearData: {year: number, [key: string]: number} = { year: yearData.year };
     
     Object.keys(yearData).forEach(key => {
       if (key !== 'year') {
-        convertedYearData[key] = Math.round(yearData[key] * PIXEL_TO_HECTARES);
+        convertedYearData[key] = Math.round((yearData[key] * PIXEL_TO_SQ_KM) / displayDivisor * 10) / 10;
       }
     });
     
@@ -90,9 +96,9 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
   // Call the check function
   ensureUrbanData();
 
-  // Custom tooltip formatter for hectares display
+  // Custom tooltip formatter for square kilometers display
   const formatTooltip = (value: number, name: string) => {
-    return [`${value.toLocaleString()} ha`, name];
+    return [`${value.toLocaleString()} ${displayUnit}`, name];
   };
 
   return (
@@ -127,7 +133,7 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
                   />
                   <YAxis 
                     label={{ 
-                      value: 'Area (hectares)', 
+                      value: `Area (${displayUnit})`, 
                       angle: -90, 
                       position: 'insideLeft',
                       style: { textAnchor: 'middle' }
@@ -137,7 +143,7 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
                   <Legend verticalAlign="top" height={36} />
                   <Bar 
                     dataKey="value" 
-                    name="Area (hectares)"
+                    name={`Area (${displayUnit})`}
                   >
                     {convertedData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -197,7 +203,7 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
                   />
                   <YAxis 
                     label={{ 
-                      value: 'Area (hectares)', 
+                      value: `Area (${displayUnit})`, 
                       angle: -90, 
                       position: 'insideLeft',
                       style: { textAnchor: 'middle' }
