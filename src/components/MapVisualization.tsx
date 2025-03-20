@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
 import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info } from 'lucide-react';
@@ -466,7 +467,7 @@ const MapVisualization = ({
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="flex flex-col items-center">
-              <Loader2 className="w-8 h-8 text-sahel-green animate-spin mb-3" />
+              <Loader2 className="w-8 h-8 text-neutral-600 animate-spin mb-3" />
               <p className="text-sm text-sahel-earth">Loading map data...</p>
             </div>
           </div>
@@ -486,21 +487,21 @@ const MapVisualization = ({
       <div className="absolute top-3 right-3 flex flex-col gap-1.5">
         <button 
           onClick={handleZoomIn} 
-          className="w-7 h-7 bg-white rounded-lg shadow-md flex items-center justify-center text-sahel-earth hover:bg-sahel-green hover:text-white transition-colors"
+          className="w-7 h-7 bg-white rounded-lg shadow-md flex items-center justify-center text-sahel-earth hover:bg-neutral-200 hover:text-neutral-700 transition-colors"
           aria-label="Zoom in"
         >
           <ZoomIn size={14} />
         </button>
         <button 
           onClick={handleZoomOut} 
-          className="w-7 h-7 bg-white rounded-lg shadow-md flex items-center justify-center text-sahel-earth hover:bg-sahel-green hover:text-white transition-colors"
+          className="w-7 h-7 bg-white rounded-lg shadow-md flex items-center justify-center text-sahel-earth hover:bg-neutral-200 hover:text-neutral-700 transition-colors"
           aria-label="Zoom out"
         >
           <ZoomOut size={14} />
         </button>
         <button 
           onClick={handleResetView} 
-          className="w-7 h-7 bg-white rounded-lg shadow-md flex items-center justify-center text-sahel-earth hover:bg-sahel-green hover:text-white transition-colors"
+          className="w-7 h-7 bg-white rounded-lg shadow-md flex items-center justify-center text-sahel-earth hover:bg-neutral-200 hover:text-neutral-700 transition-colors"
           aria-label="Reset view"
         >
           <RotateCcw size={14} />
@@ -510,7 +511,7 @@ const MapVisualization = ({
       <div className="absolute top-3 left-3">
         <div className="bg-white rounded-lg shadow-md p-1.5">
           <div className="flex items-center gap-1 px-1.5">
-            <Layers size={12} className="text-sahel-earth" />
+            <Layers size={12} className="text-neutral-600" />
             <span className="text-xs font-medium">{getCurrentLayerName()}</span>
           </div>
         </div>
