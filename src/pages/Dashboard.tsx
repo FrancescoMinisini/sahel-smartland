@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -33,7 +32,6 @@ const Dashboard = () => {
   const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
   const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
   
-  // Create a complete time series dataset that doesn't need to be updated
   const [timeSeriesData] = useState([
     {
       year: 2010,
@@ -166,7 +164,7 @@ const Dashboard = () => {
       
       return {
         name: landCoverClasses[landCoverKey as keyof typeof landCoverClasses] || `Class ${key}`,
-        value: Math.round(value / 1000),
+        value: value,
         color: landCoverColors[landCoverKey as keyof typeof landCoverColors] || '#cccccc',
         change: Math.round((changeValue / (previousValue || 1)) * 100),
         rawChange: changeValue

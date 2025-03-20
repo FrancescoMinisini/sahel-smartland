@@ -15,9 +15,33 @@ interface ChartCarouselProps {
   timeSeriesData?: Array<{year: number, [key: string]: number}>;
 }
 
+// Conversion factors based on MODIS pixel resolution (approximately 463m per pixel)
+const PIXEL_TO_HECTARES = 21.44; // One MODIS pixel is about 21.44 hectares (463m × 463m / 10000)
+const PIXEL_TO_SQ_KM = 0.2144; // One MODIS pixel is about 0.2144 sq km (463m × 463m / 1000000)
+
 const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselProps) => {
   // Filter out any data points with zero values
   const filteredData = data.filter(item => item.value > 0);
+  
+  // Convert pixel data to hectares for display
+  const convertedData = filteredData.map(item => ({
+    ...item,
+    value: Math.round(item.value * PIXEL_TO_HECTARES),
+    rawHectares: item.value * PIXEL_TO_HECTARES,
+  }));
+  
+  // Convert time series data to hectares
+  const convertedTimeSeriesData = timeSeriesData.map(yearData => {
+    const convertedYearData: {year: number, [key: string]: number} = { year: yearData.year };
+    
+    Object.keys(yearData).forEach(key => {
+      if (key !== 'year') {
+        convertedYearData[key] = Math.round(yearData[key] * PIXEL_TO_HECTARES);
+      }
+    });
+    
+    return convertedYearData;
+  });
   
   // Get all land cover types that appear in the time series data
   const getAllLandCoverTypes = () => {
@@ -66,6 +90,11 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
   // Call the check function
   ensureUrbanData();
 
+  // Custom tooltip formatter for hectares display
+  const formatTooltip = (value: number, name: string) => {
+    return [`${value.toLocaleString()} ha`, name];
+  };
+
   return (
     <div className={cn("relative", className)}>
       <Carousel
@@ -81,7 +110,7 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
             <div className="h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={filteredData}
+                  data={convertedData}
                   margin={{
                     top: 20,
                     right: 30,
@@ -98,19 +127,19 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
                   />
                   <YAxis 
                     label={{ 
-                      value: 'Area (thousand pixels)', 
+                      value: 'Area (hectares)', 
                       angle: -90, 
                       position: 'insideLeft',
                       style: { textAnchor: 'middle' }
                     }} 
                   />
-                  <Tooltip />
+                  <Tooltip formatter={formatTooltip} />
                   <Legend verticalAlign="top" height={36} />
                   <Bar 
                     dataKey="value" 
-                    name="Area (thousand pixels)"
+                    name="Area (hectares)"
                   >
-                    {filteredData.map((entry, index) => (
+                    {convertedData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Bar>
@@ -125,7 +154,7 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={filteredData}
+                    data={convertedData}
                     dataKey="value"
                     nameKey="name"
                     cx="50%"
@@ -133,11 +162,11 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
                     outerRadius={150}
                     label={(entry) => entry.name}
                   >
-                    {filteredData.map((entry, index) => (
+                    {convertedData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip formatter={formatTooltip} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -149,7 +178,7 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
             <div className="h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
-                  data={timeSeriesData}
+                  data={convertedTimeSeriesData}
                   margin={{
                     top: 20,
                     right: 30,
@@ -168,13 +197,13 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
                   />
                   <YAxis 
                     label={{ 
-                      value: 'Area (thousand pixels)', 
+                      value: 'Area (hectares)', 
                       angle: -90, 
                       position: 'insideLeft',
                       style: { textAnchor: 'middle' }
                     }} 
                   />
-                  <Tooltip />
+                  <Tooltip formatter={formatTooltip} />
                   <Legend />
                   
                   {/* Show the key land cover types with stacked area like in TemporalAnalysis */}
