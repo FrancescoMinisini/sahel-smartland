@@ -317,301 +317,304 @@ const Dashboard = () => {
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="mt-8">
-                    <h3 className="text-lg font-semibold mb-4">Key Findings</h3>
-                    <div className="bg-muted/30 rounded-lg p-6">
-                      {activeTab === 'landCover' && (
-                        <div>
-                          <p className="mb-4">Analysis of 20 years of land cover data reveals several key trends:</p>
-                          <ul className="space-y-2 mb-4">
-                            <li className="flex items-start">
-                              <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="text-sahel-green"
-                                >
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                              </div>
-                              <span className="ml-3 text-sm">Significant conversion of natural vegetation to croplands in southern Sahel regions</span>
-                            </li>
-                            <li className="flex items-start">
-                              <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="text-sahel-green"
-                                >
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                              </div>
-                              <span className="ml-3 text-sm">Urban expansion around major cities, with a 35% increase in urban area since 2010</span>
-                            </li>
-                            <li className="flex items-start">
-                              <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="text-sahel-green"
-                                >
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                              </div>
-                              <span className="ml-3 text-sm">Restoration efforts showing positive results in targeted areas, with 1.2M ha restored</span>
-                            </li>
-                          </ul>
-                          <Link 
-                            to="/reports" 
-                            className="text-sm text-sahel-blue flex items-center hover:underline"
-                          >
-                            View detailed land cover report
-                            <ArrowRight size={14} className="ml-1" />
-                          </Link>
-                        </div>
-                      )}
-                      
-                      {activeTab === 'vegetation' && (
-                        <div>
-                          <p className="mb-4">Analysis of vegetation productivity data reveals:</p>
-                          <ul className="space-y-2 mb-4">
-                            <li className="flex items-start">
-                              <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="text-sahel-green"
-                                >
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                              </div>
-                              <span className="ml-3 text-sm">Overall increase in gross primary production by 8.2% since 2010</span>
-                            </li>
-                            <li className="flex items-start">
-                              <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="text-sahel-green"
-                                >
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                              </div>
-                              <span className="ml-3 text-sm">Hotspots of declining productivity in regions with excessive agricultural expansion</span>
-                            </li>
-                            <li className="flex items-start">
-                              <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="text-sahel-green"
-                                >
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                              </div>
-                              <span className="ml-3 text-sm">Positive correlation between restoration efforts and increased vegetation productivity</span>
-                            </li>
-                          </ul>
-                          <Link 
-                            to="/reports" 
-                            className="text-sm text-sahel-blue flex items-center hover:underline"
-                          >
-                            View detailed vegetation report
-                            <ArrowRight size={14} className="ml-1" />
-                          </Link>
-                        </div>
-                      )}
-                      
-                      {activeTab === 'precipitation' && (
-                        <div>
-                          <p className="mb-4">Analysis of precipitation data shows:</p>
-                          <ul className="space-y-2 mb-4">
-                            <li className="flex items-start">
-                              <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="text-sahel-green"
-                                >
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                              </div>
-                              <span className="ml-3 text-sm">Increasing variability in annual rainfall patterns across the Sahel</span>
-                            </li>
-                            <li className="flex items-start">
-                              <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="text-sahel-green"
-                                >
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                              </div>
-                              <span className="ml-3 text-sm">Overall decrease in rainfall by 3.5% in northern regions since 2010</span>
-                            </li>
-                            <li className="flex items-start">
-                              <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="text-sahel-green"
-                                >
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                              </div>
-                              <span className="ml-3 text-sm">Increased frequency of extreme rainfall events in southern Sahel regions</span>
-                            </li>
-                          </ul>
-                          <Link 
-                            to="/reports" 
-                            className="text-sm text-sahel-blue flex items-center hover:underline"
-                          >
-                            View detailed climate report
-                            <ArrowRight size={14} className="ml-1" />
-                          </Link>
-                        </div>
-                      )}
-                      
-                      {activeTab === 'population' && (
-                        <div>
-                          <p className="mb-4">Analysis of population data indicates:</p>
-                          <ul className="space-y-2 mb-4">
-                            <li className="flex items-start">
-                              <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="text-sahel-green"
-                                >
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                              </div>
-                              <span className="ml-3 text-sm">Rapid urban population growth at 4.3% annually, exceeding national averages</span>
-                            </li>
-                            <li className="flex items-start">
-                              <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="text-sahel-green"
-                                >
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                              </div>
-                              <span className="ml-3 text-sm">Migration from rural to urban areas correlating with land degradation hotspots</span>
-                            </li>
-                            <li className="flex items-start">
-                              <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="text-sahel-green"
-                                >
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                              </div>
-                              <span className="ml-3 text-sm">Population pressure on natural resources highest in peri-urban regions</span>
-                            </li>
-                          </ul>
-                          <Link 
-                            to="/reports" 
-                            className="text-sm text-sahel-blue flex items-center hover:underline"
-                          >
-                            View detailed population report
-                            <ArrowRight size={14} className="ml-1" />
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  </div>
                 </div>
               )}
+            </div>
+          </div>
+          
+          {/* Moved Key Findings section here */}
+          <div className="bg-white dark:bg-muted rounded-xl shadow-sm border border-border/40 overflow-hidden mb-8">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Key Findings</h3>
+              <div className="bg-muted/30 rounded-lg p-6">
+                {activeTab === 'landCover' && (
+                  <div>
+                    <p className="mb-4">Analysis of 20 years of land cover data reveals several key trends:</p>
+                    <ul className="space-y-2 mb-4">
+                      <li className="flex items-start">
+                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-sahel-green"
+                          >
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-sm">Significant conversion of natural vegetation to croplands in southern Sahel regions</span>
+                      </li>
+                      <li className="flex items-start">
+                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-sahel-green"
+                          >
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-sm">Urban expansion around major cities, with a 35% increase in urban area since 2010</span>
+                      </li>
+                      <li className="flex items-start">
+                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-sahel-green"
+                          >
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-sm">Restoration efforts showing positive results in targeted areas, with 1.2M ha restored</span>
+                      </li>
+                    </ul>
+                    <Link 
+                      to="/reports" 
+                      className="text-sm text-sahel-blue flex items-center hover:underline"
+                    >
+                      View detailed land cover report
+                      <ArrowRight size={14} className="ml-1" />
+                    </Link>
+                  </div>
+                )}
+                
+                {activeTab === 'vegetation' && (
+                  <div>
+                    <p className="mb-4">Analysis of vegetation productivity data reveals:</p>
+                    <ul className="space-y-2 mb-4">
+                      <li className="flex items-start">
+                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-sahel-green"
+                          >
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-sm">Overall increase in gross primary production by 8.2% since 2010</span>
+                      </li>
+                      <li className="flex items-start">
+                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-sahel-green"
+                          >
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-sm">Hotspots of declining productivity in regions with excessive agricultural expansion</span>
+                      </li>
+                      <li className="flex items-start">
+                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-sahel-green"
+                          >
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-sm">Positive correlation between restoration efforts and increased vegetation productivity</span>
+                      </li>
+                    </ul>
+                    <Link 
+                      to="/reports" 
+                      className="text-sm text-sahel-blue flex items-center hover:underline"
+                    >
+                      View detailed vegetation report
+                      <ArrowRight size={14} className="ml-1" />
+                    </Link>
+                  </div>
+                )}
+                
+                {activeTab === 'precipitation' && (
+                  <div>
+                    <p className="mb-4">Analysis of precipitation data shows:</p>
+                    <ul className="space-y-2 mb-4">
+                      <li className="flex items-start">
+                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-sahel-green"
+                          >
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-sm">Increasing variability in annual rainfall patterns across the Sahel</span>
+                      </li>
+                      <li className="flex items-start">
+                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-sahel-green"
+                          >
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-sm">Overall decrease in rainfall by 3.5% in northern regions since 2010</span>
+                      </li>
+                      <li className="flex items-start">
+                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-sahel-green"
+                          >
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-sm">Increased frequency of extreme rainfall events in southern Sahel regions</span>
+                      </li>
+                    </ul>
+                    <Link 
+                      to="/reports" 
+                      className="text-sm text-sahel-blue flex items-center hover:underline"
+                    >
+                      View detailed climate report
+                      <ArrowRight size={14} className="ml-1" />
+                    </Link>
+                  </div>
+                )}
+                
+                {activeTab === 'population' && (
+                  <div>
+                    <p className="mb-4">Analysis of population data indicates:</p>
+                    <ul className="space-y-2 mb-4">
+                      <li className="flex items-start">
+                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-sahel-green"
+                          >
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-sm">Rapid urban population growth at 4.3% annually, exceeding national averages</span>
+                      </li>
+                      <li className="flex items-start">
+                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-sahel-green"
+                          >
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-sm">Migration from rural to urban areas correlating with land degradation hotspots</span>
+                      </li>
+                      <li className="flex items-start">
+                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-sahel-green"
+                          >
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        </div>
+                        <span className="ml-3 text-sm">Population pressure on natural resources highest in peri-urban regions</span>
+                      </li>
+                    </ul>
+                    <Link 
+                      to="/reports" 
+                      className="text-sm text-sahel-blue flex items-center hover:underline"
+                    >
+                      View detailed population report
+                      <ArrowRight size={14} className="ml-1" />
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           
