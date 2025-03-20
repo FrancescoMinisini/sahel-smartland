@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import HeroSection from '@/components/HeroSection';
 import FeatureSection from '@/components/FeatureSection';
@@ -7,46 +6,49 @@ import DataCard from '@/components/DataCard';
 import Footer from '@/components/Footer';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BarChart2, CloudRain, Leaf, Map, Users, Download } from 'lucide-react';
-
 const Index = () => {
   // Scroll to top on page load
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-
-  const keyStats = [
-    { 
-      title: 'Land Cover Change', 
-      value: '27.3M ha', 
-      description: 'Area affected by land cover change in the past 20 years',
-      icon: <Leaf size={20} />,
-      trend: { value: 15, isPositive: false }
-    },
-    { 
-      title: 'Vegetation Production', 
-      value: '+8.2%', 
-      description: 'Average increase in gross primary production since 2010',
-      icon: <BarChart2 size={20} />,
-      trend: { value: 8.2, isPositive: true }
-    },
-    { 
-      title: 'Annual Precipitation', 
-      value: '685 mm', 
-      description: 'Average annual rainfall across the Sahel region',
-      icon: <CloudRain size={20} />,
-      trend: { value: 3.5, isPositive: false }
-    },
-    { 
-      title: 'Population Growth', 
-      value: '4.3%', 
-      description: 'Annual population growth rate in urban centers',
-      icon: <Users size={20} />,
-      trend: { value: 4.3, isPositive: true }
+  const keyStats = [{
+    title: 'Land Cover Change',
+    value: '27.3M ha',
+    description: 'Area affected by land cover change in the past 20 years',
+    icon: <Leaf size={20} />,
+    trend: {
+      value: 15,
+      isPositive: false
     }
-  ];
-
-  return (
-    <div className="min-h-screen flex flex-col">
+  }, {
+    title: 'Vegetation Production',
+    value: '+8.2%',
+    description: 'Average increase in gross primary production since 2010',
+    icon: <BarChart2 size={20} />,
+    trend: {
+      value: 8.2,
+      isPositive: true
+    }
+  }, {
+    title: 'Annual Precipitation',
+    value: '685 mm',
+    description: 'Average annual rainfall across the Sahel region',
+    icon: <CloudRain size={20} />,
+    trend: {
+      value: 3.5,
+      isPositive: false
+    }
+  }, {
+    title: 'Population Growth',
+    value: '4.3%',
+    description: 'Annual population growth rate in urban centers',
+    icon: <Users size={20} />,
+    trend: {
+      value: 4.3,
+      isPositive: true
+    }
+  }];
+  return <div className="min-h-screen flex flex-col">
       <HeroSection />
       
       <FeatureSection />
@@ -68,23 +70,11 @@ const Index = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            {keyStats.map((stat, index) => (
-              <DataCard
-                key={index}
-                title={stat.title}
-                value={stat.value}
-                description={stat.description}
-                icon={stat.icon}
-                trend={stat.trend}
-              />
-            ))}
+            {keyStats.map((stat, index) => <DataCard key={index} title={stat.title} value={stat.value} description={stat.description} icon={stat.icon} trend={stat.trend} />)}
           </div>
           
           <div className="text-center">
-            <Link 
-              to="/dashboard" 
-              className="inline-flex items-center justify-center px-6 py-3 bg-sahel-earth text-white font-medium rounded-lg transition-all shadow-md hover:shadow-lg hover:bg-sahel-earth/90"
-            >
+            <Link to="/dashboard" className="inline-flex items-center justify-center px-6 py-3 bg-sahel-earth text-white font-medium rounded-lg transition-all shadow-md hover:shadow-lg hover:bg-sahel-earth/90">
               Explore All Data
               <ArrowRight size={16} className="ml-2" />
             </Link>
@@ -117,18 +107,7 @@ const Index = () => {
               <ul className="space-y-4 mb-8">
                 <li className="flex items-start">
                   <div className="w-6 h-6 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-sahel-green"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-sahel-green">
                       <path d="M20 6 9 17l-5-5" />
                     </svg>
                   </div>
@@ -136,18 +115,7 @@ const Index = () => {
                 </li>
                 <li className="flex items-start">
                   <div className="w-6 h-6 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-sahel-green"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-sahel-green">
                       <path d="M20 6 9 17l-5-5" />
                     </svg>
                   </div>
@@ -155,18 +123,7 @@ const Index = () => {
                 </li>
                 <li className="flex items-start">
                   <div className="w-6 h-6 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-sahel-green"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-sahel-green">
                       <path d="M20 6 9 17l-5-5" />
                     </svg>
                   </div>
@@ -174,10 +131,7 @@ const Index = () => {
                 </li>
               </ul>
               
-              <Link 
-                to="/map" 
-                className="inline-flex items-center justify-center px-6 py-3 bg-sahel-blue text-white font-medium rounded-lg transition-all shadow-md hover:shadow-lg hover:bg-sahel-blue/90"
-              >
+              <Link to="/map" className="inline-flex items-center justify-center px-6 py-3 bg-sahel-blue text-white font-medium rounded-lg transition-all shadow-md hover:shadow-lg hover:bg-sahel-blue/90">
                 Open Full Map
                 <Map size={16} className="ml-2" />
               </Link>
@@ -187,39 +141,9 @@ const Index = () => {
       </section>
       
       {/* Call to Action Section */}
-      <section className="py-20 bg-sahel-green text-white">
-        <div className="container mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Join the Effort to Restore the Sahel Region
-          </h2>
-          <p className="text-lg opacity-90 max-w-3xl mx-auto mb-12">
-            Download our comprehensive datasets, analysis tools, and reports to contribute 
-            to sustainable land management and restoration efforts.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link 
-              to="/dashboard" 
-              className="inline-flex items-center justify-center px-6 py-3 bg-white text-sahel-green font-medium rounded-lg transition-all shadow-md hover:shadow-lg"
-            >
-              Explore Dashboard
-              <BarChart2 size={16} className="ml-2" />
-            </Link>
-            
-            <a 
-              href="#" 
-              className="inline-flex items-center justify-center px-6 py-3 bg-transparent text-white font-medium rounded-lg border border-white/30 transition-all hover:bg-white/10"
-            >
-              Download Data
-              <Download size={16} className="ml-2" />
-            </a>
-          </div>
-        </div>
-      </section>
+      
       
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
