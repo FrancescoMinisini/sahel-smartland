@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
 import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info } from 'lucide-react';
@@ -130,7 +129,6 @@ const MapVisualization = ({
     };
   }, [dataType]);
 
-  // Resize handler to maintain proper canvas dimensions
   useEffect(() => {
     const handleResize = () => {
       if (isLoading || !canvasRef.current || !containerRef.current) return;
@@ -155,29 +153,23 @@ const MapVisualization = ({
     const containerHeight = container.clientHeight;
     const dataAspectRatio = prevYearData.width / prevYearData.height;
     
-    // Set canvas display size to fill the container while maintaining aspect ratio
     let displayWidth, displayHeight;
     
     if (containerWidth / containerHeight > dataAspectRatio) {
-      // Container is wider than data
       displayHeight = containerHeight;
       displayWidth = displayHeight * dataAspectRatio;
     } else {
-      // Container is taller than data
       displayWidth = containerWidth;
       displayHeight = displayWidth / dataAspectRatio;
     }
     
-    // Apply CSS sizing (this is what's visually shown)
     canvas.style.width = `${displayWidth}px`;
     canvas.style.height = `${displayHeight}px`;
     
-    // For better rendering quality, set canvas dimensions higher than display size
-    const scaleFactor = dataType === 'precipitation' || dataType === 'vegetation' ? 2 : 1; // Higher resolution for precipitation and vegetation
+    const scaleFactor = dataType === 'precipitation' || dataType === 'vegetation' ? 2 : 1;
     canvas.width = prevYearData.width * scaleFactor; 
     canvas.height = prevYearData.height * scaleFactor;
     
-    // Render with the adjusted canvas
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.scale(scaleFactor, scaleFactor);
@@ -240,8 +232,17 @@ const MapVisualization = ({
         min = 0;
         max = 500;
       } else if (dataType === 'vegetation') {
-        min = 0;
-        max = 3000;
+        const validPrevData = prevYearData.data.filter(val => val !== 65533 && val > 0 && val < 3000);
+        const validNextData = nextYearData.data.filter(val => val !== 65533 && val > 0 && val < 3000);
+        
+        min = Math.min(
+          validPrevData.length > 0 ? Math.min(...validPrevData) : 0,
+          validNextData.length > 0 ? Math.min(...validNextData) : 0
+        );
+        max = Math.max(
+          validPrevData.length > 0 ? Math.max(...validPrevData) : 3000,
+          validNextData.length > 0 ? Math.max(...validNextData) : 3000
+        );
       }
     } else {
       renderData = prevYearData.data;
@@ -250,12 +251,12 @@ const MapVisualization = ({
         min = prevYearData.min || 0;
         max = prevYearData.max || 500;
       } else if (dataType === 'vegetation') {
-        min = prevYearData.min || 0;
-        max = prevYearData.max || 3000;
+        const validData = prevYearData.data.filter(val => val !== 65533 && val > 0 && val < 3000);
+        min = validData.length > 0 ? Math.min(...validData) : 0;
+        max = validData.length > 0 ? Math.max(...validData) : 3000;
       }
     }
     
-    // Use the enhanced rendering with appropriate options for each data type
     renderTIFFToCanvas(
       ctx, 
       renderData, 

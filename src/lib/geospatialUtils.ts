@@ -156,9 +156,8 @@ export const getPrecipitationColor = (value: number, min: number, max: number): 
 
 // Get color for vegetation productivity value between min and max
 export const getVegetationColor = (value: number, min: number, max: number): string => {
-  // Normalize the value to 0-1 range, clamping to the specified range
-  // Filter out no-data values (typically ≤ 0 in GPP data)
-  if (value <= 0) return '#ffffff00'; // Transparent
+  // Treat 65533 as "no data" value and return transparent
+  if (value === 65533 || value <= 0) return '#ffffff00'; // Transparent
   
   const normalized = Math.max(0, Math.min(1, (value - min) / (max - min || 1)));
   
@@ -210,7 +209,12 @@ export const renderTIFFToCanvas = (
     if (dataType === 'precipitation') {
       color = getPrecipitationColor(value, min, max);
     } else if (dataType === 'vegetation') {
-      color = getVegetationColor(value, min, max);
+      // Skip no data values (65533)
+      if (value === 65533) {
+        color = '#ffffff00'; // Fully transparent
+      } else {
+        color = getVegetationColor(value, min, max);
+      }
     } else {
       // Land cover coloring
       color = landCoverColors[value as keyof typeof landCoverColors] || landCoverColors[0];
@@ -305,8 +309,8 @@ export const calculatePrecipitationStats = (data: number[], noDataValue = 0): Re
 export const calculateVegetationStats = (data: number[]): Record<string, number> => {
   if (data.length === 0) return { average: 0, min: 0, max: 0, total: 0, forestGPP: 0, grasslandGPP: 0, croplandGPP: 0, barrenGPP: 0 };
   
-  // Filter out NoData values (typically ≤ 0 in GPP data)
-  const validData = data.filter(value => value > 0 && value < 3000);
+  // Filter out NoData values (65533) and non-positive values
+  const validData = data.filter(value => value !== 65533 && value > 0 && value < 3000);
   
   if (validData.length === 0) return { average: 0, min: 0, max: 0, total: 0, forestGPP: 0, grasslandGPP: 0, croplandGPP: 0, barrenGPP: 0 };
   
