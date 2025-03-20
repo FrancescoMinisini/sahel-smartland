@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import YearSlider from '@/components/YearSlider';
 import MapVisualization from '@/components/MapVisualization';
 import Navbar from '@/components/Navbar';
-import { Info, Calendar, Map, BarChartHorizontal } from 'lucide-react';
+import { Info, Calendar, Map, BarChartHorizontal, TrendingUp, TrendingDown } from 'lucide-react';
 import { landCoverClasses, landCoverColors } from '@/lib/geospatialUtils';
 import { 
   BarChart, 
@@ -24,6 +24,7 @@ const TemporalAnalysis = () => {
   const [selectedYear, setSelectedYear] = useState(2010);
   const [activeTab, setActiveTab] = useState("map");
   const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
+  const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
   
   // Page transition animation
   const pageVariants = {
@@ -33,6 +34,8 @@ const TemporalAnalysis = () => {
   };
 
   const handleYearChange = (year: number) => {
+    // Store the previous year's stats before updating to the new year
+    setPreviousYearStats({...landCoverStats});
     setSelectedYear(year);
   };
 
@@ -45,13 +48,101 @@ const TemporalAnalysis = () => {
     .filter(([key]) => key !== '0') // Filter out "No Data" class
     .map(([key, value]) => {
       const landCoverKey = Number(key);
+      const previousValue = previousYearStats[key] || value;
+      const changeValue = value - previousValue;
+      
       return {
         name: landCoverClasses[landCoverKey as keyof typeof landCoverClasses] || `Class ${key}`,
         value: Math.round(value / 1000), // Convert to 1000s of pixels (approximate km²)
-        color: landCoverColors[landCoverKey as keyof typeof landCoverColors] || '#cccccc'
+        color: landCoverColors[landCoverKey as keyof typeof landCoverColors] || '#cccccc',
+        change: Math.round((changeValue / (previousValue || 1)) * 100), // Percent change
+        rawChange: changeValue
       };
     })
     .sort((a, b) => b.value - a.value); // Sort by descending value
+    
+  // Calculate analysis insights based on land cover stats
+  const getAnalysisInsights = () => {
+    if (Object.keys(landCoverStats).length === 0) {
+      return {
+        majorChanges: [],
+        environmentalImpact: "",
+        recommendedActions: []
+      };
+    }
+    
+    // Find significant changes (over 5% or 1000 pixels)
+    const significantChanges = chartData
+      .filter(item => Math.abs(item.rawChange) > 1000 || Math.abs(item.change) > 5)
+      .sort((a, b) => Math.abs(b.rawChange) - Math.abs(a.rawChange))
+      .slice(0, 3); // Get top 3 changes
+      
+    // Determine overall environmental impact
+    let deforestationLevel = 0;
+    let urbanizationLevel = 0;
+    let desertificationLevel = 0;
+    
+    // Check for deforestation (decrease in forests, class 7)
+    const forestsChange = chartData.find(item => item.name === "Forests")?.change || 0;
+    if (forestsChange < -5) deforestationLevel = 2; // High deforestation
+    else if (forestsChange < 0) deforestationLevel = 1; // Moderate deforestation
+    
+    // Check for urbanization (increase in urban areas, class 13)
+    const urbanChange = chartData.find(item => item.name === "Urban")?.change || 0;
+    if (urbanChange > 10) urbanizationLevel = 2; // High urbanization
+    else if (urbanChange > 0) urbanizationLevel = 1; // Moderate urbanization
+    
+    // Check for desertification (increase in barren land, class 16)
+    const barrenChange = chartData.find(item => item.name === "Barren")?.change || 0;
+    if (barrenChange > 10) desertificationLevel = 2; // High desertification
+    else if (barrenChange > 0) desertificationLevel = 1; // Moderate desertification
+    
+    // Generate impact text
+    let environmentalImpact = "";
+    if (deforestationLevel > 0 && urbanizationLevel > 0 && desertificationLevel > 0) {
+      environmentalImpact = "Critical environmental degradation detected with significant deforestation, urbanization, and desertification.";
+    } else if (deforestationLevel > 0 && (urbanizationLevel > 0 || desertificationLevel > 0)) {
+      environmentalImpact = "Moderate to high environmental stress with observable deforestation and land use changes.";
+    } else if (deforestationLevel > 0 || urbanizationLevel > 0 || desertificationLevel > 0) {
+      environmentalImpact = "Early indications of environmental changes that require monitoring.";
+    } else if (forestsChange > 5) {
+      environmentalImpact = "Positive environmental trends with increasing forest coverage.";
+    } else {
+      environmentalImpact = "Stable environmental conditions with minimal land cover changes.";
+    }
+    
+    // Generate recommended actions
+    const recommendedActions = [];
+    
+    if (deforestationLevel > 0) {
+      recommendedActions.push(deforestationLevel > 1 
+        ? "Implement immediate reforestation initiatives in affected areas"
+        : "Monitor forest degradation and plan targeted conservation efforts");
+    }
+    
+    if (desertificationLevel > 0) {
+      recommendedActions.push(desertificationLevel > 1
+        ? "Deploy advanced soil conservation techniques to combat severe desertification"
+        : "Introduce sustainable land management practices to prevent further soil degradation");
+    }
+    
+    if (urbanizationLevel > 0) {
+      recommendedActions.push(urbanizationLevel > 1
+        ? "Develop comprehensive urban planning strategies to minimize environmental impact"
+        : "Encourage green infrastructure in developing urban areas");
+    }
+    
+    // Always add a general recommendation
+    recommendedActions.push("Continue monitoring land cover changes for early detection of environmental issues");
+    
+    return {
+      majorChanges: significantChanges,
+      environmentalImpact,
+      recommendedActions: recommendedActions.slice(0, 3) // Limit to top 3 recommendations
+    };
+  };
+  
+  const insights = getAnalysisInsights();
 
   return (
     <div className="min-h-screen bg-background">
@@ -153,10 +244,16 @@ const TemporalAnalysis = () => {
                           }} 
                         />
                         <Tooltip 
-                          formatter={(value) => [
-                            `${value} thousand pixels`, 
-                            "Area"
-                          ]}
+                          formatter={(value, name, props) => {
+                            if (name === "Area (thousand pixels)") {
+                              const change = props.payload.change;
+                              return [
+                                `${value} thousand pixels ${change !== 0 ? `(${change > 0 ? '+' : ''}${change}%)` : ''}`, 
+                                name
+                              ];
+                            }
+                            return [value, name];
+                          }}
                         />
                         <Legend verticalAlign="top" height={36} />
                         <Bar 
@@ -180,34 +277,78 @@ const TemporalAnalysis = () => {
                   <h3 className="text-lg font-medium mb-4">Environmental Analysis ({selectedYear})</h3>
                   
                   <div className="space-y-6">
+                    {/* Major Changes Section */}
                     <div className="rounded-lg bg-muted p-4">
-                      <h4 className="font-medium mb-2">Key Observations</h4>
-                      <p className="text-sm text-muted-foreground">
-                        The {selectedYear} data shows significant changes in land cover patterns across the Sahel region.
-                        {selectedYear > 2018 ? " Recent reforestation efforts are visible in certain areas." : 
-                         selectedYear > 2015 ? " Moderate vegetation recovery observed in parts of the region." :
-                         " Earlier periods show more extensive desertification trends."}
-                      </p>
+                      <h4 className="font-medium mb-3">Key Land Cover Changes</h4>
+                      
+                      {insights.majorChanges.length > 0 ? (
+                        <div className="space-y-3">
+                          {insights.majorChanges.map((change, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                              {change.change > 0 ? (
+                                <TrendingUp className="h-5 w-5 text-green-500" />
+                              ) : (
+                                <TrendingDown className="h-5 w-5 text-red-500" />
+                              )}
+                              <div>
+                                <span className="font-medium" style={{ color: change.color }}>{change.name}: </span>
+                                <span className="text-sm text-muted-foreground">
+                                  {change.change > 0 ? 'Increased by ' : 'Decreased by '}
+                                  <span className={change.change > 0 ? 'text-green-500' : 'text-red-500'}>
+                                    {Math.abs(change.change)}%
+                                  </span>
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          No significant land cover changes detected in the current period.
+                        </p>
+                      )}
                     </div>
                     
+                    {/* Environmental Impact Assessment */}
                     <div className="rounded-lg bg-primary/10 p-4">
-                      <h4 className="font-medium mb-2">Climate Impact</h4>
+                      <h4 className="font-medium mb-2">Environmental Impact Assessment</h4>
                       <p className="text-sm text-muted-foreground">
-                        {selectedYear > 2020 
-                          ? "Recent climate initiatives show positive impact on vegetation recovery in selected areas."
-                          : selectedYear > 2015
-                          ? "Mid-decade climate intervention programs started showing limited impact."
-                          : "Early decade showed more limited climate intervention programs."}
+                        {insights.environmentalImpact}
                       </p>
                     </div>
                     
+                    {/* Recommended Actions */}
                     <div className="rounded-lg bg-accent/20 p-4">
-                      <h4 className="font-medium mb-2">Land Cover Distribution</h4>
-                      <p className="text-sm text-muted-foreground">
-                        The predominant land cover types in {selectedYear} include variations of grasslands and shrublands,
-                        with {selectedYear > 2018 ? "increasing" : "limited"} forest coverage in highland areas.
-                        Urban expansion is {selectedYear > 2015 ? "accelerating" : "gradual"} during this period.
-                      </p>
+                      <h4 className="font-medium mb-2">Recommended Actions</h4>
+                      {insights.recommendedActions.length > 0 ? (
+                        <ul className="space-y-1">
+                          {insights.recommendedActions.map((action, index) => (
+                            <li key={index} className="flex items-start">
+                              <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  className="text-sahel-green"
+                                >
+                                  <path d="M20 6 9 17l-5-5" />
+                                </svg>
+                              </div>
+                              <span className="ml-3 text-sm">{action}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Continue monitoring current land cover patterns.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </Card>
