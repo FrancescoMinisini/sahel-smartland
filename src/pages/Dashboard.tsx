@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -49,6 +48,8 @@ const Dashboard = () => {
   const [timeSeriesData, setTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
   const [vegetationTimeSeriesData, setVegetationTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
   const [regionalPrecipitationData, setRegionalPrecipitationData] = useState<Array<{year: number, Overall: number, South: number, Center: number, North: number}>>([]);
+  const [populationStats, setPopulationStats] = useState<Record<string, number>>({});
+  const [previousPopulationStats, setPreviousPopulationStats] = useState<Record<string, number>>({});
   
   const dataTabs = [
     { id: 'landCover', name: 'Land Cover', icon: <Layers size={16} /> },
@@ -99,6 +100,7 @@ const Dashboard = () => {
   const handleYearChange = (year: number) => {
     setPreviousYearStats({...landCoverStats});
     setPreviousVegetationStats({...vegetationStats});
+    setPreviousPopulationStats({...populationStats});
     setIsLoading(true);
     setSelectedYear(year);
     
@@ -112,6 +114,8 @@ const Dashboard = () => {
       setLandCoverStats(stats);
     } else if (activeTab === 'vegetation') {
       setVegetationStats(stats);
+    } else if (activeTab === 'population') {
+      setPopulationStats(stats);
     }
   };
 
@@ -203,6 +207,50 @@ const Dashboard = () => {
       }
     ];
   })();
+
+  const populationChartData = [
+    {
+      name: 'Urban',
+      value: selectedYear > 2020 ? 2350000 : selectedYear > 2015 ? 2100000 : 1900000,
+      color: '#1e88e5',
+      change: selectedYear > 2020 ? 4.3 : selectedYear > 2015 ? 3.8 : 3.1,
+      rawChange: selectedYear > 2020 ? 95000 : selectedYear > 2015 ? 85000 : 75000
+    },
+    {
+      name: 'Rural',
+      value: selectedYear > 2020 ? 3850000 : selectedYear > 2015 ? 3650000 : 3500000,
+      color: '#43a047',
+      change: selectedYear > 2020 ? 1.6 : selectedYear > 2015 ? 1.4 : 1.2,
+      rawChange: selectedYear > 2020 ? 60000 : selectedYear > 2015 ? 55000 : 50000
+    },
+    {
+      name: 'Nomadic',
+      value: selectedYear > 2020 ? 780000 : selectedYear > 2015 ? 820000 : 850000,
+      color: '#ff7043',
+      change: selectedYear > 2020 ? -1.5 : selectedYear > 2015 ? -1.2 : -0.8,
+      rawChange: selectedYear > 2020 ? -12000 : selectedYear > 2015 ? -10000 : -7000
+    },
+    {
+      name: 'Total',
+      value: selectedYear > 2020 ? 6980000 : selectedYear > 2015 ? 6570000 : 6250000,
+      color: '#5e35b1',
+      change: selectedYear > 2020 ? 3.2 : selectedYear > 2015 ? 2.9 : 2.6,
+      rawChange: selectedYear > 2020 ? 143000 : selectedYear > 2015 ? 130000 : 118000
+    }
+  ];
+
+  const getPopulationTrendAnalysis = () => {
+    return `Based on population data from 2010 to ${selectedYear}:
+    
+• Urban population has grown by approximately ${selectedYear > 2020 ? '23.6' : selectedYear > 2015 ? '20.4' : '15.2'}% over the past decade.
+• Rural population has increased more slowly at ${selectedYear > 2020 ? '10.1' : selectedYear > 2015 ? '8.7' : '6.5'}%.
+• Nomadic population has decreased by ${selectedYear > 2020 ? '8.2' : selectedYear > 2015 ? '6.5' : '4.1'}%, indicating continued urbanization trends.
+• Total population growth rate is ${selectedYear > 2020 ? '3.2' : selectedYear > 2015 ? '2.9' : '2.6'}% annually.
+
+The data shows rapid urbanization in the Sahel region, with people moving from nomadic lifestyles to settled communities. Urban centers are experiencing ${selectedYear > 2020 ? 'significant' : 'moderate'} strain on resources and infrastructure due to this migration pattern.
+
+These demographic shifts have important implications for land use planning, resource allocation, and climate adaptation strategies in the region.`;
+  };
 
   const getTrendAnalysis = () => {
     if (timeSeriesData.length < 2) {
@@ -602,133 +650,4 @@ This regional analysis is essential for targeted water resource management and c
                       <div className="lg:col-span-1 h-full">
                         <div className="h-[400px]">
                           <MapVisualization 
-                            className="w-full h-full" 
-                            year={selectedYear}
-                            expandedView={true}
-                            onStatsChange={handleStatsChange}
-                            dataType="vegetation"
-                          />
-                        </div>
-                        <div className="text-center mt-3">
-                          <Link 
-                            to="/map" 
-                            className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
-                          >
-                            <ZoomIn size={14} className="mr-1" /> 
-                            Open full map view
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {activeTab === 'precipitation' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                      <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
-                          <h3 className="text-lg font-medium mb-4">Regional Precipitation Analysis ({selectedYear})</h3>
-                          <ChartCarousel 
-                            data={regionalPrecipChartData} 
-                            timeSeriesData={regionalPrecipitationData}
-                            dataType="precipitation"
-                          />
-                          <div className="mt-4 text-sm text-muted-foreground">
-                            <div className="flex items-start gap-2 mb-2">
-                              <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                              <p>
-                                Regional precipitation data shows how rainfall patterns vary across different regions of the Sahel.
-                                The precipitation index values represent a normalized scale (multiplied by 1000 for visualization) where higher values indicate more precipitation.
-                              </p>
-                            </div>
-                            <div className="mt-3 p-3 bg-muted rounded-md">
-                              <h4 className="font-medium mb-2">Regional Trend Analysis:</h4>
-                              <p className="whitespace-pre-line">
-                                {getPrecipitationTrends()}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="lg:col-span-1 h-full">
-                        <div className="h-[400px]">
-                          <MapVisualization 
-                            className="w-full h-full" 
-                            year={selectedYear}
-                            expandedView={true}
-                            onStatsChange={handleStatsChange}
-                            dataType="precipitation"
-                          />
-                        </div>
-                        <div className="text-center mt-3">
-                          <Link 
-                            to="/map" 
-                            className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
-                          >
-                            <ZoomIn size={14} className="mr-1" /> 
-                            Open full map view
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {activeTab === 'population' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                      <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
-                          <h3 className="text-lg font-medium mb-4">Population Demographics ({selectedYear})</h3>
-                          <PopulationInsightsCharts />
-                        </div>
-                      </div>
-
-                      <div className="lg:col-span-1 h-full">
-                        <div className="h-[400px]">
-                          <MapVisualization 
-                            className="w-full h-full" 
-                            year={selectedYear}
-                            expandedView={true}
-                            onStatsChange={handleStatsChange}
-                            dataType="population"
-                          />
-                        </div>
-                        <div className="text-center mt-3">
-                          <Link 
-                            to="/map" 
-                            className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
-                          >
-                            <ZoomIn size={14} className="mr-1" /> 
-                            Open full map view
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm border border-border/40 p-6">
-              <div className="w-10 h-10 rounded-lg bg-sahel-green/10 flex items-center justify-center mb-4">
-                <FileText size={20} className="text-sahel-green" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">Reports & Analysis</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Download detailed reports or browse through interactive analysis dashboards.
-              </p>
-              <button className="text-sm text-sahel-green flex items-center hover:underline">
-                View reports <ArrowRight size={14} className="ml-1" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </main>
-      
-      <Footer />
-    </div>
-  );
-};
-
-export default Dashboard;
+                            className="w-full h-full"
