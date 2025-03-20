@@ -254,26 +254,10 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <div>
-                  {/* Modified layout to accommodate expanded map view */}
-                  <div className="flex flex-col gap-8">
-                    {/* Expanded map visualization that takes the full width */}
-                    <MapVisualization 
-                      className="w-full" 
-                      year={selectedYear}
-                      expandedView={true} 
-                    />
-                    <div className="text-center">
-                      <Link 
-                        to="/map" 
-                        className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
-                      >
-                        <ZoomIn size={14} className="mr-1" /> 
-                        Open full map view
-                      </Link>
-                    </div>
-
-                    {/* Charts and visualizations below the map */}
-                    <div className="bg-muted/30 rounded-lg p-4">
+                  {/* Two-column layout with land coverage charts on left and map on right */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Land coverage charts - 2/3 width on larger screens */}
+                    <div className="lg:col-span-2 bg-muted/30 rounded-lg p-4">
                       {activeTab === 'landCover' && (
                         <div className="text-center p-8">
                           <h3 className="text-xl font-semibold mb-4">Land Cover Change (2010-2023)</h3>
@@ -321,6 +305,24 @@ const Dashboard = () => {
                           </div>
                         </div>
                       )}
+                    </div>
+                    
+                    {/* Map visualization - 1/3 width on larger screens */}
+                    <div className="lg:col-span-1">
+                      <MapVisualization 
+                        className="w-full" 
+                        year={selectedYear}
+                        expandedView={true} 
+                      />
+                      <div className="text-center mt-3">
+                        <Link 
+                          to="/map" 
+                          className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
+                        >
+                          <ZoomIn size={14} className="mr-1" /> 
+                          Open full map view
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
