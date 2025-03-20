@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from "@/components/ui/card";
@@ -6,8 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import YearSlider from '@/components/YearSlider';
 import MapVisualization from '@/components/MapVisualization';
 import Navbar from '@/components/Navbar';
-import LayerSelector from '@/components/LayerSelector';
-import { Layers, Calendar, Map, BarChartHorizontal, TrendingUp, TrendingDown, HelpCircle, Info } from 'lucide-react';
+import { Info, Calendar, Map, BarChartHorizontal, TrendingUp, TrendingDown, HelpCircle } from 'lucide-react';
 import { landCoverClasses, landCoverColors } from '@/lib/geospatialUtils';
 import { 
   BarChart, 
@@ -28,9 +26,6 @@ import {
 const TemporalAnalysis = () => {
   const [selectedYear, setSelectedYear] = useState(2010);
   const [activeTab, setActiveTab] = useState("map");
-  const [activeLayer, setActiveLayer] = useState<'landCover' | 'precipitation'>('landCover');
-  const [showAdminBoundaries, setShowAdminBoundaries] = useState(false);
-  const [showNetworks, setShowNetworks] = useState(false);
   const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
   const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
   const [timeSeriesData, setTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
@@ -46,18 +41,6 @@ const TemporalAnalysis = () => {
     // Store the previous year's stats before updating to the new year
     setPreviousYearStats({...landCoverStats});
     setSelectedYear(year);
-  };
-
-  const handleLayerChange = (layerType: string) => {
-    setActiveLayer(layerType as 'landCover' | 'precipitation');
-  };
-
-  const toggleAdminBoundaries = () => {
-    setShowAdminBoundaries(prev => !prev);
-  };
-
-  const toggleNetworks = () => {
-    setShowNetworks(prev => !prev);
   };
 
   const handleStatsChange = (stats: Record<string, number>) => {
@@ -280,7 +263,7 @@ const TemporalAnalysis = () => {
               <h2 className="text-xl font-semibold">Time Period</h2>
             </div>
             <p className="text-muted-foreground mb-6">
-              Adjust the slider to see land use changes from 2010 to 2023
+              Adjust the slider to see land use changes from 1985 to 2023
             </p>
             <YearSlider 
               minYear={2010} 
@@ -313,33 +296,15 @@ const TemporalAnalysis = () => {
               
               {/* Map View */}
               <TabsContent value="map" className="mt-0">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                  {/* Layer Selector */}
-                  <Card className="p-6 lg:col-span-1">
-                    <LayerSelector 
-                      activeLayer={activeLayer}
-                      onLayerChange={handleLayerChange}
-                      showAdminBoundaries={showAdminBoundaries}
-                      showNetworks={showNetworks}
-                      onToggleAdminBoundaries={toggleAdminBoundaries}
-                      onToggleNetworks={toggleNetworks}
+                <Card className="overflow-hidden">
+                  <div className="h-[500px] w-full">
+                    <MapVisualization 
+                      className="w-full h-full" 
+                      year={selectedYear} 
+                      onStatsChange={handleStatsChange}
                     />
-                  </Card>
-                  
-                  {/* Map Visualization */}
-                  <Card className="overflow-hidden lg:col-span-3">
-                    <div className="h-[500px] w-full">
-                      <MapVisualization 
-                        className="w-full h-full" 
-                        year={selectedYear} 
-                        onStatsChange={handleStatsChange}
-                        dataType={activeLayer}
-                        showAdminBoundaries={showAdminBoundaries}
-                        showNetworks={showNetworks}
-                      />
-                    </div>
-                  </Card>
-                </div>
+                  </div>
+                </Card>
               </TabsContent>
               
               {/* Charts View */}

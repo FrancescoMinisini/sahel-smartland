@@ -1,4 +1,3 @@
-
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -212,123 +211,6 @@ export const renderTIFFToCanvas = (
   }
 };
 
-// Function to load and parse shapefile data
-export const loadShapefile = async (shapefileType: 'admin' | 'network'): Promise<any> => {
-  // This is a placeholder function that would actually load and parse shapefiles
-  // In a real implementation, we would use a library like shpjs to parse the .shp files
-  
-  try {
-    // In a real implementation, this would actually load the shapefile data
-    const shapefile = {
-      type: 'FeatureCollection',
-      features: []
-    };
-    
-    // Mock some features based on the shapefile type
-    if (shapefileType === 'admin') {
-      shapefile.features = [
-        { 
-          type: 'Feature', 
-          geometry: { 
-            type: 'Polygon', 
-            coordinates: [[[0, 0], [100, 0], [100, 100], [0, 100], [0, 0]]] 
-          },
-          properties: { name: 'Assaba Region' } 
-        },
-        // More features would be loaded from the actual shapefile
-      ];
-    } else if (shapefileType === 'network') {
-      shapefile.features = [
-        { 
-          type: 'Feature', 
-          geometry: { 
-            type: 'LineString', 
-            coordinates: [[10, 10], [90, 90]] 
-          },
-          properties: { type: 'road', name: 'Main Road' } 
-        },
-        { 
-          type: 'Feature', 
-          geometry: { 
-            type: 'LineString', 
-            coordinates: [[20, 10], [80, 90]] 
-          },
-          properties: { type: 'river', name: 'Main River' } 
-        }
-        // More features would be loaded from the actual shapefile
-      ];
-    }
-    
-    return shapefile;
-  } catch (error) {
-    console.error(`Error loading shapefile for ${shapefileType}:`, error);
-    return null;
-  }
-};
-
-// Function to render a GeoJSON feature to a canvas
-export const renderGeoJSONToCanvas = (
-  ctx: CanvasRenderingContext2D,
-  feature: any,
-  width: number,
-  height: number,
-  options: { strokeColor?: string, fillColor?: string, lineWidth?: number } = {}
-): void => {
-  if (!ctx || !feature) return;
-  
-  const { 
-    strokeColor = '#ffffff', 
-    fillColor = 'rgba(255, 255, 255, 0.2)',
-    lineWidth = 2
-  } = options;
-  
-  ctx.strokeStyle = strokeColor;
-  ctx.fillStyle = fillColor;
-  ctx.lineWidth = lineWidth;
-  
-  // This is a simplified implementation
-  // In a real application, we would implement proper GeoJSON rendering with coordinate transforms
-  // to map geographic coordinates to canvas pixel coordinates
-  
-  if (feature.geometry.type === 'Polygon') {
-    const coordinates = feature.geometry.coordinates[0];
-    
-    ctx.beginPath();
-    coordinates.forEach((coord: number[], index: number) => {
-      // Transform geographic coordinates to canvas coordinates
-      const x = (coord[0] / 360) * width;
-      const y = (1 - (coord[1] + 90) / 180) * height;
-      
-      if (index === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-  }
-  
-  if (feature.geometry.type === 'LineString') {
-    const coordinates = feature.geometry.coordinates;
-    
-    ctx.beginPath();
-    coordinates.forEach((coord: number[], index: number) => {
-      // Transform geographic coordinates to canvas coordinates
-      const x = (coord[0] / 360) * width;
-      const y = (1 - (coord[1] + 90) / 180) * height;
-      
-      if (index === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
-    ctx.stroke();
-  }
-};
-
 // Get a list of available years for land cover data
 export const getAvailableYears = (dataType = 'landCover'): number[] => {
   return Array.from({ length: 14 }, (_, i) => 2010 + i);
@@ -410,7 +292,7 @@ export const getAccuratePrecipitationData = (year: number): Record<string, numbe
 };
 
 // Function to generate the full time series data for precipitation
-export const getPrecipitationTimeSeriesData = (): Array<{ [key: string]: number; year: number }> => {
+export const getPrecipitationTimeSeriesData = (): Array<Record<string, number>> => {
   return [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023].map(year => {
     const data = getAccuratePrecipitationData(year);
     return {

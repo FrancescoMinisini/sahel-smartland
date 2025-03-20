@@ -1,6 +1,7 @@
+
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
-import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info, MapPin, Network } from 'lucide-react';
+import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info } from 'lucide-react';
 import { 
   loadTIFF, 
   renderTIFFToCanvas, 
@@ -20,8 +21,6 @@ interface MapVisualizationProps {
   onStatsChange?: (stats: Record<string, number>) => void;
   expandedView?: boolean;
   dataType?: 'landCover' | 'precipitation' | 'vegetation' | 'population';
-  showAdminBoundaries?: boolean;
-  showNetworks?: boolean;
 }
 
 const MapVisualization = ({ 
@@ -29,9 +28,7 @@ const MapVisualization = ({
   year = 2023, 
   onStatsChange,
   expandedView = false,
-  dataType = 'landCover',
-  showAdminBoundaries = false,
-  showNetworks = false
+  dataType = 'landCover'
 }: MapVisualizationProps) => {
   const { toast } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -131,6 +128,7 @@ const MapVisualization = ({
     };
   }, [dataType]);
 
+  // Resize handler to maintain proper canvas dimensions
   useEffect(() => {
     const handleResize = () => {
       if (isLoading || !canvasRef.current || !containerRef.current) return;
@@ -155,23 +153,29 @@ const MapVisualization = ({
     const containerHeight = container.clientHeight;
     const dataAspectRatio = prevYearData.width / prevYearData.height;
     
+    // Set canvas display size to fill the container while maintaining aspect ratio
     let displayWidth, displayHeight;
     
     if (containerWidth / containerHeight > dataAspectRatio) {
+      // Container is wider than data
       displayHeight = containerHeight;
       displayWidth = displayHeight * dataAspectRatio;
     } else {
+      // Container is taller than data
       displayWidth = containerWidth;
       displayHeight = displayWidth / dataAspectRatio;
     }
     
+    // Apply CSS sizing (this is what's visually shown)
     canvas.style.width = `${displayWidth}px`;
     canvas.style.height = `${displayHeight}px`;
     
-    const scaleFactor = dataType === 'precipitation' ? 2 : 1;
+    // For better rendering quality, set canvas dimensions higher than display size
+    const scaleFactor = dataType === 'precipitation' ? 2 : 1; // Higher resolution for precipitation
     canvas.width = prevYearData.width * scaleFactor; 
     canvas.height = prevYearData.height * scaleFactor;
     
+    // Render with the adjusted canvas
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.scale(scaleFactor, scaleFactor);
@@ -203,7 +207,7 @@ const MapVisualization = ({
     
     previousYearRef.current = year;
     previousDataTypeRef.current = dataType;
-  }, [mapData, prevYear, nextYear, progress, isLoading, year, dataType, transitionAnimationId, showAdminBoundaries, showNetworks]);
+  }, [mapData, prevYear, nextYear, progress, isLoading, year, dataType, transitionAnimationId]);
 
   const renderCurrentData = () => {
     if (!canvasRef.current) return;
@@ -238,6 +242,7 @@ const MapVisualization = ({
       renderData = prevYearData.data;
     }
     
+    // Use the enhanced rendering with appropriate options for each data type
     renderTIFFToCanvas(
       ctx, 
       renderData, 
@@ -252,14 +257,6 @@ const MapVisualization = ({
       }
     );
     
-    if (showAdminBoundaries) {
-      renderAdminBoundaries(ctx, prevYearData.width, prevYearData.height);
-    }
-    
-    if (showNetworks) {
-      renderNetworks(ctx, prevYearData.width, prevYearData.height);
-    }
-    
     if (dataType === 'landCover') {
       const stats = calculateLandCoverStats(renderData);
       setCurrentStats(stats);
@@ -267,42 +264,6 @@ const MapVisualization = ({
       const stats = calculatePrecipitationStats(renderData);
       setCurrentStats(stats);
     }
-  };
-
-  const renderAdminBoundaries = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.lineWidth = 2;
-    
-    ctx.beginPath();
-    ctx.rect(width * 0.1, height * 0.1, width * 0.8, height * 0.8);
-    ctx.stroke();
-    
-    ctx.strokeStyle = 'rgba(255, 204, 0, 0.5)';
-    ctx.lineWidth = 1;
-    
-    for (let i = 0; i < 3; i++) {
-      ctx.beginPath();
-      ctx.rect(width * (0.2 + i * 0.2), height * 0.2, width * 0.15, height * 0.6);
-      ctx.stroke();
-    }
-  };
-
-  const renderNetworks = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
-    ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
-    ctx.lineWidth = 3;
-    
-    ctx.beginPath();
-    ctx.moveTo(width * 0.1, height * 0.3);
-    ctx.lineTo(width * 0.9, height * 0.7);
-    ctx.stroke();
-    
-    ctx.strokeStyle = 'rgba(0, 100, 255, 0.7)';
-    ctx.lineWidth = 2;
-    
-    ctx.beginPath();
-    ctx.moveTo(width * 0.2, height * 0.1);
-    ctx.quadraticCurveTo(width * 0.5, height * 0.5, width * 0.8, height * 0.9);
-    ctx.stroke();
   };
 
   const animateYearTransition = () => {
@@ -499,21 +460,6 @@ const MapVisualization = ({
         >
           <RotateCcw size={14} />
         </button>
-      </div>
-      
-      <div className="absolute bottom-3 right-3 flex flex-col gap-1.5">
-        {showAdminBoundaries && (
-          <div className="bg-white/80 rounded-full px-2 py-1 text-xs font-medium flex items-center gap-1 shadow-sm">
-            <MapPin size={10} className="text-primary" />
-            <span>Admin boundaries</span>
-          </div>
-        )}
-        {showNetworks && (
-          <div className="bg-white/80 rounded-full px-2 py-1 text-xs font-medium flex items-center gap-1 shadow-sm">
-            <Network size={10} className="text-primary" />
-            <span>Roads & Rivers</span>
-          </div>
-        )}
       </div>
       
       <div className="absolute top-3 left-3">
