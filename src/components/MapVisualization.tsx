@@ -195,8 +195,8 @@ const MapVisualization = ({
     if (!ctx) return;
     
     let renderData;
-    let min = prevYearData.min || 0;
-    let max = prevYearData.max || 0;
+    let min = 0;
+    let max = 500;
     
     if (nextYearData && prevYear !== nextYear) {
       renderData = interpolateData(
@@ -206,10 +206,8 @@ const MapVisualization = ({
       );
       
       if (dataType === 'precipitation') {
-        const nextMin = nextYearData.min || 0;
-        const nextMax = nextYearData.max || 0;
-        min = min + (nextMin - min) * progress;
-        max = max + (nextMax - max) * progress;
+        min = 0;
+        max = 500;
       }
     } else {
       renderData = prevYearData.data;
@@ -273,15 +271,8 @@ const MapVisualization = ({
         return Math.random() < animationProgress ? endInterpolatedData[index] : startValue;
       });
       
-      let min = prevYearData.min || 0;
-      let max = prevYearData.max || 0;
-      
-      if (dataType === 'precipitation' && nextYearData) {
-        const nextMin = nextYearData.min || 0;
-        const nextMax = nextYearData.max || 0;
-        min = min + (nextMin - min) * targetProgress;
-        max = max + (nextMax - max) * targetProgress;
-      }
+      let min = 0;
+      let max = 500;
       
       renderTIFFToCanvas(
         ctx, 
@@ -375,8 +366,8 @@ const MapVisualization = ({
               ))}
             </div>
             <div className="flex justify-between text-xs mt-1">
-              <span>Low</span>
-              <span>High</span>
+              <span>0 mm</span>
+              <span>500 mm</span>
             </div>
           </div>
         </div>

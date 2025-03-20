@@ -118,7 +118,7 @@ export const interpolateData = (
 
 // Get color for precipitation value between min and max
 export const getPrecipitationColor = (value: number, min: number, max: number): string => {
-  // Normalize the value to 0-1 range
+  // Normalize the value to 0-1 range, clamping to the specified range
   const normalized = Math.max(0, Math.min(1, (value - min) / (max - min || 1)));
   
   // Map to color index
