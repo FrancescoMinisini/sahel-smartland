@@ -1,7 +1,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { cn } from "@/lib/utils";
-import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Calendar } from 'lucide-react';
+import { Layers, MapPin, ZoomIn, ZoomOut, RotateCcw, Eye, CornerUpRight, Calendar } from 'lucide-react';
 
 interface MapVisualizationProps {
   className?: string;
@@ -140,6 +140,54 @@ const MapVisualization = ({ className, year = 2023 }: MapVisualizationProps) => 
               </button>
             ))}
           </div>
+        </div>
+      </div>
+      
+      {/* Legend */}
+      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-md p-3">
+        <div className="flex items-center gap-2 mb-2">
+          <CornerUpRight size={14} className="text-sahel-earth" />
+          <span className="text-xs font-medium">Legend</span>
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-sahel-green"></span>
+            <span className="text-xs">Restored Areas</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-sahel-blue"></span>
+            <span className="text-xs">Water Bodies</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-sahel-sand"></span>
+            <span className="text-xs">Degraded Land</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-sahel-earth"></span>
+            <span className="text-xs">Urban Areas</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Locations */}
+      <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-md p-3">
+        <div className="flex items-center gap-2 mb-2">
+          <MapPin size={14} className="text-sahel-earth" />
+          <span className="text-xs font-medium">Focus Areas</span>
+        </div>
+        <div className="space-y-2">
+          <button className="flex items-center gap-2 text-xs hover:text-sahel-green transition-colors">
+            <span className="w-2 h-2 rounded-full bg-sahel-green"></span>
+            Senegal River Basin
+          </button>
+          <button className="flex items-center gap-2 text-xs hover:text-sahel-green transition-colors">
+            <span className="w-2 h-2 rounded-full bg-sahel-blue"></span>
+            Lake Chad
+          </button>
+          <button className="flex items-center gap-2 text-xs hover:text-sahel-green transition-colors">
+            <span className="w-2 h-2 rounded-full bg-sahel-earth"></span>
+            Niger Delta
+          </button>
         </div>
       </div>
     </div>
