@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from "@/lib/utils";
@@ -21,7 +20,7 @@ const Navbar = () => {
   const navLinks = [
     { name: 'Home', path: '/', icon: Home },
     { name: 'Dashboard', path: '/dashboard', icon: BarChart2 },
-    { name: 'Temporal Analysis', path: '/temporal-analysis', icon: Clock }, // Ensure path matches route in App.tsx
+    { name: 'Temporal Analysis', path: '/temporal-analysis', icon: Clock },
     { name: 'Map', path: '/map', icon: Map },
     { name: 'Reports', path: '/reports', icon: FileText },
   ];

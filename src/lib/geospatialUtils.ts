@@ -1,7 +1,6 @@
-
 import * as GeoTIFF from 'geotiff';
 
-// Enhanced land cover type colors with better contrast for visualization
+// Land cover type colors - using more distinctive colors for better visualization
 export const landCoverColors = {
   7: '#1a9850', // Forests (vibrant green)
   8: '#91cf60', // Shrublands (medium green)
@@ -56,7 +55,15 @@ export const loadTIFF = async (year: number): Promise<{
   }
 };
 
-// Improved interpolation between two years of data with enhanced transitions
+// Interface for render options
+export interface RenderOptions {
+  opacity?: number;
+  enhanceContrast?: boolean;
+  highlightChanges?: boolean;
+  scaleIntensity?: number;
+}
+
+// Improved interpolation between two years of data
 export const interpolateData = (
   startData: number[], 
   endData: number[], 
@@ -66,9 +73,9 @@ export const interpolateData = (
     return endData;
   }
   
-  // Enhanced transition approach for better visualization:
-  // - Areas with changes get more visual emphasis
-  // - Smoother blending between states
+  // For land cover data, use a smarter transition approach:
+  // - For areas that don't change between years, keep the class
+  // - For areas that do change, blend based on progress
   return startData.map((startValue, index) => {
     const endValue = endData[index];
     
@@ -77,55 +84,42 @@ export const interpolateData = (
       return startValue;
     }
     
-    // For changing areas, use a weighted transition based on progress
-    // This creates more noticeable transitions for storytelling
-    const threshold = Math.pow(progress, 1.5); // Non-linear progression for more dramatic changes
-    return Math.random() < threshold ? endValue : startValue;
+    // Otherwise, use progress to determine which value to show
+    // This creates a more natural-looking transition
+    return Math.random() < progress ? endValue : startValue;
   });
 };
 
-// Interface for rendering options
-export interface RenderOptions {
-  enhanceContrast?: boolean;
-  highlightChanges?: boolean;
-  scaleIntensity?: number;
-  opacity?: number;
-  bgColor?: string;
-}
-
-// Enhanced rendering function with better color handling and background color support
+// Enhanced rendering function with better color blending
 export const renderTIFFToCanvas = (
   ctx: CanvasRenderingContext2D,
   data: number[],
-  width: number, 
+  width: number,
   height: number,
-  options: RenderOptions | number = 1
+  options: number | RenderOptions = 1
 ): void => {
   if (!ctx || data.length === 0 || width === 0 || height === 0) {
     return;
   }
 
-  // Handle both legacy (number) and new options format
-  const renderOptions: RenderOptions = typeof options === 'number' 
-    ? { opacity: options } 
-    : options;
+  // Parse options
+  let opacity = 1;
+  let enhanceContrast = false;
+  let scaleIntensity = 1;
   
-  const {
-    opacity = 1,
-    enhanceContrast = true,
-    scaleIntensity = 1.3,
-    bgColor = 'hsl(var(--background))'
-  } = renderOptions;
-
-  // First clear the canvas and set the background color
-  ctx.fillStyle = bgColor;
-  ctx.fillRect(0, 0, width, height);
+  if (typeof options === 'number') {
+    opacity = options;
+  } else {
+    opacity = options.opacity ?? 1;
+    enhanceContrast = options.enhanceContrast ?? false;
+    scaleIntensity = options.scaleIntensity ?? 1;
+  }
 
   // Create an ImageData object
   const imageData = ctx.createImageData(width, height);
   const pixels = imageData.data;
 
-  // Map the data values to RGBA values with improved color mapping and contrast
+  // Map the data values to RGBA values with improved color mapping
   for (let i = 0; i < data.length; i++) {
     const value = data[i];
     const color = landCoverColors[value as keyof typeof landCoverColors] || landCoverColors[0];
@@ -135,17 +129,23 @@ export const renderTIFFToCanvas = (
     const g = parseInt(color.slice(3, 5), 16);
     const b = parseInt(color.slice(5, 7), 16);
     
-    // Apply contrast enhancement if enabled
-    const intensity = enhanceContrast ? scaleIntensity : 1;
-    const enhancedR = Math.min(255, Math.round(r * intensity));
-    const enhancedG = Math.min(255, Math.round(g * intensity));
-    const enhancedB = Math.min(255, Math.round(b * intensity));
+    // Apply enhancements if requested
+    let finalR = r;
+    let finalG = g;
+    let finalB = b;
+    
+    if (enhanceContrast) {
+      // Enhance contrast by scaling the intensity
+      finalR = Math.min(255, Math.floor(r * scaleIntensity));
+      finalG = Math.min(255, Math.floor(g * scaleIntensity));
+      finalB = Math.min(255, Math.floor(b * scaleIntensity));
+    }
     
     // Set RGBA values in the ImageData
     const pixelIndex = i * 4;
-    pixels[pixelIndex] = enhancedR;
-    pixels[pixelIndex + 1] = enhancedG;
-    pixels[pixelIndex + 2] = enhancedB;
+    pixels[pixelIndex] = finalR;
+    pixels[pixelIndex + 1] = finalG;
+    pixels[pixelIndex + 2] = finalB;
     pixels[pixelIndex + 3] = opacity * 255; // Alpha channel
   }
 
