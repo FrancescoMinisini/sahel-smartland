@@ -42,39 +42,23 @@ const Dashboard = () => {
   // Use the more accurate precipitation data from our utility function
   const accuratePrecipData = getAccuratePrecipitationData(selectedYear);
   
-  const [precipitationData] = useState([
-    {
-      name: 'Annual Rainfall',
-      value: accuratePrecipData.annual,
-      color: '#4575b4',
-      change: selectedYear > 2020 ? -3.5 : selectedYear > 2015 ? -2.1 : -1.2,
-      rawChange: selectedYear > 2020 ? -5.7 : selectedYear > 2015 ? -3.8 : -2.2
-    },
-    {
-      name: 'Dry Season',
-      value: accuratePrecipData.dryseason,
-      color: '#74add1',
-      change: selectedYear > 2020 ? -9.8 : selectedYear > 2015 ? -7.2 : -4.8,
-      rawChange: selectedYear > 2020 ? -2.2 : selectedYear > 2015 ? -1.6 : -1.1
-    },
-    {
-      name: 'Wet Season',
-      value: accuratePrecipData.wetseason,
-      color: '#91bfdb',
-      change: selectedYear > 2020 ? -4.1 : selectedYear > 2015 ? -2.6 : -1.4,
-      rawChange: selectedYear > 2020 ? -7.5 : selectedYear > 2015 ? -4.8 : -2.6
-    }
-  ]);
-  
   // Use our utility function to get the complete time series data
   const [precipTimeSeriesData] = useState(getPrecipitationTimeSeriesData());
   
   // Load land cover time series data from CSV
   useEffect(() => {
     const loadData = async () => {
-      const data = await getLandCoverTimeSeriesData();
-      setTimeSeriesData(data);
-      setIsLoading(false);
+      setIsLoading(true);
+      try {
+        console.log('Starting to load land cover data...');
+        const data = await getLandCoverTimeSeriesData();
+        console.log('Land cover data loaded in Dashboard:', data);
+        setTimeSeriesData(data);
+      } catch (error) {
+        console.error('Error loading land cover data in Dashboard:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
     
     loadData();
@@ -129,6 +113,8 @@ const Dashboard = () => {
       return "Insufficient data to analyze trends. Please select multiple years to build trend data.";
     }
     
+    console.log('Generating trend analysis with data:', timeSeriesData);
+    
     const forestData = timeSeriesData
       .filter(d => d.Forests !== undefined)
       .map(d => ({ year: d.year, value: d.Forests }));
@@ -140,6 +126,10 @@ const Dashboard = () => {
     const grasslandsData = timeSeriesData
       .filter(d => d.Grasslands !== undefined)
       .map(d => ({ year: d.year, value: d.Grasslands }));
+    
+    console.log('Forest data:', forestData);
+    console.log('Barren data:', barrenData);
+    console.log('Grasslands data:', grasslandsData);
     
     let forestTrend = "stable";
     let barrenTrend = "stable";

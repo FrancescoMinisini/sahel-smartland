@@ -1,4 +1,3 @@
-
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -310,15 +309,18 @@ export const getPrecipitationTimeSeriesData = (): Array<{ [key: string]: number;
 // Function to load and parse the land cover CSV data
 export const loadLandCoverCSVData = async (): Promise<Array<{ year: number, [key: string]: number }>> => {
   try {
+    console.log('Loading land cover CSV data...');
     const response = await fetch('/Datasets_Hackathon/Graph_data/land_cover_values.csv');
     const csv = await response.text();
+    console.log('CSV text loaded:', csv.substring(0, 100) + '...');
     
     // Parse CSV
     const lines = csv.split('\n');
     const headers = lines[0].split(',');
+    console.log('CSV headers:', headers);
     
     // Skip header row and map data rows to objects
-    return lines.slice(1)
+    const result = lines.slice(1)
       .filter(line => line.trim() !== '') // Skip empty lines
       .map(line => {
         const values = line.split(',');
@@ -336,6 +338,9 @@ export const loadLandCoverCSVData = async (): Promise<Array<{ year: number, [key
         return dataObj;
       })
       .sort((a, b) => a.year - b.year); // Sort by year ascending
+
+    console.log('Parsed land cover data:', result);
+    return result;
   } catch (error) {
     console.error('Error loading land cover CSV data:', error);
     return [];
@@ -346,7 +351,10 @@ export const loadLandCoverCSVData = async (): Promise<Array<{ year: number, [key
 export const getLandCoverTimeSeriesData = async (): Promise<Array<{ year: number, [key: string]: number }>> => {
   const rawData = await loadLandCoverCSVData();
   
+  console.log('Land cover time series data loaded:', rawData.length, 'entries');
+  
   if (rawData.length === 0) {
+    console.warn('No land cover data loaded from CSV, using fallback data');
     // Return dummy data if CSV loading failed
     return [
       { year: 2010, Forests: 2561, Grasslands: 124304, Barren: 41332 },
