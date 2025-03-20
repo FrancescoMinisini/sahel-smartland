@@ -16,7 +16,7 @@ import {
   Droplets,
   Eye,
   FileBarChart,
-  FileLine,
+  FileText,
   FileSpreadsheet,
   Fullscreen,
   Leaf,
@@ -111,10 +111,10 @@ const TemporalAnalysis = () => {
             </CardHeader>
             <CardContent>
               <YearSlider 
-                year={year}
-                onYearChange={handleYearChange}
-                min={2010}
-                max={2023}
+                minYear={2010}
+                maxYear={2023}
+                initialValue={year}
+                onChange={handleYearChange}
               />
               <div className="flex justify-center items-center text-xs mt-2">
                 <Calendar className="h-3.5 w-3.5 mr-1" />
@@ -315,7 +315,7 @@ const TemporalAnalysis = () => {
                     dry: { label: 'Dry Season' },
                   }}
                 >
-                  <BarChart
+                  <RechartsBarChart
                     data={annualRainfallData}
                     margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
                   >
@@ -329,7 +329,7 @@ const TemporalAnalysis = () => {
                     <Bar dataKey="Annual" name="annual" fill="#0ea5e9" />
                     <Bar dataKey="Wet Season" name="wet" fill="#38bdf8" />
                     <Bar dataKey="Dry Season" name="dry" fill="#7dd3fc" />
-                  </BarChart>
+                  </RechartsBarChart>
                 </ChartContainer>
               </CardContent>
             </Card>
@@ -423,7 +423,7 @@ const TemporalAnalysis = () => {
                     cropland: { label: 'Cropland' },
                   }}
                 >
-                  <LineChart
+                  <RechartsLineChart
                     data={vegetationData}
                     margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
                   >
@@ -438,7 +438,7 @@ const TemporalAnalysis = () => {
                     <Line type="monotone" dataKey="Forest" name="forest" stroke="#059669" strokeWidth={2} />
                     <Line type="monotone" dataKey="Grassland" name="grassland" stroke="#84cc16" strokeWidth={2} />
                     <Line type="monotone" dataKey="Cropland" name="cropland" stroke="#ca8a04" strokeWidth={2} />
-                  </LineChart>
+                  </RechartsLineChart>
                 </ChartContainer>
               </CardContent>
             </Card>
@@ -461,7 +461,7 @@ const TemporalAnalysis = () => {
                     rural: { label: 'Rural Population' },
                   }}
                 >
-                  <BarChart
+                  <RechartsBarChart
                     data={populationData}
                     margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
                   >
@@ -475,7 +475,7 @@ const TemporalAnalysis = () => {
                     <Bar dataKey="Total Population" name="total" fill="#6366f1" />
                     <Bar dataKey="Urban Population" name="urban" fill="#818cf8" />
                     <Bar dataKey="Rural Population" name="rural" fill="#a5b4fc" />
-                  </BarChart>
+                  </RechartsBarChart>
                 </ChartContainer>
               </CardContent>
             </Card>
@@ -517,7 +517,7 @@ const TemporalAnalysis = () => {
             
             {/* Vegetation charts would go here */}
             <div className="text-center p-8 border-2 border-dashed rounded-lg">
-              <FileLine className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">Vegetation Analysis Charts</h3>
               <p className="text-muted-foreground mb-4">Vegetation analysis dashboard would display here.</p>
               <Button variant="outline">
