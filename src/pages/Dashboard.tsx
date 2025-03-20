@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -378,8 +377,8 @@ const Dashboard = () => {
                             <>
                               <div className="aspect-video relative bg-muted/40 rounded-lg overflow-hidden border border-border/40">
                                 <MapVisualization 
-                                  year={selectedYear} 
-                                  dataType="landCover"
+                                  year={selectedYear}
+                                  dataType={activeTab}
                                   onStatsChange={handleStatsChange}
                                 />
                                 
