@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from "@/components/ui/card";
@@ -16,7 +15,8 @@ import {
   CartesianGrid, 
   Tooltip, 
   Legend, 
-  ResponsiveContainer 
+  ResponsiveContainer,
+  Cell
 } from 'recharts';
 
 const TemporalAnalysis = () => {
@@ -143,7 +143,6 @@ const TemporalAnalysis = () => {
                           dataKey="value" 
                           name="Area (km²)" 
                           fill="#8884d8"
-                          label={{ position: 'top', formatter: (val) => `${val}` }}
                         >
                           {chartData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
