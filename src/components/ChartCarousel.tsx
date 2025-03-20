@@ -1,3 +1,4 @@
+
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart, LineChart, Line, ComposedChart, Scatter } from 'recharts';
 import { cn } from "@/lib/utils";
@@ -84,17 +85,17 @@ const ChartCarousel = ({
     if (dataType === 'precipitation') {
       // Find min and max values for precipitation data
       const values = convertedData.map(item => item.value);
-      if (values.length === 0) return [0, 500];
+      if (values.length === 0) return [0, 500] as [number, number];
       
       const min = Math.floor(Math.min(...values) * 0.95);
       const max = Math.ceil(Math.max(...values) * 1.05);
       const range = max - min;
       
       // Ensure we have a reasonable range to display
-      return [min, max + (range < 50 ? 50 : 0)];
+      return [min, max + (range < 50 ? 50 : 0)] as [number, number];
     }
     
-    return [0, 'auto'];
+    return [0, 'auto'] as const;
   };
   
   // Custom tooltip formatter for different data types
