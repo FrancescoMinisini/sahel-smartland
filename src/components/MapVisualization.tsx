@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
 import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info } from 'lucide-react';
@@ -31,6 +32,7 @@ const MapVisualization = ({
 }: MapVisualizationProps) => {
   const { toast } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeLayer, setActiveLayer] = useState(dataType);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -126,43 +128,65 @@ const MapVisualization = ({
     };
   }, [dataType]);
 
+  // Resize handler to maintain proper canvas dimensions
   useEffect(() => {
-    if (isLoading || !canvasRef.current) return;
+    const handleResize = () => {
+      if (isLoading || !canvasRef.current || !containerRef.current) return;
+      adjustCanvasSize();
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isLoading]);
+
+  const adjustCanvasSize = () => {
+    if (!canvasRef.current || !containerRef.current) return;
     
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
+    const container = containerRef.current;
     const dataForType = mapData[dataType] || {};
     const prevYearData = dataForType[prevYear];
-    const nextYearData = dataForType[nextYear];
     
-    if (!prevYearData || prevYearData.data.length === 0) {
-      console.error(`No data for ${dataType} for year ${prevYear}`);
-      return;
+    if (!prevYearData) return;
+    
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+    const dataAspectRatio = prevYearData.width / prevYearData.height;
+    
+    // Set canvas display size to fill the container while maintaining aspect ratio
+    let displayWidth, displayHeight;
+    
+    if (containerWidth / containerHeight > dataAspectRatio) {
+      // Container is wider than data
+      displayHeight = containerHeight;
+      displayWidth = displayHeight * dataAspectRatio;
+    } else {
+      // Container is taller than data
+      displayWidth = containerWidth;
+      displayHeight = displayWidth / dataAspectRatio;
     }
     
-    if (dataType === 'precipitation' && canvas.parentElement) {
-      const parentWidth = canvas.parentElement.clientWidth;
-      const parentHeight = canvas.parentElement.clientHeight;
-      const aspectRatio = prevYearData.width / prevYearData.height;
-      
-      let displayWidth = parentWidth;
-      let displayHeight = displayWidth / aspectRatio;
-      
-      if (displayHeight < parentHeight) {
-        displayHeight = parentHeight;
-        displayWidth = displayHeight * aspectRatio;
-      }
-      
-      canvas.style.width = `${displayWidth}px`;
-      canvas.style.height = `${displayHeight}px`;
-    }
+    // Apply CSS sizing (this is what's visually shown)
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
     
-    if (canvas.width !== prevYearData.width || canvas.height !== prevYearData.height) {
-      canvas.width = prevYearData.width;
-      canvas.height = prevYearData.height;
+    // For better rendering quality, set canvas dimensions higher than display size
+    const scaleFactor = dataType === 'precipitation' ? 2 : 1; // Higher resolution for precipitation
+    canvas.width = prevYearData.width * scaleFactor; 
+    canvas.height = prevYearData.height * scaleFactor;
+    
+    // Render with the adjusted canvas
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.scale(scaleFactor, scaleFactor);
+      renderCurrentData();
     }
+  };
+
+  useEffect(() => {
+    if (isLoading || !canvasRef.current || !containerRef.current) return;
+    
+    adjustCanvasSize();
     
     if (previousYearRef.current !== null && 
         (previousYearRef.current !== year || previousDataTypeRef.current !== dataType)) {
@@ -173,26 +197,31 @@ const MapVisualization = ({
       const dataTypeChanged = previousDataTypeRef.current !== dataType;
       
       if (dataTypeChanged) {
-        renderDataToCanvas(prevYearData, nextYearData, progress);
+        renderCurrentData();
       } else {
-        animateYearTransition(prevYearData, nextYearData, progress);
+        animateYearTransition();
       }
     } else {
-      renderDataToCanvas(prevYearData, nextYearData, progress);
+      renderCurrentData();
     }
     
     previousYearRef.current = year;
     previousDataTypeRef.current = dataType;
   }, [mapData, prevYear, nextYear, progress, isLoading, year, dataType, transitionAnimationId]);
 
-  const renderDataToCanvas = (
-    prevYearData: typeof mapData[string][number],
-    nextYearData: typeof mapData[string][number] | undefined,
-    progress: number
-  ) => {
+  const renderCurrentData = () => {
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
+    
+    const dataForType = mapData[dataType] || {};
+    const prevYearData = dataForType[prevYear];
+    const nextYearData = dataForType[nextYear];
+    
+    if (!prevYearData || prevYearData.data.length === 0) {
+      console.error(`No data for ${dataType} for year ${prevYear}`);
+      return;
+    }
     
     let renderData;
     let min = 0;
@@ -213,6 +242,7 @@ const MapVisualization = ({
       renderData = prevYearData.data;
     }
     
+    // Use the enhanced rendering with appropriate options for each data type
     renderTIFFToCanvas(
       ctx, 
       renderData, 
@@ -222,7 +252,8 @@ const MapVisualization = ({
         opacity: 1,
         dataType,
         min,
-        max
+        max,
+        smoothing: dataType === 'precipitation'
       }
     );
     
@@ -235,12 +266,12 @@ const MapVisualization = ({
     }
   };
 
-  const animateYearTransition = (
-    prevYearData: typeof mapData[string][number],
-    nextYearData: typeof mapData[string][number] | undefined,
-    targetProgress: number
-  ) => {
-    if (!canvasRef.current || !nextYearData) return;
+  const animateYearTransition = () => {
+    const dataForType = mapData[dataType] || {};
+    const prevYearData = dataForType[prevYear];
+    const nextYearData = dataForType[nextYear];
+    
+    if (!canvasRef.current || !prevYearData || !nextYearData) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
     
@@ -253,7 +284,7 @@ const MapVisualization = ({
     const startInterpolatedData = [...previousData.data];
     
     const endInterpolatedData = nextYearData && prevYear !== nextYear
-      ? interpolateData(prevYearData.data, nextYearData.data, targetProgress)
+      ? interpolateData(prevYearData.data, nextYearData.data, progress)
       : prevYearData.data;
     
     let animationProgress = 0;
@@ -283,7 +314,8 @@ const MapVisualization = ({
           opacity: 1,
           dataType,
           min,
-          max
+          max,
+          smoothing: dataType === 'precipitation'
         }
       );
       
@@ -380,7 +412,7 @@ const MapVisualization = ({
     <div className={cn(
       "relative rounded-xl overflow-hidden w-full h-full flex items-center justify-center", 
       className
-    )}>
+    )} ref={containerRef}>
       <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-10 bg-white/80 dark:bg-muted/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium flex items-center gap-1.5 shadow-sm">
         {year}
       </div>

@@ -136,7 +136,8 @@ export const renderTIFFToCanvas = (
     opacity?: number,
     dataType?: string,
     min?: number,
-    max?: number
+    max?: number,
+    smoothing?: boolean
   } = {}
 ): void => {
   if (!ctx || data.length === 0 || width === 0 || height === 0) {
@@ -147,8 +148,14 @@ export const renderTIFFToCanvas = (
     opacity = 1, 
     dataType = 'landCover',
     min = 0,
-    max = 500
+    max = 500,
+    smoothing = false
   } = options;
+
+  // Set image smoothing property based on the data type
+  // For precipitation we want smoothing, for land cover we don't
+  ctx.imageSmoothingEnabled = dataType === 'precipitation' ? true : smoothing;
+  ctx.imageSmoothingQuality = 'high';
 
   // Create an ImageData object
   const imageData = ctx.createImageData(width, height);
@@ -181,6 +188,28 @@ export const renderTIFFToCanvas = (
 
   // Put the ImageData onto the canvas
   ctx.putImageData(imageData, 0, 0);
+  
+  // If we're rendering precipitation, apply post-processing for smoother appearance
+  if (dataType === 'precipitation') {
+    // Create a temporary canvas for post-processing
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    if (tempCtx) {
+      // Copy our original image data to the temp canvas
+      tempCtx.putImageData(imageData, 0, 0);
+      
+      // Clear the original canvas
+      ctx.clearRect(0, 0, width, height);
+      
+      // Draw the temp canvas back to the original with slight blur for smoothing
+      ctx.filter = 'blur(0.5px)';
+      ctx.drawImage(tempCanvas, 0, 0);
+      ctx.filter = 'none';
+    }
+  }
 };
 
 // Get a list of available years for land cover data
