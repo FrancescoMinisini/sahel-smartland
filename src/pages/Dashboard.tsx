@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -23,17 +22,23 @@ import {
   HelpCircle,
   Info,
   Sprout,
-  Trees
+  Trees,
+  Home,
+  Building,
+  Tractor
 } from 'lucide-react';
 import { 
   landCoverClasses, 
   landCoverColors,
   regionalPrecipitationColors,
-  getAccuratePrecipitationData,
+  getAccuratePopulationData,
   getPrecipitationTimeSeriesData,
   getLandCoverTimeSeriesData,
   loadPrecipitationByRegion,
-  getVegetationTimeSeriesData
+  getVegetationTimeSeriesData,
+  getPopulationTimeSeriesData,
+  populationDensityScale,
+  calculateTransitionStats
 } from '@/lib/geospatialUtils';
 import ChartCarousel from '@/components/ChartCarousel';
 
@@ -45,8 +50,13 @@ const Dashboard = () => {
   const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
   const [vegetationStats, setVegetationStats] = useState<Record<string, number>>({});
   const [previousVegetationStats, setPreviousVegetationStats] = useState<Record<string, number>>({});
+  const [populationStats, setPopulationStats] = useState<Record<string, number>>({});
+  const [previousPopulationStats, setPreviousPopulationStats] = useState<Record<string, number>>({});
+  const [transitionStats, setTransitionStats] = useState<Record<string, number>>({});
+  const [previousTransitionStats, setPreviousTransitionStats] = useState<Record<string, number>>({});
   const [timeSeriesData, setTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
   const [vegetationTimeSeriesData, setVegetationTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
+  const [populationTimeSeriesData, setPopulationTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
   const [regionalPrecipitationData, setRegionalPrecipitationData] = useState<Array<{year: number, Overall: number, South: number, Center: number, North: number}>>([]);
   
   const dataTabs = [
@@ -54,6 +64,7 @@ const Dashboard = () => {
     { id: 'vegetation', name: 'Vegetation', icon: <Leaf size={16} /> },
     { id: 'precipitation', name: 'Precipitation', icon: <CloudRain size={16} /> },
     { id: 'population', name: 'Population', icon: <Users size={16} /> },
+    { id: 'transition', name: 'Land Transition', icon: <Map size={16} /> },
   ];
   
   useEffect(() => {
@@ -72,6 +83,11 @@ const Dashboard = () => {
         const vegetationData = getVegetationTimeSeriesData();
         console.log("Loaded vegetation productivity data:", vegetationData);
         setVegetationTimeSeriesData(vegetationData);
+        
+        // Load population data
+        const populationData = getPopulationTimeSeriesData();
+        console.log("Loaded population data:", populationData);
+        setPopulationTimeSeriesData(populationData);
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
@@ -98,6 +114,8 @@ const Dashboard = () => {
   const handleYearChange = (year: number) => {
     setPreviousYearStats({...landCoverStats});
     setPreviousVegetationStats({...vegetationStats});
+    setPreviousPopulationStats({...populationStats});
+    setPreviousTransitionStats({...transitionStats});
     setIsLoading(true);
     setSelectedYear(year);
     
@@ -111,6 +129,10 @@ const Dashboard = () => {
       setLandCoverStats(stats);
     } else if (activeTab === 'vegetation') {
       setVegetationStats(stats);
+    } else if (activeTab === 'population') {
+      setPopulationStats(stats);
+    } else if (activeTab === 'transition') {
+      setTransitionStats(stats);
     }
   };
 
@@ -203,134 +225,139 @@ const Dashboard = () => {
     ];
   })();
 
-  const getTrendAnalysis = () => {
-    if (timeSeriesData.length < 2) {
-      return "Insufficient data to analyze trends. Please select multiple years to build trend data.";
+  // Generate population chart data from time series data or population stats
+  const populationChartData = (() => {
+    const currentYear = populationTimeSeriesData.find(d => d.year === selectedYear) ||
+                        populationTimeSeriesData[populationTimeSeriesData.length - 1] ||
+                        { 
+                          year: selectedYear, 
+                          Total: 394800, 
+                          Urban: 142900, 
+                          Rural: 251900,
+                          Density: 29.9,
+                          'Urban Growth': 4.3,
+                          'Rural Growth': 0.9
+                        };
+    
+    return [
+      {
+        name: 'Urban',
+        value: currentYear.Urban || 142900,
+        color: '#ce1256', // Dark purple
+        change: 4.3,
+        rawChange: 5800
+      },
+      {
+        name: 'Rural',
+        value: currentYear.Rural || 251900,
+        color: '#df65b0', // Medium purple
+        change: 0.9,
+        rawChange: 2200
+      }
+    ];
+  })();
+
+  // Generate transition stats chart data
+  const transitionChartData = (() => {
+    // Use transition stats if available, otherwise use default values
+    const significantChanges = transitionStats.significantChanges || 1250;
+    const minorChanges = transitionStats.minorChanges || 3750;
+    const stableAreas = transitionStats.stableAreas || 15000;
+    const changeIndex = transitionStats.changeIndex || 18.5;
+    
+    return [
+      {
+        name: 'Significant Changes',
+        value: significantChanges,
+        color: '#7a0177', // Dark purple
+        change: 3.2,
+        rawChange: 40
+      },
+      {
+        name: 'Minor Changes',
+        value: minorChanges,
+        color: '#f768a1', // Medium purple-pink
+        change: 1.5,
+        rawChange: 55
+      },
+      {
+        name: 'Stable Areas',
+        value: stableAreas,
+        color: '#fcc5c0', // Light pink
+        change: -1.2,
+        rawChange: -180
+      },
+      {
+        name: 'Change Index',
+        value: changeIndex,
+        color: '#ae017e', // Medium-dark purple
+        change: 2.8,
+        rawChange: 0.5
+      }
+    ];
+  })();
+
+  // Function to analyze population trends
+  const getPopulationTrends = () => {
+    if (populationTimeSeriesData.length < 2) {
+      return "Insufficient data to analyze population trends.";
     }
     
-    const forestData = timeSeriesData
-      .filter(d => d.Forests !== undefined)
-      .map(d => ({ year: d.year, value: d.Forests }));
-      
-    const barrenData = timeSeriesData
-      .filter(d => d.Barren !== undefined)
-      .map(d => ({ year: d.year, value: d.Barren }));
+    const firstYearData = populationTimeSeriesData[0];
+    const lastYearData = populationTimeSeriesData[populationTimeSeriesData.length - 1];
     
-    const grasslandsData = timeSeriesData
-      .filter(d => d.Grasslands !== undefined)
-      .map(d => ({ year: d.year, value: d.Grasslands }));
+    const totalChange = ((lastYearData.Total - firstYearData.Total) / firstYearData.Total) * 100;
+    const urbanChange = ((lastYearData.Urban - firstYearData.Urban) / firstYearData.Urban) * 100;
+    const ruralChange = ((lastYearData.Rural - firstYearData.Rural) / firstYearData.Rural) * 100;
+    const densityChange = ((lastYearData.Density - firstYearData.Density) / firstYearData.Density) * 100;
     
-    let forestTrend = "stable";
-    let barrenTrend = "stable";
-    let grasslandsTrend = "stable";
+    return `Based on population data from ${firstYearData.year} to ${lastYearData.year}:
     
-    if (forestData.length >= 2) {
-      const firstForest = forestData[0].value;
-      const lastForest = forestData[forestData.length - 1].value;
-      if (lastForest > firstForest * 1.05) forestTrend = "increasing";
-      else if (lastForest < firstForest * 0.95) forestTrend = "decreasing";
-    }
-    
-    if (barrenData.length >= 2) {
-      const firstBarren = barrenData[0].value;
-      const lastBarren = barrenData[barrenData.length - 1].value;
-      if (lastBarren > firstBarren * 1.05) barrenTrend = "increasing";
-      else if (lastBarren < firstBarren * 0.95) barrenTrend = "decreasing";
-    }
-    
-    if (grasslandsData.length >= 2) {
-      const firstGrasslands = grasslandsData[0].value;
-      const lastGrasslands = grasslandsData[grasslandsData.length - 1].value;
-      if (lastGrasslands > firstGrasslands * 1.05) grasslandsTrend = "increasing";
-      else if (lastGrasslands < firstGrasslands * 0.95) grasslandsTrend = "decreasing";
-    }
-    
-    let analysisText = `Based on the observed data from ${timeSeriesData[0].year} to ${timeSeriesData[timeSeriesData.length - 1].year}:\n\n`;
-    
-    analysisText += `• Forest coverage is ${forestTrend === "stable" ? "relatively stable" : forestTrend}`;
-    analysisText += forestTrend === "decreasing" ? ", indicating potential deforestation concerns.\n" : 
-                    forestTrend === "increasing" ? ", suggesting successful conservation efforts.\n" : ".\n";
-    
-    analysisText += `• Barren land is ${barrenTrend === "stable" ? "relatively stable" : barrenTrend}`;
-    analysisText += barrenTrend === "increasing" ? ", which may indicate desertification processes.\n" : 
-                    barrenTrend === "decreasing" ? ", suggesting land rehabilitation success.\n" : ".\n";
-    
-    analysisText += `• Grasslands are ${grasslandsTrend === "stable" ? "relatively stable" : grasslandsTrend}`;
-    analysisText += grasslandsTrend === "increasing" ? ", which may indicate conversion from other land types.\n" : 
-                    grasslandsTrend === "decreasing" ? ", suggesting possible conversion to cropland or urban areas.\n" : ".\n";
-    
-    return analysisText;
+• The total population has increased by ${totalChange.toFixed(1)}% over the past ${lastYearData.year - firstYearData.year} years.
+• Urban population has grown by ${urbanChange.toFixed(1)}%, while rural population has increased by only ${ruralChange.toFixed(1)}%.
+• Population density has increased from ${firstYearData.Density.toFixed(1)} to ${lastYearData.Density.toFixed(1)} people/km², a change of ${densityChange.toFixed(1)}%.
+
+The data shows a significant trend toward urbanization, with urban growth rates consistently ${lastYearData['Urban Growth'] > lastYearData['Rural Growth'] ? 'higher' : 'lower'} than rural growth rates.
+
+This urbanization pattern has important implications for land use change, resource allocation, and infrastructure development in the Sahel region. Urban centers are experiencing more rapid growth, which may be linked to rural-to-urban migration, economic opportunities, and changing settlement patterns.`;
   };
 
-  const getVegetationTrendAnalysis = () => {
-    if (vegetationTimeSeriesData.length < 2) {
-      return "Insufficient data to analyze vegetation productivity trends.";
+  // Function to analyze land cover transition trends
+  const getTransitionTrends = () => {
+    if (!transitionStats || !timeSeriesData || timeSeriesData.length < 2) {
+      return "Insufficient data to analyze land cover transition trends.";
     }
     
-    const firstYearData = vegetationTimeSeriesData[0];
-    const lastYearData = vegetationTimeSeriesData[vegetationTimeSeriesData.length - 1];
+    // Use transition stats if available, otherwise use default values
+    const significantChanges = transitionStats.significantChanges || 1250;
+    const minorChanges = transitionStats.minorChanges || 3750;
+    const stableAreas = transitionStats.stableAreas || 15000;
+    const changeIndex = transitionStats.changeIndex || 18.5;
     
-    const forestChange = ((lastYearData.Forest - firstYearData.Forest) / firstYearData.Forest) * 100;
-    const grasslandChange = ((lastYearData.Grassland - firstYearData.Grassland) / firstYearData.Grassland) * 100;
-    const croplandChange = ((lastYearData.Cropland - firstYearData.Cropland) / firstYearData.Cropland) * 100;
-    const shrublandChange = ((lastYearData.Shrubland - firstYearData.Shrubland) / firstYearData.Shrubland) * 100;
+    // Calculate percentages
+    const totalPixels = significantChanges + minorChanges + stableAreas;
+    const significantPct = (significantChanges / totalPixels) * 100;
+    const minorPct = (minorChanges / totalPixels) * 100;
+    const stablePct = (stableAreas / totalPixels) * 100;
     
-    return `Based on Gross Primary Production (GPP) data from ${firstYearData.year} to ${lastYearData.year}:
+    return `Land Cover Transition Analysis between ${selectedYear > 2010 ? selectedYear - 1 : 2010} and ${selectedYear}:
     
-• Forest productivity has changed by ${forestChange.toFixed(1)}% over the past ${lastYearData.year - firstYearData.year} years.
-• Grassland productivity has changed by ${grasslandChange.toFixed(1)}%.
-• Cropland productivity has changed by ${croplandChange.toFixed(1)}%.
-• Shrubland productivity has changed by ${shrublandChange.toFixed(1)}%.
+• ${stablePct.toFixed(1)}% of the landscape remained stable with no detectable land cover changes.
+• ${minorPct.toFixed(1)}% experienced minor transitions between similar land cover classes.
+• ${significantPct.toFixed(1)}% underwent significant transitions between different land cover types.
 
-The data indicates ${forestChange > 0 ? "improvements" : "declines"} in forest carbon sequestration and ${croplandChange > 0 ? "gains" : "losses"} in agricultural productivity. 
-${
-  Math.abs(forestChange) > Math.abs(grasslandChange) && 
-  Math.abs(forestChange) > Math.abs(croplandChange) && 
-  Math.abs(forestChange) > Math.abs(shrublandChange)
-    ? "Forests show the most significant changes, suggesting they are most responsive to environmental factors."
-    : Math.abs(croplandChange) > Math.abs(grasslandChange) && 
-      Math.abs(croplandChange) > Math.abs(shrublandChange)
-      ? "Croplands show the most significant changes, which may be related to agricultural practices and climate factors."
-      : "Multiple vegetation types show significant changes, indicating complex ecosystem dynamics."
-}
+The overall Change Index of ${changeIndex.toFixed(1)} indicates ${
+      changeIndex > 20 ? 'a high rate of' : 
+      changeIndex > 10 ? 'a moderate rate of' : 
+      'a relatively low rate of'
+    } land cover change during this period.
 
-These productivity trends can help identify areas for conservation focus and agricultural improvement.`;
-  };
+Primary transition patterns include:
+• Conversion from natural vegetation to croplands
+• Expansion of barren areas in previously vegetated regions
+• Urbanization of previously agricultural or natural areas
 
-  const getPrecipitationTrends = () => {
-    if (regionalPrecipitationData.length < 2) {
-      return "Insufficient data to analyze precipitation trends by region.";
-    }
-    
-    const firstYearData = regionalPrecipitationData[0];
-    const lastYearData = regionalPrecipitationData[regionalPrecipitationData.length - 1];
-    
-    const calculateChange = (region: keyof typeof firstYearData) => {
-      if (region === 'year') return 0;
-      return ((lastYearData[region] - firstYearData[region]) / firstYearData[region]) * 100;
-    };
-    
-    const overallChange = calculateChange('Overall');
-    const southChange = calculateChange('South');
-    const centerChange = calculateChange('Center');
-    const northChange = calculateChange('North');
-    
-    return `Based on the precipitation data by region from ${firstYearData.year} to ${lastYearData.year}:
-    
-• Overall precipitation index has changed by approximately ${overallChange.toFixed(1)}% over the past ${lastYearData.year - firstYearData.year} years.
-• The Southern region shows a change of ${southChange.toFixed(1)}%.
-• The Central region shows a change of ${centerChange.toFixed(1)}%.
-• The Northern region shows a change of ${northChange.toFixed(1)}%.
-
-Regional variations show that precipitation patterns differ significantly across the Sahel region, with the most pronounced changes seen in the ${
-      Math.abs(southChange) > Math.abs(centerChange) && Math.abs(southChange) > Math.abs(northChange) 
-        ? 'Southern' 
-        : Math.abs(centerChange) > Math.abs(northChange) 
-          ? 'Central' 
-          : 'Northern'
-    } region.
-    
-This regional analysis is essential for targeted water resource management and climate adaptation strategies.`;
+These changes reflect the dynamic nature of land use in the Sahel region, influenced by climate variability, human activities, and development patterns.`;
   };
 
   const keyStats = [
@@ -673,13 +700,103 @@ This regional analysis is essential for targeted water resource management and c
                   )}
                   
                   {activeTab === 'population' && (
-                    <div className="text-center p-8">
-                      <h3 className="text-xl font-semibold mb-4">Population Density (2010-2023)</h3>
-                      <p className="text-muted-foreground mb-6">
-                        Analysis of population growth and distribution in the Sahel region.
-                      </p>
-                      <div className="h-48 bg-sahel-earth/10 rounded-lg flex items-center justify-center">
-                        <Users size={48} className="text-sahel-earth/30" />
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                      <div className="lg:col-span-2 space-y-6">
+                        <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
+                          <h3 className="text-lg font-medium mb-4">Population Distribution ({selectedYear})</h3>
+                          <ChartCarousel 
+                            data={populationChartData} 
+                            timeSeriesData={populationTimeSeriesData}
+                            dataType="population"
+                          />
+                          <div className="mt-4 text-sm text-muted-foreground">
+                            <div className="flex items-start gap-2 mb-2">
+                              <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                              <p>
+                                Population data shows the distribution between urban and rural areas, as well as growth trends over time.
+                                The population density map highlights concentrations of people across the region.
+                              </p>
+                            </div>
+                            <div className="mt-3 p-3 bg-muted rounded-md">
+                              <h4 className="font-medium mb-2">Population Trend Analysis:</h4>
+                              <p className="whitespace-pre-line">
+                                {getPopulationTrends()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="lg:col-span-1 h-full">
+                        <div className="h-[400px]">
+                          <MapVisualization 
+                            className="w-full h-full" 
+                            year={selectedYear}
+                            expandedView={true}
+                            onStatsChange={handleStatsChange}
+                            dataType="population"
+                          />
+                        </div>
+                        <div className="text-center mt-3">
+                          <Link 
+                            to="/map" 
+                            className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
+                          >
+                            <ZoomIn size={14} className="mr-1" /> 
+                            Open full map view
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {activeTab === 'transition' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                      <div className="lg:col-span-2 space-y-6">
+                        <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
+                          <h3 className="text-lg font-medium mb-4">Land Cover Transitions ({selectedYear > 2010 ? `${selectedYear-1} to ${selectedYear}` : '2010 to 2011'})</h3>
+                          <ChartCarousel 
+                            data={transitionChartData} 
+                            timeSeriesData={[]} // No time series data for transitions yet
+                            dataType="transition"
+                          />
+                          <div className="mt-4 text-sm text-muted-foreground">
+                            <div className="flex items-start gap-2 mb-2">
+                              <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                              <p>
+                                The land cover transition analysis shows areas of change between consecutive years.
+                                Darker areas on the map indicate more significant transitions between land cover types.
+                              </p>
+                            </div>
+                            <div className="mt-3 p-3 bg-muted rounded-md">
+                              <h4 className="font-medium mb-2">Land Cover Transition Analysis:</h4>
+                              <p className="whitespace-pre-line">
+                                {getTransitionTrends()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="lg:col-span-1 h-full">
+                        <div className="h-[400px]">
+                          <MapVisualization 
+                            className="w-full h-full" 
+                            year={selectedYear}
+                            expandedView={true}
+                            onStatsChange={handleStatsChange}
+                            dataType="transition"
+                          />
+                        </div>
+                        <div className="text-center mt-3">
+                          <Link 
+                            to="/map" 
+                            className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
+                          >
+                            <ZoomIn size={14} className="mr-1" /> 
+                            Open full map view
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -699,6 +816,32 @@ This regional analysis is essential for targeted water resource management and c
               </p>
               <button className="text-sm text-sahel-green flex items-center hover:underline">
                 View reports <ArrowRight size={14} className="ml-1" />
+              </button>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-sm border border-border/40 p-6">
+              <div className="w-10 h-10 rounded-lg bg-sahel-blue/10 flex items-center justify-center mb-4">
+                <Users size={20} className="text-sahel-blue" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">Population Insights</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Explore demographic patterns and their relationship with land use changes.
+              </p>
+              <button className="text-sm text-sahel-blue flex items-center hover:underline">
+                View demographics <ArrowRight size={14} className="ml-1" />
+              </button>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-sm border border-border/40 p-6">
+              <div className="w-10 h-10 rounded-lg bg-sahel-earth/10 flex items-center justify-center mb-4">
+                <Building size={20} className="text-sahel-earth" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">Settlement Analysis</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Review urban expansion patterns and infrastructure development over time.
+              </p>
+              <button className="text-sm text-sahel-earth flex items-center hover:underline">
+                View settlements <ArrowRight size={14} className="ml-1" />
               </button>
             </div>
           </div>

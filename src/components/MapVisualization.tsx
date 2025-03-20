@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
 import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info } from 'lucide-react';
@@ -12,8 +11,12 @@ import {
   calculateLandCoverStats,
   calculatePrecipitationStats,
   calculateVegetationStats,
+  calculatePopulationStats,
+  calculateTransitionStats,
   precipitationColorScale,
-  vegetationProductivityScale
+  vegetationProductivityScale,
+  populationDensityScale,
+  transitionColorScale
 } from '@/lib/geospatialUtils';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -22,7 +25,7 @@ interface MapVisualizationProps {
   year?: number;
   onStatsChange?: (stats: Record<string, number>) => void;
   expandedView?: boolean;
-  dataType?: 'landCover' | 'precipitation' | 'vegetation' | 'population';
+  dataType?: 'landCover' | 'precipitation' | 'vegetation' | 'population' | 'transition';
 }
 
 const MapVisualization = ({ 
@@ -52,7 +55,8 @@ const MapVisualization = ({
     landCover: {},
     precipitation: {},
     vegetation: {},
-    population: {}
+    population: {},
+    transition: {}
   });
   const [currentStats, setCurrentStats] = useState<Record<string, number>>({});
   const [transitionAnimationId, setTransitionAnimationId] = useState<number | null>(null);
@@ -167,7 +171,8 @@ const MapVisualization = ({
     canvas.style.width = `${displayWidth}px`;
     canvas.style.height = `${displayHeight}px`;
     
-    const scaleFactor = dataType === 'precipitation' || dataType === 'vegetation' ? 2 : 1;
+    const needsScaling = ['precipitation', 'vegetation', 'population', 'transition'].includes(dataType);
+    const scaleFactor = needsScaling ? 2 : 1;
     canvas.width = prevYearData.width * scaleFactor; 
     canvas.height = prevYearData.height * scaleFactor;
     
@@ -244,6 +249,12 @@ const MapVisualization = ({
           validPrevData.length > 0 ? Math.max(...validPrevData) : 3000,
           validNextData.length > 0 ? Math.max(...validNextData) : 3000
         );
+      } else if (dataType === 'population') {
+        min = 0;
+        max = 1000;
+      } else if (dataType === 'transition') {
+        min = 0;
+        max = 10;
       }
     } else {
       renderData = prevYearData.data;
@@ -255,6 +266,12 @@ const MapVisualization = ({
         const validData = prevYearData.data.filter(val => val !== 65533 && val > 0 && val < 3000);
         min = validData.length > 0 ? Math.min(...validData) : 0;
         max = validData.length > 0 ? Math.max(...validData) : 3000;
+      } else if (dataType === 'population') {
+        min = prevYearData.min || 0;
+        max = prevYearData.max || 1000;
+      } else if (dataType === 'transition') {
+        min = prevYearData.min || 0;
+        max = prevYearData.max || 10;
       }
     }
     
@@ -268,7 +285,7 @@ const MapVisualization = ({
         dataType,
         min,
         max,
-        smoothing: dataType === 'precipitation' || dataType === 'vegetation'
+        smoothing: ['precipitation', 'vegetation', 'population', 'transition'].includes(dataType)
       }
     );
     
@@ -280,6 +297,12 @@ const MapVisualization = ({
       setCurrentStats(stats);
     } else if (dataType === 'vegetation') {
       const stats = calculateVegetationStats(renderData);
+      setCurrentStats(stats);
+    } else if (dataType === 'population') {
+      const stats = calculatePopulationStats(renderData);
+      setCurrentStats(stats);
+    } else if (dataType === 'transition') {
+      const stats = calculateTransitionStats(renderData);
       setCurrentStats(stats);
     }
   };
@@ -326,6 +349,12 @@ const MapVisualization = ({
       if (dataType === 'vegetation') {
         min = 0;
         max = 3000;
+      } else if (dataType === 'population') {
+        min = 0;
+        max = 1000;
+      } else if (dataType === 'transition') {
+        min = 0;
+        max = 10;
       }
       
       renderTIFFToCanvas(
@@ -338,7 +367,7 @@ const MapVisualization = ({
           dataType,
           min,
           max,
-          smoothing: dataType === 'precipitation' || dataType === 'vegetation'
+          smoothing: ['precipitation', 'vegetation', 'population', 'transition'].includes(dataType)
         }
       );
       
@@ -353,6 +382,10 @@ const MapVisualization = ({
           setCurrentStats(calculatePrecipitationStats(endInterpolatedData));
         } else if (dataType === 'vegetation') {
           setCurrentStats(calculateVegetationStats(endInterpolatedData));
+        } else if (dataType === 'population') {
+          setCurrentStats(calculatePopulationStats(endInterpolatedData));
+        } else if (dataType === 'transition') {
+          setCurrentStats(calculateTransitionStats(endInterpolatedData));
         }
       }
     };
@@ -373,7 +406,7 @@ const MapVisualization = ({
     setZoomLevel(1);
   };
 
-  const handleLayerChange = (layer: 'landCover' | 'precipitation' | 'vegetation' | 'population') => {
+  const handleLayerChange = (layer: 'landCover' | 'precipitation' | 'vegetation' | 'population' | 'transition') => {
     setActiveLayer(layer);
   };
 
@@ -382,6 +415,7 @@ const MapVisualization = ({
     { id: 'vegetation' as const, name: 'Vegetation', color: 'bg-sahel-greenLight' },
     { id: 'precipitation' as const, name: 'Rainfall', color: 'bg-sahel-blue' },
     { id: 'population' as const, name: 'Population', color: 'bg-sahel-earth' },
+    { id: 'transition' as const, name: 'Land Transition', color: 'bg-purple-500' },
   ];
 
   const getCurrentLayerName = () => {
@@ -446,6 +480,48 @@ const MapVisualization = ({
             <div className="flex justify-between text-xs mt-1">
               <span>0</span>
               <span>3000</span>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (dataType === 'population') {
+      return (
+        <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 shadow-md">
+          <div className="flex flex-col">
+            <span className="text-xs font-medium mb-1">Population Density (people/km²)</span>
+            <div className="flex h-4 w-full">
+              {populationDensityScale.map((color, i) => (
+                <div 
+                  key={i} 
+                  className="h-full flex-1" 
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+            <div className="flex justify-between text-xs mt-1">
+              <span>Low</span>
+              <span>High</span>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (dataType === 'transition') {
+      return (
+        <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 shadow-md">
+          <div className="flex flex-col">
+            <span className="text-xs font-medium mb-1">Land Cover Change Intensity</span>
+            <div className="flex h-4 w-full">
+              {transitionColorScale.map((color, i) => (
+                <div 
+                  key={i} 
+                  className="h-full flex-1" 
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+            <div className="flex justify-between text-xs mt-1">
+              <span>Low</span>
+              <span>High</span>
             </div>
           </div>
         </div>
