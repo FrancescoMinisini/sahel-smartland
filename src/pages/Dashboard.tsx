@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -322,8 +323,56 @@ const Dashboard = () => {
             </div>
           </div>
           
-          {/* Moved Key Findings section here */}
-          <div className="bg-white dark:bg-muted rounded-xl shadow-sm border border-border/40 overflow-hidden mb-8">
+          {/* Quick Links */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white rounded-xl shadow-sm border border-border/40 p-6">
+              <div className="w-10 h-10 rounded-lg bg-sahel-green/10 flex items-center justify-center mb-4">
+                <Calendar className="h-5 w-5 text-sahel-green" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Temporal Analysis</h3>
+              <p className="text-muted-foreground mb-4">Explore data trends over time with our interactive time series tools.</p>
+              <Link 
+                to="/dashboard/temporal" 
+                className="text-sm text-sahel-blue flex items-center hover:underline"
+              >
+                View time series
+                <ArrowRight size={14} className="ml-1" />
+              </Link>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-sm border border-border/40 p-6">
+              <div className="w-10 h-10 rounded-lg bg-sahel-blue/10 flex items-center justify-center mb-4">
+                <Map className="h-5 w-5 text-sahel-blue" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Spatial Analysis</h3>
+              <p className="text-muted-foreground mb-4">Analyze geographic patterns and spatial relationships in the data.</p>
+              <Link 
+                to="/map" 
+                className="text-sm text-sahel-blue flex items-center hover:underline"
+              >
+                Open interactive map
+                <ArrowRight size={14} className="ml-1" />
+              </Link>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-sm border border-border/40 p-6">
+              <div className="w-10 h-10 rounded-lg bg-sahel-earth/10 flex items-center justify-center mb-4">
+                <FileText className="h-5 w-5 text-sahel-earth" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Reports & Insights</h3>
+              <p className="text-muted-foreground mb-4">Access detailed reports and recommendations for land restoration.</p>
+              <Link 
+                to="/reports" 
+                className="text-sm text-sahel-blue flex items-center hover:underline"
+              >
+                View reports
+                <ArrowRight size={14} className="ml-1" />
+              </Link>
+            </div>
+          </div>
+          
+          {/* Key Findings section moved to the bottom of the page */}
+          <div className="bg-white dark:bg-muted rounded-xl shadow-sm border border-border/40 overflow-hidden">
             <div className="p-6">
               <h3 className="text-lg font-semibold mb-4">Key Findings</h3>
               <div className="bg-muted/30 rounded-lg p-6">
@@ -615,54 +664,6 @@ const Dashboard = () => {
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-          
-          {/* Quick Links */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-xl shadow-sm border border-border/40 p-6">
-              <div className="w-10 h-10 rounded-lg bg-sahel-green/10 flex items-center justify-center mb-4">
-                <Calendar className="h-5 w-5 text-sahel-green" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Temporal Analysis</h3>
-              <p className="text-muted-foreground mb-4">Explore data trends over time with our interactive time series tools.</p>
-              <Link 
-                to="/dashboard/temporal" 
-                className="text-sm text-sahel-blue flex items-center hover:underline"
-              >
-                View time series
-                <ArrowRight size={14} className="ml-1" />
-              </Link>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-sm border border-border/40 p-6">
-              <div className="w-10 h-10 rounded-lg bg-sahel-blue/10 flex items-center justify-center mb-4">
-                <Map className="h-5 w-5 text-sahel-blue" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Spatial Analysis</h3>
-              <p className="text-muted-foreground mb-4">Analyze geographic patterns and spatial relationships in the data.</p>
-              <Link 
-                to="/map" 
-                className="text-sm text-sahel-blue flex items-center hover:underline"
-              >
-                Open interactive map
-                <ArrowRight size={14} className="ml-1" />
-              </Link>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-sm border border-border/40 p-6">
-              <div className="w-10 h-10 rounded-lg bg-sahel-earth/10 flex items-center justify-center mb-4">
-                <FileText className="h-5 w-5 text-sahel-earth" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Reports & Insights</h3>
-              <p className="text-muted-foreground mb-4">Access detailed reports and recommendations for land restoration.</p>
-              <Link 
-                to="/reports" 
-                className="text-sm text-sahel-blue flex items-center hover:underline"
-              >
-                View reports
-                <ArrowRight size={14} className="ml-1" />
-              </Link>
             </div>
           </div>
         </div>
