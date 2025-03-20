@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
 import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info } from 'lucide-react';
@@ -500,7 +499,13 @@ const MapVisualization = ({
         {year}
       </div>
       
-      <div className={`absolute inset-0 overflow-hidden ${dataType === 'precipitation' ? 'bg-[#f8fcfc]' : 'bg-[#504c4c]'}`}>
+      <div className={`absolute inset-0 overflow-hidden ${
+        dataType === 'precipitation' 
+          ? 'bg-[#f8fcfc]' 
+          : dataType === 'vegetation'
+            ? 'bg-[#18441c]'
+            : 'bg-[#504c4c]'
+      }`}>
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="flex flex-col items-center">
