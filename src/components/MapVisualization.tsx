@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
 import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info } from 'lucide-react';
@@ -167,7 +166,7 @@ const MapVisualization = ({
     canvas.style.width = `${displayWidth}px`;
     canvas.style.height = `${displayHeight}px`;
     
-    const scaleFactor = dataType === 'precipitation' || dataType === 'vegetation' ? 2 : 1;
+    const scaleFactor = dataType === 'precipitation' ? 4 : dataType === 'vegetation' ? 2 : 1;
     canvas.width = prevYearData.width * scaleFactor; 
     canvas.height = prevYearData.height * scaleFactor;
     
@@ -268,7 +267,8 @@ const MapVisualization = ({
         dataType,
         min,
         max,
-        smoothing: dataType === 'precipitation' || dataType === 'vegetation'
+        smoothing: dataType === 'precipitation' || dataType === 'vegetation',
+        highQuality: dataType === 'precipitation'
       }
     );
     
