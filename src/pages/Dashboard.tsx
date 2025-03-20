@@ -651,3 +651,141 @@ This regional analysis is essential for targeted water resource management and c
                         <div className="h-[400px]">
                           <MapVisualization 
                             className="w-full h-full"
+                            year={selectedYear}
+                            expandedView={true}
+                            onStatsChange={handleStatsChange}
+                            dataType="vegetation"
+                          />
+                        </div>
+                        <div className="text-center mt-3">
+                          <Link 
+                            to="/map" 
+                            className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
+                          >
+                            <ZoomIn size={14} className="mr-1" /> 
+                            Open full map view
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {activeTab === 'precipitation' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                      <div className="lg:col-span-2 space-y-6">
+                        <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
+                          <h3 className="text-lg font-medium mb-4">Precipitation by Region ({selectedYear})</h3>
+                          <ChartCarousel 
+                            data={regionalPrecipChartData} 
+                            timeSeriesData={regionalPrecipitationData}
+                            dataType="precipitation"
+                          />
+                          <div className="mt-4 text-sm text-muted-foreground">
+                            <div className="flex items-start gap-2 mb-2">
+                              <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                              <p>
+                                The charts show precipitation index values across different regions of the Sahel.
+                                Higher values indicate greater rainfall in that region during the selected year.
+                              </p>
+                            </div>
+                            <div className="mt-3 p-3 bg-muted rounded-md">
+                              <h4 className="font-medium mb-2">Precipitation Trend Analysis:</h4>
+                              <p className="whitespace-pre-line">
+                                {getPrecipitationTrends()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="lg:col-span-1 h-full">
+                        <div className="h-[400px]">
+                          <MapVisualization 
+                            className="w-full h-full"
+                            year={selectedYear}
+                            expandedView={true}
+                            onStatsChange={handleStatsChange}
+                            dataType="precipitation"
+                          />
+                        </div>
+                        <div className="text-center mt-3">
+                          <Link 
+                            to="/map" 
+                            className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
+                          >
+                            <ZoomIn size={14} className="mr-1" /> 
+                            Open full map view
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {activeTab === 'population' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                      <div className="lg:col-span-2 space-y-6">
+                        <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
+                          <h3 className="text-lg font-medium mb-4">Population Distribution ({selectedYear})</h3>
+                          <ChartCarousel 
+                            data={populationChartData} 
+                            timeSeriesData={[
+                              { year: 2010, Urban: 1900000, Rural: 3500000, Nomadic: 850000, Total: 6250000 },
+                              { year: 2015, Urban: 2100000, Rural: 3650000, Nomadic: 820000, Total: 6570000 },
+                              { year: 2020, Urban: 2250000, Rural: 3750000, Nomadic: 800000, Total: 6800000 },
+                              { year: 2023, Urban: 2350000, Rural: 3850000, Nomadic: 780000, Total: 6980000 }
+                            ]}
+                            dataType="population"
+                          />
+                          <div className="mt-4 text-sm text-muted-foreground">
+                            <div className="flex items-start gap-2 mb-2">
+                              <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                              <p>
+                                The charts show population distribution across urban, rural, and nomadic communities.
+                                Population trends reflect migration patterns and demographic changes in the region.
+                              </p>
+                            </div>
+                            <div className="mt-3 p-3 bg-muted rounded-md">
+                              <h4 className="font-medium mb-2">Population Trend Analysis:</h4>
+                              <p className="whitespace-pre-line">
+                                {getPopulationTrendAnalysis()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="lg:col-span-1 h-full">
+                        <div className="h-[400px]">
+                          <MapVisualization 
+                            className="w-full h-full"
+                            year={selectedYear}
+                            expandedView={true}
+                            onStatsChange={handleStatsChange}
+                            dataType="population"
+                          />
+                        </div>
+                        <div className="text-center mt-3">
+                          <Link 
+                            to="/map" 
+                            className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
+                          >
+                            <ZoomIn size={14} className="mr-1" /> 
+                            Open full map view
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
+    </div>
+  );
+};
+
+export default Dashboard;
