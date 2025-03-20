@@ -1,26 +1,28 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { cn } from "@/lib/utils";
-import { Layers, MapPin, ZoomIn, ZoomOut, RotateCcw, Eye, CornerUpRight } from 'lucide-react';
+import { Layers, MapPin, ZoomIn, ZoomOut, RotateCcw, Eye, CornerUpRight, Calendar } from 'lucide-react';
 
 interface MapVisualizationProps {
   className?: string;
+  year?: number;
 }
 
-const MapVisualization = ({ className }: MapVisualizationProps) => {
+const MapVisualization = ({ className, year = 2023 }: MapVisualizationProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeLayer, setActiveLayer] = useState('landCover');
   const [zoomLevel, setZoomLevel] = useState(1);
 
-  // Simulate map loading
+  // Simulate map loading when year changes
   useEffect(() => {
+    setIsLoading(true);
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 1500);
+    }, 800);
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [year]);
 
   const handleZoomIn = () => {
     setZoomLevel(prev => Math.min(prev + 0.2, 3));
@@ -47,6 +49,12 @@ const MapVisualization = ({ className }: MapVisualizationProps) => {
 
   return (
     <div className={cn("relative rounded-xl overflow-hidden shadow-lg", className)}>
+      {/* Year indicator */}
+      <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-10 bg-white/80 dark:bg-muted/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium flex items-center gap-1.5 shadow-sm">
+        <Calendar size={12} />
+        {year}
+      </div>
+      
       {/* Map Container */}
       <div 
         ref={mapRef} 

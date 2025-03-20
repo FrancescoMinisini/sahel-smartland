@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import DataCard from '@/components/DataCard';
 import MapVisualization from '@/components/MapVisualization';
+import YearSlider from '@/components/YearSlider';
 import { 
   Calendar, 
   FileText, 
@@ -24,7 +25,7 @@ import {
 const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('landCover');
-  const [yearRange, setYearRange] = useState([2010, 2023]);
+  const [selectedYear, setSelectedYear] = useState(2023);
   
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -44,8 +45,14 @@ const Dashboard = () => {
     }, 800);
   };
 
-  const handleYearChange = (range: number[]) => {
-    setYearRange(range);
+  const handleYearChange = (year: number) => {
+    setIsLoading(true);
+    setSelectedYear(year);
+    
+    // Simulate data loading for the new year
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
   };
 
   const dataTabs = [
@@ -58,31 +65,31 @@ const Dashboard = () => {
   const keyStats = [
     { 
       title: 'Land Cover Change', 
-      value: '27.3M ha', 
+      value: selectedYear > 2020 ? '27.3M ha' : selectedYear > 2015 ? '23.6M ha' : '18.9M ha', 
       description: 'Area affected by land cover change in the past 20 years',
       icon: <Leaf size={20} />,
-      trend: { value: 15, isPositive: false }
+      trend: { value: selectedYear > 2020 ? 15 : selectedYear > 2015 ? 12 : 8, isPositive: false }
     },
     { 
       title: 'Vegetation Production', 
-      value: '+8.2%', 
+      value: selectedYear > 2020 ? '+8.2%' : selectedYear > 2015 ? '+6.7%' : '+4.2%', 
       description: 'Average increase in gross primary production since 2010',
       icon: <BarChart2 size={20} />,
-      trend: { value: 8.2, isPositive: true }
+      trend: { value: selectedYear > 2020 ? 8.2 : selectedYear > 2015 ? 6.7 : 4.2, isPositive: true }
     },
     { 
       title: 'Annual Precipitation', 
-      value: '685 mm', 
+      value: selectedYear > 2020 ? '685 mm' : selectedYear > 2015 ? '710 mm' : '745 mm', 
       description: 'Average annual rainfall across the Sahel region',
       icon: <CloudRain size={20} />,
-      trend: { value: 3.5, isPositive: false }
+      trend: { value: selectedYear > 2020 ? 3.5 : selectedYear > 2015 ? 2.1 : 1.2, isPositive: false }
     },
     { 
       title: 'Population Growth', 
-      value: '4.3%', 
+      value: selectedYear > 2020 ? '4.3%' : selectedYear > 2015 ? '3.8%' : '3.1%', 
       description: 'Annual population growth rate in urban centers',
       icon: <Users size={20} />,
-      trend: { value: 4.3, isPositive: true }
+      trend: { value: selectedYear > 2020 ? 4.3 : selectedYear > 2015 ? 3.8 : 3.1, isPositive: true }
     }
   ];
 
@@ -100,6 +107,24 @@ const Dashboard = () => {
             </p>
           </div>
           
+          {/* Year Slider */}
+          <div className="bg-white dark:bg-muted rounded-xl shadow-sm border border-border/40 p-6 mb-8">
+            <div className="flex items-center gap-2 mb-3">
+              <Calendar size={18} className="text-primary" />
+              <h3 className="text-lg font-medium">Time Period Selection</h3>
+            </div>
+            <p className="text-muted-foreground text-sm mb-6">
+              Drag the slider to view data for different years between 2010 and 2023.
+            </p>
+            <YearSlider 
+              minYear={2010} 
+              maxYear={2023} 
+              initialValue={selectedYear}
+              onChange={handleYearChange}
+              className="max-w-3xl mx-auto"
+            />
+          </div>
+          
           {/* Key Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {keyStats.map((stat, index) => (
@@ -115,7 +140,7 @@ const Dashboard = () => {
           </div>
           
           {/* Main Dashboard Content */}
-          <div className="bg-white rounded-xl shadow-sm border border-border/40 overflow-hidden mb-8">
+          <div className="bg-white dark:bg-muted rounded-xl shadow-sm border border-border/40 overflow-hidden mb-8">
             {/* Dashboard Tabs */}
             <div className="flex flex-wrap border-b border-border/40">
               {dataTabs.map((tab) => (
@@ -136,7 +161,7 @@ const Dashboard = () => {
               <div className="ml-auto flex items-center px-4">
                 <div className="flex items-center mr-4">
                   <Clock size={16} className="text-muted-foreground mr-2" />
-                  <span className="text-sm text-muted-foreground">2010 - 2023</span>
+                  <span className="text-sm text-muted-foreground">Year: {selectedYear}</span>
                 </div>
                 
                 <button className="p-2 rounded-md hover:bg-muted transition-colors">
@@ -214,7 +239,7 @@ const Dashboard = () => {
                     </div>
                     
                     <div className="lg:w-1/3">
-                      <MapVisualization className="h-[400px]" />
+                      <MapVisualization className="h-[400px]" year={selectedYear} />
                       <div className="mt-2 text-center">
                         <Link 
                           to="/map" 
