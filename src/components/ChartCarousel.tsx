@@ -78,14 +78,13 @@ const ChartCarousel = ({
       item.name === 'Extreme Events'
     );
     
-    // Converting rainfall data (keep only rainfall metrics for bar/pie charts)
+    // Keep rainfall metrics in original mm units for charts
     convertedData = rainfallOnly.map(item => {
       return {
         ...item,
-        value: Math.round(PRECIP_MM_TO_VOLUME(item.value, totalLandArea) / 1000 * 10) / 10,
-        displayUnit: 'million cubic meters',
+        value: item.value, // Use original mm values for bar/pie charts
+        displayUnit: 'mm',
         originalValue: item.value,
-        rawVolume: PRECIP_MM_TO_VOLUME(item.value, totalLandArea),
       };
     });
     
@@ -99,26 +98,11 @@ const ChartCarousel = ({
       }))
     ];
     
-    // Convert time series data with appropriate units
-    convertedTimeSeriesData = timeSeriesData.map(yearData => {
-      const convertedYearData: {year: number, [key: string]: number} = { year: yearData.year };
-      
-      Object.keys(yearData).forEach(key => {
-        if (key !== 'year') {
-          if (key === 'Annual' || key === 'Dry Season' || key === 'Wet Season') {
-            convertedYearData[key] = Math.round(PRECIP_MM_TO_VOLUME(yearData[key], totalLandArea) / 1000 * 10) / 10;
-          } else {
-            convertedYearData[key] = yearData[key];
-          }
-        }
-      });
-      
-      return convertedYearData;
-    });
+    // Preserve original mm values in time series data
+    convertedTimeSeriesData = timeSeriesData;
     
-    displayUnit = 'million cubic meters';
+    displayUnit = 'mm';
   }
-  // Add additional data type handling (vegetation, population) here if needed
   
   // Get all land cover types that appear in the time series data
   const getAllLandCoverTypes = () => {
@@ -176,9 +160,8 @@ const ChartCarousel = ({
         const dataPoint = entry.payload;
         if (name === 'Annual' || name === 'Dry Season' || name === 'Wet Season' || 
             name === 'Annual Rainfall' || name === 'Dry Season' || name === 'Wet Season') {
-          // For rainfall, show original mm and converted volume
-          const originalValue = dataPoint.originalValue || value;
-          return [`${value.toLocaleString()} million m³ (${originalValue} mm)`, name];
+          // For rainfall, show mm values
+          return [`${value.toLocaleString()} mm`, name];
         } else if (name === 'Extreme Events') {
           return [`${value.toLocaleString()} events`, name];
         } else if (name === 'Water Stress Index') {
@@ -224,7 +207,7 @@ const ChartCarousel = ({
                   <YAxis 
                     label={{ 
                       value: dataType === 'precipitation' ? 
-                        'Volume (million m³)' : 
+                        'Rainfall (mm)' : 
                         `Area (${displayUnit})`, 
                       angle: -90, 
                       position: 'insideLeft',
@@ -236,7 +219,7 @@ const ChartCarousel = ({
                   <Bar 
                     dataKey="value" 
                     name={dataType === 'precipitation' ? 
-                      'Rainfall Volume' : 
+                      'Rainfall (mm)' : 
                       `Area (${displayUnit})`}
                   >
                     {convertedData.map((entry, index) => (
@@ -278,7 +261,7 @@ const ChartCarousel = ({
             <div className="h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 {dataType === 'precipitation' ? (
-                  <AreaChart
+                  <LineChart
                     data={convertedTimeSeriesData}
                     margin={{
                       top: 20,
@@ -298,7 +281,7 @@ const ChartCarousel = ({
                     />
                     <YAxis 
                       label={{ 
-                        value: 'Rainfall (million m³)', 
+                        value: 'Rainfall (mm)', 
                         angle: -90, 
                         position: 'insideLeft',
                         style: { textAnchor: 'middle' }
@@ -307,30 +290,30 @@ const ChartCarousel = ({
                     <Tooltip formatter={formatTooltip} />
                     <Legend />
                     
-                    {/* Only rainfall data shown in time series chart */}
-                    <Area 
+                    {/* Rainfall data shown as lines */}
+                    <Line 
                       type="monotone" 
                       dataKey="Annual" 
                       stroke="#4575b4" 
-                      fill="#4575b4" 
-                      fillOpacity={0.7} 
+                      strokeWidth={2}
+                      dot={{ r: 5 }}
                       name="Annual Rainfall"
                     />
-                    <Area 
+                    <Line 
                       type="monotone" 
                       dataKey="Dry Season" 
                       stroke="#74add1" 
-                      fill="#74add1" 
-                      fillOpacity={0.7}
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
                     />
-                    <Area 
+                    <Line 
                       type="monotone" 
                       dataKey="Wet Season" 
                       stroke="#91bfdb" 
-                      fill="#91bfdb" 
-                      fillOpacity={0.7}
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
                     />
-                  </AreaChart>
+                  </LineChart>
                 ) : (
                   <AreaChart
                     data={convertedTimeSeriesData}
@@ -374,6 +357,11 @@ const ChartCarousel = ({
                 )}
               </ResponsiveContainer>
             </div>
+            {dataType === 'precipitation' && (
+              <div className="text-xs text-center mt-1 text-muted-foreground">
+                Annual and Seasonal Rainfall Trends (2010-2023) in mm
+              </div>
+            )}
           </CarouselItem>
 
           {/* Specialized Chart for Water Stress Index and Extreme Events - Only for Precipitation */}
