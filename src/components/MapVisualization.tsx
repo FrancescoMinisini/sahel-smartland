@@ -76,20 +76,19 @@ const MapVisualization = ({
       canvas.width = containerRect.width;
       canvas.height = containerRect.height;
       
-      // Clear any existing rendering
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
+      console.log("Canvas resized to:", canvas.width, "x", canvas.height);
       
-      // Redraw the canvas if data is available
+      // Trigger a redraw after resizing
       redrawCanvas();
     };
     
     const redrawCanvas = () => {
-      const prevYearData = mapData[prevYear];
+      if (!prevYear || !mapData[prevYear] || !canvasRef.current) {
+        console.warn("Unable to redraw - missing data:", { prevYear, hasData: prevYear ? !!mapData[prevYear] : false });
+        return;
+      }
       
-      if (!prevYearData || !canvasRef.current) return;
+      const prevYearData = mapData[prevYear];
       
       if (nextYear !== prevYear && mapData[nextYear]) {
         const interpolatedData = interpolateData(
@@ -121,11 +120,19 @@ const MapVisualization = ({
 
   // Render the map data to canvas
   const renderMapToCanvas = (data: number[]) => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current) {
+      console.warn("Canvas reference is null");
+      return;
+    }
     
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      console.warn("Could not get 2D context from canvas");
+      return;
+    }
+    
+    console.log("Rendering to canvas:", canvas.width, "x", canvas.height, "with", data.length, "data points");
     
     // Use the canvas dimensions rather than from the data
     // This ensures it fills the container
@@ -144,14 +151,35 @@ const MapVisualization = ({
       try {
         // Get all available years
         const availableYears = getAvailableYears();
+        let loadedCount = 0;
         
         // Create a queue to load years in sequence
         for (const yearToLoad of availableYears) {
           if (!mapData[yearToLoad]) {
             // Load data for this year
+            console.log(`Loading data for year ${yearToLoad}...`);
             const data = await loadTIFF(yearToLoad);
-            setMapData(prev => ({ ...prev, [yearToLoad]: data }));
+            
+            if (data.data.length > 0) {
+              console.log(`Successfully loaded data for year ${yearToLoad}. Width: ${data.width}, Height: ${data.height}`);
+              setMapData(prev => ({ ...prev, [yearToLoad]: data }));
+              loadedCount++;
+            } else {
+              console.warn(`No data loaded for year ${yearToLoad}`);
+            }
+          } else {
+            loadedCount++;
           }
+        }
+        
+        console.log(`Loaded ${loadedCount} years of data`);
+        
+        if (loadedCount === 0) {
+          toast({
+            title: 'No data loaded',
+            description: 'Could not load any land cover data.',
+            variant: 'destructive'
+          });
         }
       } catch (error) {
         console.error('Error preloading TIFF data:', error);
@@ -170,16 +198,32 @@ const MapVisualization = ({
 
   // Render the map with smooth transitions when the year changes
   useEffect(() => {
-    if (isLoading || !canvasRef.current) return;
+    if (isLoading) {
+      console.log("Still loading, not rendering map yet");
+      return;
+    }
+    
+    if (!canvasRef.current) {
+      console.warn("Canvas reference is null in year change effect");
+      return;
+    }
+    
+    console.log(`Rendering year ${year} (prev: ${prevYear}, next: ${nextYear}, progress: ${progress})`);
     
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      console.warn("Could not get 2D context from canvas in year change effect");
+      return;
+    }
     
     const prevYearData = mapData[prevYear];
     const nextYearData = mapData[nextYear];
     
-    if (!prevYearData || prevYearData.data.length === 0) return;
+    if (!prevYearData || prevYearData.data.length === 0) {
+      console.warn(`No data available for year ${prevYear}`);
+      return;
+    }
     
     // Handle smooth transition when year changes
     if (previousYearRef.current !== null && previousYearRef.current !== year) {
@@ -316,6 +360,7 @@ const MapVisualization = ({
             <canvas 
               ref={canvasRef} 
               className="w-full h-full"
+              style={{ display: 'block' }}
             />
           </div>
         )}

@@ -49,6 +49,7 @@ export const loadTIFF = async (year: number): Promise<{
     // Convert the TypedArray to a regular Array
     const data = Array.from(values[0] as Uint8Array);
     
+    console.log(`Loaded TIFF for year ${year}. Data range:`, Math.min(...data), Math.max(...data));
     return { data, width, height };
   } catch (error) {
     console.error(`Error loading TIFF for year ${year}:`, error);
@@ -92,6 +93,7 @@ export const renderTIFFToCanvas = (
   opacity: number = 1
 ): void => {
   if (!ctx || data.length === 0 || width === 0 || height === 0) {
+    console.warn("Invalid rendering parameters:", { dataLength: data.length, width, height });
     return;
   }
 
@@ -103,37 +105,58 @@ export const renderTIFFToCanvas = (
   const imageData = ctx.createImageData(width, height);
   const pixels = imageData.data;
 
+  // Log data statistics for debugging
+  const valueSet = new Set(data);
+  console.log("Unique values in data:", Array.from(valueSet));
+
   // Enhanced color mapping with better contrast
   for (let i = 0; i < data.length; i++) {
     const value = data[i];
-    const color = landCoverColors[value as keyof typeof landCoverColors] || landCoverColors[0];
     
-    // Convert hex color to RGB with enhanced saturation
-    let r = parseInt(color.slice(1, 3), 16);
-    let g = parseInt(color.slice(3, 5), 16);
-    let b = parseInt(color.slice(5, 7), 16);
-    
-    // Boost color saturation for better visibility of distinctions
-    const enhanceFactor = 1.2;
-    const maxChannel = Math.max(r, g, b);
-    if (maxChannel > 0) {
-      const scale = Math.min(255 / maxChannel, enhanceFactor);
-      r = Math.min(255, Math.round(r * scale));
-      g = Math.min(255, Math.round(g * scale));
-      b = Math.min(255, Math.round(b * scale));
+    // Check if value exists in our color mapping
+    if (value in landCoverColors || value === 0) {
+      const color = landCoverColors[value as keyof typeof landCoverColors] || '#4d4d4d';
+      
+      // Convert hex color to RGB with enhanced saturation
+      let r = parseInt(color.slice(1, 3), 16);
+      let g = parseInt(color.slice(3, 5), 16);
+      let b = parseInt(color.slice(5, 7), 16);
+      
+      // Boost color saturation for better visibility
+      const enhanceFactor = 1.3;
+      const maxChannel = Math.max(r, g, b);
+      if (maxChannel > 0) {
+        const scale = Math.min(255 / maxChannel, enhanceFactor);
+        r = Math.min(255, Math.round(r * scale));
+        g = Math.min(255, Math.round(g * scale));
+        b = Math.min(255, Math.round(b * scale));
+      }
+      
+      // Set RGBA values in the ImageData
+      const pixelIndex = i * 4;
+      pixels[pixelIndex] = r;
+      pixels[pixelIndex + 1] = g;
+      pixels[pixelIndex + 2] = b;
+      pixels[pixelIndex + 3] = Math.round(opacity * 255); // Alpha channel
+    } else {
+      // For unknown values, make them visible for debugging (bright magenta)
+      const pixelIndex = i * 4;
+      pixels[pixelIndex] = 255;
+      pixels[pixelIndex + 1] = 0;
+      pixels[pixelIndex + 2] = 255;
+      pixels[pixelIndex + 3] = Math.round(opacity * 255);
+      
+      // Log unusual values (but limit to avoid console spam)
+      if (!valueSet.has(value)) {
+        valueSet.add(value);
+        console.warn(`Unknown land cover value: ${value}`);
+      }
     }
-    
-    // Set RGBA values in the ImageData with enhanced alpha for better visibility
-    const pixelIndex = i * 4;
-    pixels[pixelIndex] = r;
-    pixels[pixelIndex + 1] = g;
-    pixels[pixelIndex + 2] = b;
-    pixels[pixelIndex + 3] = opacity * 255; // Alpha channel
   }
 
   // Put the ImageData onto the canvas
   ctx.putImageData(imageData, 0, 0);
-};
+}
 
 // Get a list of available years for land cover data
 export const getAvailableYears = (): number[] => {
