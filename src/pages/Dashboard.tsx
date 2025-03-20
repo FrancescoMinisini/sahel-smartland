@@ -23,8 +23,10 @@ import {
   HelpCircle,
   Info,
   Sprout,
-  Trees
+  Trees,
+  Expand
 } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 import { 
   landCoverClasses, 
   landCoverColors,
@@ -36,6 +38,7 @@ import {
   getVegetationTimeSeriesData
 } from '@/lib/geospatialUtils';
 import ChartCarousel from '@/components/ChartCarousel';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -170,7 +173,6 @@ const Dashboard = () => {
     }
   ];
 
-  // Generate vegetation chart data from time series data
   const vegetationChartData = (() => {
     const currentYear = vegetationTimeSeriesData.find(d => d.year === selectedYear) ||
                         vegetationTimeSeriesData[vegetationTimeSeriesData.length - 1] ||
@@ -483,11 +485,28 @@ This regional analysis is essential for targeted water resource management and c
       
       <main className="flex-1 pt-24 pb-12">
         <div className="container mx-auto px-6">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Data Dashboard</h1>
-            <p className="text-muted-foreground">
-              Explore comprehensive data on land cover, vegetation, precipitation, and population in the Sahel region.
-            </p>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Data Dashboard</h1>
+              <p className="text-muted-foreground">
+                Explore comprehensive data on land cover, vegetation, precipitation, and population in the Sahel region.
+              </p>
+            </div>
+            <Link to="/temporal-analysis">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex items-center gap-2">
+                      <Expand size={16} />
+                      <span className="hidden sm:inline">Temporal Analysis</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Expand to detailed temporal analysis view</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Link>
           </div>
           
           <div className="bg-white dark:bg-muted rounded-xl shadow-sm border border-border/40 p-6 mb-8">
@@ -555,6 +574,13 @@ This regional analysis is essential for targeted water resource management and c
                 <button className="p-2 rounded-md hover:bg-muted transition-colors">
                   <Download size={16} className="text-muted-foreground" />
                 </button>
+                
+                <Link 
+                  to={`/temporal-analysis?tab=${activeTab}&year=${selectedYear}`} 
+                  className="p-2 rounded-md hover:bg-muted transition-colors ml-1"
+                >
+                  <Expand size={16} className="text-muted-foreground" />
+                </Link>
               </div>
             </div>
             
