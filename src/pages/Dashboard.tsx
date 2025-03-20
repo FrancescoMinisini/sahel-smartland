@@ -32,6 +32,29 @@ import {
 } from '@/lib/geospatialUtils';
 import ChartCarousel from '@/components/ChartCarousel';
 
+const dataTabs = [
+  {
+    id: 'landCover',
+    name: 'Land Cover',
+    icon: <Layers size={16} className="mr-1" />
+  },
+  {
+    id: 'vegetation',
+    name: 'Vegetation',
+    icon: <Leaf size={16} className="mr-1" />
+  },
+  {
+    id: 'precipitation',
+    name: 'Precipitation',
+    icon: <CloudRain size={16} className="mr-1" />
+  },
+  {
+    id: 'population',
+    name: 'Population',
+    icon: <Users size={16} className="mr-1" />
+  }
+];
+
 const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('landCover');
@@ -42,10 +65,8 @@ const Dashboard = () => {
   const [precipitationData, setPrecipitationData] = useState<Array<{name: string, value: number, color: string, change: number, rawChange: number}>>([]);
   const [precipitationTimeSeriesData, setPrecipitationTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
   
-  // Use the more accurate precipitation data from our utility function
   const accuratePrecipData = getAccuratePrecipitationData(selectedYear);
   
-  // Load precipitation time series data from CSV
   useEffect(() => {
     const loadPrecipitationData = async () => {
       try {
@@ -61,7 +82,6 @@ const Dashboard = () => {
     loadPrecipitationData();
   }, []);
   
-  // Load precipitation data for the selected year
   useEffect(() => {
     const loadYearPrecipitationData = async () => {
       try {
@@ -77,7 +97,6 @@ const Dashboard = () => {
     loadYearPrecipitationData();
   }, [selectedYear]);
   
-  // Load land cover time series data from CSV
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
