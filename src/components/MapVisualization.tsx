@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
 import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2 } from 'lucide-react';
@@ -26,6 +25,7 @@ const MapVisualization = ({
 }: MapVisualizationProps) => {
   const { toast } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeLayer, setActiveLayer] = useState('landCover');
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -61,6 +61,38 @@ const MapVisualization = ({
       onStatsChange(currentStats);
     }
   }, [currentStats, onStatsChange]);
+
+  // Set up resize observer to keep canvas size matched to container
+  useEffect(() => {
+    if (!containerRef.current || !canvasRef.current) return;
+    
+    const handleResize = () => {
+      if (!containerRef.current || !canvasRef.current) return;
+      
+      // Get the container dimensions
+      const { width, height } = containerRef.current.getBoundingClientRect();
+      
+      // Apply the dimensions while maintaining aspect ratio
+      if (canvasRef.current) {
+        canvasRef.current.style.width = '100%';
+        canvasRef.current.style.height = '100%';
+      }
+    };
+    
+    // Initial sizing
+    handleResize();
+    
+    // Set up resize observer
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(containerRef.current);
+    
+    return () => {
+      if (containerRef.current) {
+        resizeObserver.unobserve(containerRef.current);
+      }
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   // Preload data for all years when the component mounts
   useEffect(() => {
@@ -253,14 +285,14 @@ const MapVisualization = ({
   ];
 
   return (
-    <div className={cn("relative rounded-xl overflow-hidden shadow-lg", className)}>
+    <div className={cn("relative rounded-xl overflow-hidden shadow-lg w-full h-full", className)}>
       {/* Year indicator */}
       <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-10 bg-white/80 dark:bg-muted/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium flex items-center gap-1.5 shadow-sm">
         {year}
       </div>
       
-      {/* Map Container */}
-      <div className="w-full aspect-[4/3] bg-sahel-sandLight overflow-hidden relative">
+      {/* Map Container - expanded to take full space */}
+      <div ref={containerRef} className="w-full h-full bg-sahel-sandLight overflow-hidden relative">
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="flex flex-col items-center">
@@ -275,7 +307,7 @@ const MapVisualization = ({
           >
             <canvas 
               ref={canvasRef} 
-              className="max-w-full max-h-full object-contain"
+              className="w-full h-full object-contain"
             />
           </div>
         )}
