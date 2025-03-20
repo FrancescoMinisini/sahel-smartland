@@ -70,21 +70,17 @@ const Dashboard = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load land cover data
         const landCoverData = await getLandCoverTimeSeriesData();
         setTimeSeriesData(landCoverData);
         
-        // Load precipitation data
         const precipData = await loadPrecipitationByRegion();
         console.log("Loaded precipitation by region:", precipData);
         setRegionalPrecipitationData(precipData);
         
-        // Load vegetation productivity data
         const vegetationData = getVegetationTimeSeriesData();
         console.log("Loaded vegetation productivity data:", vegetationData);
         setVegetationTimeSeriesData(vegetationData);
         
-        // Load population data
         const populationData = getPopulationTimeSeriesData();
         console.log("Loaded population data:", populationData);
         setPopulationTimeSeriesData(populationData);
@@ -187,7 +183,6 @@ const Dashboard = () => {
     }
   ];
 
-  // Generate vegetation chart data from time series data
   const vegetationChartData = (() => {
     const currentYear = vegetationTimeSeriesData.find(d => d.year === selectedYear) ||
                         vegetationTimeSeriesData[vegetationTimeSeriesData.length - 1] ||
@@ -225,7 +220,6 @@ const Dashboard = () => {
     ];
   })();
 
-  // Generate population chart data from time series data or population stats
   const populationChartData = (() => {
     const currentYear = populationTimeSeriesData.find(d => d.year === selectedYear) ||
                         populationTimeSeriesData[populationTimeSeriesData.length - 1] ||
@@ -257,9 +251,7 @@ const Dashboard = () => {
     ];
   })();
 
-  // Generate transition stats chart data
   const transitionChartData = (() => {
-    // Use transition stats if available, otherwise use default values
     const significantChanges = transitionStats.significantChanges || 1250;
     const minorChanges = transitionStats.minorChanges || 3750;
     const stableAreas = transitionStats.stableAreas || 15000;
@@ -297,7 +289,6 @@ const Dashboard = () => {
     ];
   })();
 
-  // Function to analyze population trends
   const getPopulationTrends = () => {
     if (populationTimeSeriesData.length < 2) {
       return "Insufficient data to analyze population trends.";
@@ -322,19 +313,16 @@ The data shows a significant trend toward urbanization, with urban growth rates 
 This urbanization pattern has important implications for land use change, resource allocation, and infrastructure development in the Sahel region. Urban centers are experiencing more rapid growth, which may be linked to rural-to-urban migration, economic opportunities, and changing settlement patterns.`;
   };
 
-  // Function to analyze land cover transition trends
   const getTransitionTrends = () => {
     if (!transitionStats || !timeSeriesData || timeSeriesData.length < 2) {
       return "Insufficient data to analyze land cover transition trends.";
     }
     
-    // Use transition stats if available, otherwise use default values
     const significantChanges = transitionStats.significantChanges || 1250;
     const minorChanges = transitionStats.minorChanges || 3750;
     const stableAreas = transitionStats.stableAreas || 15000;
     const changeIndex = transitionStats.changeIndex || 18.5;
     
-    // Calculate percentages
     const totalPixels = significantChanges + minorChanges + stableAreas;
     const significantPct = (significantChanges / totalPixels) * 100;
     const minorPct = (minorChanges / totalPixels) * 100;
@@ -358,6 +346,150 @@ Primary transition patterns include:
 • Urbanization of previously agricultural or natural areas
 
 These changes reflect the dynamic nature of land use in the Sahel region, influenced by climate variability, human activities, and development patterns.`;
+  };
+
+  const getTrendAnalysis = () => {
+    if (!timeSeriesData || timeSeriesData.length < 2) {
+      return "Insufficient data to analyze land cover trends.";
+    }
+    
+    const firstYearData = timeSeriesData[0];
+    const lastYearData = timeSeriesData[timeSeriesData.length - 1];
+    const currentYearData = timeSeriesData.find(d => d.year === selectedYear) || lastYearData;
+    
+    const classNames = Object.values(landCoverClasses)
+      .filter(className => className !== 'No Data' && firstYearData[className] !== undefined);
+    
+    const changes = classNames.map(className => {
+      const initialValue = firstYearData[className] || 0;
+      const currentValue = currentYearData[className] || 0;
+      const percentChange = initialValue > 0 ? ((currentValue - initialValue) / initialValue * 100) : 0;
+      
+      return {
+        className,
+        initialValue,
+        currentValue,
+        percentChange,
+        absoluteChange: currentValue - initialValue
+      };
+    }).sort((a, b) => Math.abs(b.percentChange) - Math.abs(a.percentChange));
+    
+    const topChanges = changes.slice(0, 3);
+    
+    return `Land Cover Analysis for ${selectedYear}:
+    
+• From 2010 to ${selectedYear}, the most significant changes have occurred in: ${topChanges.map(c => c.className).join(', ')}.
+• ${topChanges[0].className} has ${topChanges[0].percentChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(topChanges[0].percentChange).toFixed(1)}% (${Math.abs(topChanges[0].absoluteChange).toLocaleString()} pixels).
+• ${topChanges[1].className} has ${topChanges[1].percentChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(topChanges[1].percentChange).toFixed(1)}% (${Math.abs(topChanges[1].absoluteChange).toLocaleString()} pixels).
+• ${topChanges[2].className} has ${topChanges[2].percentChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(topChanges[2].percentChange).toFixed(1)}% (${Math.abs(topChanges[2].absoluteChange).toLocaleString()} pixels).
+
+These changes reflect larger regional patterns of ${getEnvironmentalTrend(changes)} in the Sahel region between 2010 and ${selectedYear}. The data suggests that ${getMainImplication(changes)}.`;
+  };
+
+  const getEnvironmentalTrend = (changes: Array<{className: string, percentChange: number}>) => {
+    const forestChange = changes.find(c => c.className === 'Forests')?.percentChange || 0;
+    const croplandChange = changes.find(c => c.className === 'Croplands')?.percentChange || 0;
+    const barrenChange = changes.find(c => c.className === 'Barren')?.percentChange || 0;
+    
+    if (forestChange < 0 && croplandChange > 0) {
+      return "agricultural expansion and deforestation";
+    } else if (barrenChange > 0) {
+      return "desertification and land degradation";
+    } else if (forestChange > 0) {
+      return "reforestation and ecological recovery";
+    } else {
+      return "changing land use patterns";
+    }
+  };
+
+  const getMainImplication = (changes: Array<{className: string, percentChange: number}>) => {
+    const forestChange = changes.find(c => c.className === 'Forests')?.percentChange || 0;
+    const croplandChange = changes.find(c => c.className === 'Croplands')?.percentChange || 0;
+    const barrenChange = changes.find(c => c.className === 'Barren')?.percentChange || 0;
+    const urbanChange = changes.find(c => c.className === 'Urban')?.percentChange || 0;
+    
+    if (urbanChange > 10) {
+      return "urbanization is a significant driver of land cover change";
+    } else if (barrenChange > 5) {
+      return "climate-related land degradation may be accelerating";
+    } else if (croplandChange > 5) {
+      return "agricultural expansion is the dominant land use change";
+    } else if (forestChange < -5) {
+      return "forest loss continues to be a concerning trend";
+    } else {
+      return "the region is experiencing complex and interdependent land use transitions";
+    }
+  };
+
+  const getVegetationTrendAnalysis = () => {
+    if (!vegetationTimeSeriesData || vegetationTimeSeriesData.length < 2) {
+      return "Insufficient data to analyze vegetation productivity trends.";
+    }
+    
+    const firstYearData = vegetationTimeSeriesData[0];
+    const lastYearData = vegetationTimeSeriesData[vegetationTimeSeriesData.length - 1];
+    const currentYearData = vegetationTimeSeriesData.find(d => d.year === selectedYear) || lastYearData;
+    
+    const forestChange = ((currentYearData.Forest - firstYearData.Forest) / firstYearData.Forest) * 100;
+    const grasslandChange = ((currentYearData.Grassland - firstYearData.Grassland) / firstYearData.Grassland) * 100;
+    const croplandChange = ((currentYearData.Cropland - firstYearData.Cropland) / firstYearData.Cropland) * 100;
+    const shrublandChange = ((currentYearData.Shrubland - firstYearData.Shrubland) / firstYearData.Shrubland) * 100;
+    
+    const yearsElapsed = selectedYear - 2010;
+    const annualChange = yearsElapsed > 0 ? (currentYearData.AnnualChange || 0) : 0;
+    
+    return `Vegetation Productivity Analysis for ${selectedYear}:
+    
+• Gross Primary Production (GPP) measures the rate at which plants produce biomass through photosynthesis.
+• Since 2010, forest productivity has ${forestChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(forestChange).toFixed(1)}%.
+• Grassland productivity has ${grasslandChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(grasslandChange).toFixed(1)}%.
+• Cropland productivity has ${croplandChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(croplandChange).toFixed(1)}%.
+• Shrubland productivity has ${shrublandChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(shrublandChange).toFixed(1)}%.
+
+The average annual change in GPP for ${selectedYear} is ${annualChange > 0 ? '+' : ''}${annualChange.toFixed(1)}%, indicating ${
+      annualChange > 1.5 ? 'significant improvement' : 
+      annualChange > 0 ? 'moderate improvement' : 
+      annualChange > -1.5 ? 'slight decline' : 'significant decline'
+    } in vegetation health and carbon sequestration.
+    
+These productivity changes are closely linked to precipitation patterns, land use changes, and climate variability in the region.`;
+  };
+
+  const getPrecipitationTrends = () => {
+    if (!regionalPrecipitationData || regionalPrecipitationData.length < 2) {
+      return "Insufficient data to analyze precipitation trends.";
+    }
+    
+    const firstYearData = regionalPrecipitationData[0];
+    const lastYearData = regionalPrecipitationData[regionalPrecipitationData.length - 1];
+    const currentYearData = regionalPrecipitationData.find(d => d.year === selectedYear) || lastYearData;
+    
+    const overallChange = ((currentYearData.Overall - firstYearData.Overall) / firstYearData.Overall) * 100;
+    const southChange = ((currentYearData.South - firstYearData.South) / firstYearData.South) * 100;
+    const centerChange = ((currentYearData.Center - firstYearData.Center) / firstYearData.Center) * 100;
+    const northChange = ((currentYearData.North - firstYearData.North) / firstYearData.North) * 100;
+    
+    const trends = [
+      { region: 'Overall', change: overallChange },
+      { region: 'South', change: southChange },
+      { region: 'Center', change: centerChange },
+      { region: 'North', change: northChange }
+    ].sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+    
+    return `Precipitation Analysis for ${selectedYear}:
+    
+• Since 2010, overall precipitation has ${overallChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(overallChange).toFixed(1)}%.
+• The southern region has experienced a ${southChange > 0 ? 'gain' : 'loss'} of ${Math.abs(southChange).toFixed(1)}% in rainfall.
+• The central region has experienced a ${centerChange > 0 ? 'gain' : 'loss'} of ${Math.abs(centerChange).toFixed(1)}% in rainfall.
+• The northern region has experienced a ${northChange > 0 ? 'gain' : 'loss'} of ${Math.abs(northChange).toFixed(1)}% in rainfall.
+
+The ${trends[0].region.toLowerCase()} region has shown the most significant change. Regional variations in precipitation patterns have important implications for agriculture, water resources, and ecosystem health in the Sahel.
+
+${
+  overallChange < -5 ? 'Declining precipitation trends raise concerns about increased drought risk and water scarcity.' :
+  overallChange > 5 ? 'Increasing precipitation trends suggest improved conditions for vegetation growth and agriculture.' :
+  'Relatively stable precipitation patterns indicate resilience in regional water resources.'
+}`;
   };
 
   const keyStats = [
