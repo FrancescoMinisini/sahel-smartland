@@ -9,7 +9,8 @@ import {
   landCoverColors, 
   landCoverClasses,
   getAvailableYears,
-  calculateLandCoverStats
+  calculateLandCoverStats,
+  RenderOptions
 } from '@/lib/geospatialUtils';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -68,7 +69,6 @@ const MapVisualization = ({
     const handleResize = () => {
       if (canvasRef.current && containerRef.current) {
         // Update canvas size based on container dimensions
-        const { width, height } = containerRef.current.getBoundingClientRect();
         adjustCanvasSize();
       }
     };
@@ -84,40 +84,35 @@ const MapVisualization = ({
     const canvas = canvasRef.current;
     const { width, height } = container.getBoundingClientRect();
     
-    // Save current transformation
-    const currentData = mapData[prevYear];
-    if (!currentData) return;
-    
-    // Set canvas size to match container
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
+    // Set canvas dimensions to match container exactly
     canvas.width = width;
     canvas.height = height;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
     
-    // Redraw at new size
+    // Redraw at new size if data is available
+    const currentData = mapData[prevYear];
     if (currentData && currentData.data.length > 0) {
       renderMapToCanvas(currentData.data, width, height);
     }
   };
 
-  // Enhanced render function with better visual contrast
+  // Enhanced render function with better visual representation
   const renderMapToCanvas = (data: number[], width: number, height: number) => {
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
     
-    // Apply enhanced visualization
-    renderTIFFToCanvas(
-      ctx, 
-      data, 
-      width, 
-      height,
-      {
-        enhanceContrast: true,
-        highlightChanges: true,
-        scaleIntensity: 1.2  // Boost color intensity
-      }
-    );
+    // Apply enhanced visualization with options
+    const renderOptions: RenderOptions = {
+      enhanceContrast: true,
+      highlightChanges: true,
+      scaleIntensity: 1.3,
+      opacity: 1,
+      bgColor: 'hsl(var(--background))'
+    };
+    
+    renderTIFFToCanvas(ctx, data, width, height, renderOptions);
   };
 
   // Preload data for all years when the component mounts
@@ -175,12 +170,8 @@ const MapVisualization = ({
     
     if (!prevYearData || prevYearData.data.length === 0) return;
     
-    // Set canvas dimensions based on container
-    if (containerRef.current) {
-      const { width, height } = containerRef.current.getBoundingClientRect();
-      canvas.width = width;
-      canvas.height = height;
-    }
+    // Ensure canvas fills container
+    adjustCanvasSize();
     
     // Handle smooth transition when year changes
     if (previousYearRef.current !== null && previousYearRef.current !== year) {
@@ -318,7 +309,7 @@ const MapVisualization = ({
       {/* Map Container */}
       <div 
         ref={containerRef}
-        className="w-full aspect-[4/3] bg-background overflow-hidden relative"
+        className="w-full h-full aspect-[4/3] bg-background overflow-hidden relative"
       >
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -334,7 +325,7 @@ const MapVisualization = ({
           >
             <canvas 
               ref={canvasRef} 
-              className="w-full h-full"
+              className="absolute inset-0 w-full h-full"
             />
           </div>
         )}
