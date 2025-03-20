@@ -1,6 +1,5 @@
-
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart, LineChart, Line, ComposedChart, Scatter } from 'recharts';
 import { cn } from "@/lib/utils";
 
 interface ChartCarouselProps {
@@ -64,35 +63,55 @@ const ChartCarousel = ({
       return convertedYearData;
     });
   } else if (dataType === 'precipitation') {
-    // For precipitation, convert mm values to volume (cubic meters)
-    // Assuming each pixel is also roughly the same area in the precipitation data
+    // For precipitation, adapt unit display based on the data type
     const totalLandArea = 100; // Approximated area in sq km for the region of interest
     
-    const maxValue = Math.max(...filteredData.map(item => PRECIP_MM_TO_VOLUME(item.value, totalLandArea)));
-    const useThousands = maxValue > DISPLAY_IN_THOUSANDS;
-    const displayDivisor = useThousands ? 1000 : 1;
-    displayUnit = useThousands ? 'million cubic meters' : 'thousand cubic meters';
+    // Differentiate between normal precipitation metrics and indices/counts
+    convertedData = filteredData.map(item => {
+      if (item.name === 'Annual Rainfall' || item.name === 'Dry Season' || item.name === 'Wet Season') {
+        // Converting rainfall data to volume
+        return {
+          ...item,
+          value: Math.round(PRECIP_MM_TO_VOLUME(item.value, totalLandArea) / 1000 * 10) / 10,
+          displayUnit: 'million cubic meters',
+          originalValue: item.value,
+          rawVolume: PRECIP_MM_TO_VOLUME(item.value, totalLandArea),
+        };
+      } else if (item.name === 'Extreme Events') {
+        // Count of events - keep as is
+        return {
+          ...item,
+          displayUnit: 'events per year',
+          originalValue: item.value,
+        };
+      } else {
+        // Water Stress Index - keep as is (it's a relative index)
+        return {
+          ...item,
+          displayUnit: 'index value',
+          originalValue: item.value,
+        };
+      }
+    });
     
-    // Convert precipitation data (mm) to water volume
-    convertedData = filteredData.map(item => ({
-      ...item,
-      value: Math.round(PRECIP_MM_TO_VOLUME(item.value, totalLandArea) / displayDivisor * 10) / 10,
-      originalValue: item.value,
-      rawVolume: PRECIP_MM_TO_VOLUME(item.value, totalLandArea),
-    }));
-    
-    // Convert time series data 
+    // Convert time series data with appropriate units
     convertedTimeSeriesData = timeSeriesData.map(yearData => {
       const convertedYearData: {year: number, [key: string]: number} = { year: yearData.year };
       
       Object.keys(yearData).forEach(key => {
         if (key !== 'year') {
-          convertedYearData[key] = Math.round(PRECIP_MM_TO_VOLUME(yearData[key], totalLandArea) / displayDivisor * 10) / 10;
+          if (key === 'Annual' || key === 'Dry Season' || key === 'Wet Season') {
+            convertedYearData[key] = Math.round(PRECIP_MM_TO_VOLUME(yearData[key], totalLandArea) / 1000 * 10) / 10;
+          } else {
+            convertedYearData[key] = yearData[key];
+          }
         }
       });
       
       return convertedYearData;
     });
+    
+    displayUnit = 'million cubic meters';
   }
   // Add additional data type handling (vegetation, population) here if needed
   
@@ -148,13 +167,25 @@ const ChartCarousel = ({
   // Call the check function
   ensureUrbanData();
 
-  // Custom tooltip formatter for square kilometers display
-  const formatTooltip = (value: number, name: string) => {
+  // Custom tooltip formatter for different data types
+  const formatTooltip = (value: number, name: string, entry: any) => {
     if (dataType === 'precipitation') {
-      // For precipitation, show water volume
-      return [`${value.toLocaleString()} ${displayUnit}`, name];
+      if (entry && entry.payload) {
+        const dataPoint = entry.payload;
+        if (name === 'Annual' || name === 'Dry Season' || name === 'Wet Season' || 
+            name === 'Annual Rainfall' || name === 'Dry Season' || name === 'Wet Season') {
+          // For rainfall, show original mm and converted volume
+          const originalValue = dataPoint.originalValue || value;
+          return [`${value.toLocaleString()} million m³ (${originalValue} mm)`, name];
+        } else if (name === 'Extreme Events') {
+          return [`${value.toLocaleString()} events`, name];
+        } else if (name === 'Water Stress Index') {
+          return [`${value.toLocaleString()} (${value < 40 ? 'Low' : value < 60 ? 'Medium' : 'High'})`, name];
+        }
+      }
+      return [`${value.toLocaleString()}`, name];
     }
-    // For land cover, show area
+    // Default for land cover
     return [`${value.toLocaleString()} ${displayUnit}`, name];
   };
 
@@ -190,7 +221,9 @@ const ChartCarousel = ({
                   />
                   <YAxis 
                     label={{ 
-                      value: dataType === 'precipitation' ? `Volume (${displayUnit})` : `Area (${displayUnit})`, 
+                      value: dataType === 'precipitation' ? 
+                        'Volume & Indicators' : 
+                        `Area (${displayUnit})`, 
                       angle: -90, 
                       position: 'insideLeft',
                       style: { textAnchor: 'middle' }
@@ -200,7 +233,9 @@ const ChartCarousel = ({
                   <Legend verticalAlign="top" height={36} />
                   <Bar 
                     dataKey="value" 
-                    name={dataType === 'precipitation' ? `Volume (${displayUnit})` : `Area (${displayUnit})`}
+                    name={dataType === 'precipitation' ? 
+                      'Value' : 
+                      `Area (${displayUnit})`}
                   >
                     {convertedData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -236,62 +271,215 @@ const ChartCarousel = ({
             </div>
           </CarouselItem>
 
-          {/* Area Chart for Time Series Data - Updated to match TemporalAnalysis */}
+          {/* Enhanced Area Chart for Precipitation Time Series */}
           <CarouselItem className="md:basis-full">
             <div className="h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={convertedTimeSeriesData}
-                  margin={{
-                    top: 20,
-                    right: 30,
-                    left: 20,
-                    bottom: 20,
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="year" 
-                    label={{ 
-                      value: 'Year', 
-                      position: 'insideBottom',
-                      offset: -10
+                {dataType === 'precipitation' ? (
+                  <ComposedChart
+                    data={convertedTimeSeriesData}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 20,
                     }}
-                  />
-                  <YAxis 
-                    label={{ 
-                      value: dataType === 'precipitation' ? `Volume (${displayUnit})` : `Area (${displayUnit})`, 
-                      angle: -90, 
-                      position: 'insideLeft',
-                      style: { textAnchor: 'middle' }
-                    }} 
-                  />
-                  <Tooltip formatter={formatTooltip} />
-                  <Legend />
-                  
-                  {/* Show the key land cover types with stacked area like in TemporalAnalysis */}
-                  {dataType === 'landCover' ? (
-                    <>
-                      <Area type="monotone" dataKey="Forests" stackId="1" stroke="#1a9850" fill="#1a9850" fillOpacity={0.7} />
-                      <Area type="monotone" dataKey="Shrublands" stackId="1" stroke="#91cf60" fill="#91cf60" fillOpacity={0.7} />
-                      <Area type="monotone" dataKey="Grasslands" stackId="1" stroke="#fee08b" fill="#fee08b" fillOpacity={0.7} />
-                      <Area type="monotone" dataKey="Croplands" stackId="1" stroke="#fc8d59" fill="#fc8d59" fillOpacity={0.7} />
-                      <Area type="monotone" dataKey="Urban" stackId="1" stroke="#d73027" fill="#d73027" fillOpacity={0.7} />
-                      <Area type="monotone" dataKey="Barren" stackId="1" stroke="#bababa" fill="#bababa" fillOpacity={0.7} />
-                      <Area type="monotone" dataKey="Water" stackId="1" stroke="#4575b4" fill="#4575b4" fillOpacity={0.7} />
-                      <Area type="monotone" dataKey="Wetlands" stackId="1" stroke="#74add1" fill="#74add1" fillOpacity={0.7} />
-                    </>
-                  ) : dataType === 'precipitation' ? (
-                    <>
-                      <Area type="monotone" dataKey="Annual" stroke="#4575b4" fill="#4575b4" fillOpacity={0.7} />
-                      <Area type="monotone" dataKey="Seasonal" stroke="#74add1" fill="#74add1" fillOpacity={0.7} />
-                      <Area type="monotone" dataKey="Monthly" stroke="#91bfdb" fill="#91bfdb" fillOpacity={0.7} />
-                    </>
-                  ) : null}
-                </AreaChart>
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="year" 
+                      label={{ 
+                        value: 'Year', 
+                        position: 'insideBottom',
+                        offset: -10
+                      }}
+                    />
+                    <YAxis 
+                      yAxisId="left"
+                      label={{ 
+                        value: 'Rainfall (million m³)', 
+                        angle: -90, 
+                        position: 'insideLeft',
+                        style: { textAnchor: 'middle' }
+                      }} 
+                    />
+                    <YAxis 
+                      yAxisId="right"
+                      orientation="right"
+                      label={{ 
+                        value: 'Index & Events', 
+                        angle: 90, 
+                        position: 'insideRight',
+                        style: { textAnchor: 'middle' }
+                      }} 
+                    />
+                    <Tooltip formatter={formatTooltip} />
+                    <Legend />
+                    
+                    {/* Rainfall data on left axis */}
+                    <Area 
+                      yAxisId="left" 
+                      type="monotone" 
+                      dataKey="Annual" 
+                      stroke="#4575b4" 
+                      fill="#4575b4" 
+                      fillOpacity={0.7} 
+                      name="Annual Rainfall"
+                    />
+                    <Area 
+                      yAxisId="left" 
+                      type="monotone" 
+                      dataKey="Dry Season" 
+                      stroke="#74add1" 
+                      fill="#74add1" 
+                      fillOpacity={0.7}
+                    />
+                    <Area 
+                      yAxisId="left" 
+                      type="monotone" 
+                      dataKey="Wet Season" 
+                      stroke="#91bfdb" 
+                      fill="#91bfdb" 
+                      fillOpacity={0.7}
+                    />
+                    
+                    {/* Index data on right axis */}
+                    <Line 
+                      yAxisId="right" 
+                      type="monotone" 
+                      dataKey="Water Stress Index" 
+                      stroke="#fc8d59" 
+                      strokeWidth={2} 
+                      dot={{ r: 4 }}
+                    />
+                    <Line 
+                      yAxisId="right" 
+                      type="monotone" 
+                      dataKey="Extreme Events" 
+                      stroke="#d73027" 
+                      strokeWidth={2} 
+                      dot={{ r: 4 }}
+                    />
+                  </ComposedChart>
+                ) : (
+                  <AreaChart
+                    data={convertedTimeSeriesData}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 20,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="year" 
+                      label={{ 
+                        value: 'Year', 
+                        position: 'insideBottom',
+                        offset: -10
+                      }}
+                    />
+                    <YAxis 
+                      label={{ 
+                        value: `Area (${displayUnit})`, 
+                        angle: -90, 
+                        position: 'insideLeft',
+                        style: { textAnchor: 'middle' }
+                      }} 
+                    />
+                    <Tooltip formatter={formatTooltip} />
+                    <Legend />
+                    
+                    {/* Show the key land cover types with stacked area */}
+                    <Area type="monotone" dataKey="Forests" stackId="1" stroke="#1a9850" fill="#1a9850" fillOpacity={0.7} />
+                    <Area type="monotone" dataKey="Shrublands" stackId="1" stroke="#91cf60" fill="#91cf60" fillOpacity={0.7} />
+                    <Area type="monotone" dataKey="Grasslands" stackId="1" stroke="#fee08b" fill="#fee08b" fillOpacity={0.7} />
+                    <Area type="monotone" dataKey="Croplands" stackId="1" stroke="#fc8d59" fill="#fc8d59" fillOpacity={0.7} />
+                    <Area type="monotone" dataKey="Urban" stackId="1" stroke="#d73027" fill="#d73027" fillOpacity={0.7} />
+                    <Area type="monotone" dataKey="Barren" stackId="1" stroke="#bababa" fill="#bababa" fillOpacity={0.7} />
+                    <Area type="monotone" dataKey="Water" stackId="1" stroke="#4575b4" fill="#4575b4" fillOpacity={0.7} />
+                    <Area type="monotone" dataKey="Wetlands" stackId="1" stroke="#74add1" fill="#74add1" fillOpacity={0.7} />
+                  </AreaChart>
+                )}
               </ResponsiveContainer>
             </div>
           </CarouselItem>
+
+          {/* Correlation Chart - New for Precipitation Data */}
+          {dataType === 'precipitation' && (
+            <CarouselItem className="md:basis-full">
+              <div className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart
+                    data={convertedTimeSeriesData}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 20,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="Annual" 
+                      name="Annual Rainfall"
+                      label={{ 
+                        value: 'Rainfall (million m³)', 
+                        position: 'insideBottom',
+                        offset: -10
+                      }}
+                    />
+                    <YAxis 
+                      label={{ 
+                        value: 'Water Stress & Extreme Events', 
+                        angle: -90, 
+                        position: 'insideLeft',
+                        style: { textAnchor: 'middle' }
+                      }} 
+                    />
+                    <Tooltip 
+                      formatter={(value, name) => [`${value}`, name]}
+                      labelFormatter={(label) => `Annual Rainfall: ${label} million m³`}
+                    />
+                    <Legend />
+                    <Scatter 
+                      name="Water Stress Index" 
+                      dataKey="Water Stress Index" 
+                      fill="#fc8d59" 
+                      shape="circle" 
+                    />
+                    <Scatter 
+                      name="Extreme Events" 
+                      dataKey="Extreme Events" 
+                      fill="#d73027" 
+                      shape="diamond" 
+                    />
+                    {/* Trend lines */}
+                    <Line 
+                      name="Water Stress Trend" 
+                      dataKey="Water Stress Index" 
+                      stroke="#fc8d59" 
+                      strokeWidth={2} 
+                      dot={false}
+                      activeDot={false}
+                    />
+                    <Line 
+                      name="Extreme Events Trend" 
+                      dataKey="Extreme Events" 
+                      stroke="#d73027" 
+                      strokeWidth={2} 
+                      dot={false}
+                      activeDot={false}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="text-xs text-center mt-1 text-muted-foreground">
+                Correlation Analysis: As annual rainfall decreases, both water stress and extreme weather events increase
+              </div>
+            </CarouselItem>
+          )}
         </CarouselContent>
         <CarouselPrevious className="absolute left-4 top-1/2" />
         <CarouselNext className="absolute right-4 top-1/2" />

@@ -61,49 +61,65 @@ const Dashboard = () => {
       year: 2010,
       Annual: 780,
       'Dry Season': 110,
-      'Wet Season': 670
+      'Wet Season': 670,
+      'Extreme Events': 3,
+      'Water Stress Index': 38
     },
     {
       year: 2012,
       Annual: 765,
       'Dry Season': 105,
-      'Wet Season': 660
+      'Wet Season': 660,
+      'Extreme Events': 4,
+      'Water Stress Index': 42
     },
     {
       year: 2014,
       Annual: 752,
       'Dry Season': 102,
-      'Wet Season': 650
+      'Wet Season': 650,
+      'Extreme Events': 4,
+      'Water Stress Index': 45
     },
     {
       year: 2016,
       Annual: 740,
       'Dry Season': 100,
-      'Wet Season': 640
+      'Wet Season': 640,
+      'Extreme Events': 5,
+      'Water Stress Index': 48
     },
     {
       year: 2018,
       Annual: 725,
       'Dry Season': 98,
-      'Wet Season': 627
+      'Wet Season': 627,
+      'Extreme Events': 6,
+      'Water Stress Index': 52
     },
     {
       year: 2020,
       Annual: 710,
       'Dry Season': 95,
-      'Wet Season': 615
+      'Wet Season': 615,
+      'Extreme Events': 7,
+      'Water Stress Index': 58
     },
     {
       year: 2022,
       Annual: 695,
       'Dry Season': 90,
-      'Wet Season': 605
+      'Wet Season': 605,
+      'Extreme Events': 8,
+      'Water Stress Index': 63
     },
     {
       year: 2023,
       Annual: 685,
       'Dry Season': 85,
-      'Wet Season': 600
+      'Wet Season': 600,
+      'Extreme Events': 9,
+      'Water Stress Index': 68
     }
   ]);
   
@@ -312,6 +328,56 @@ const Dashboard = () => {
     { id: 'precipitation', name: 'Precipitation', icon: <CloudRain size={16} /> },
     { id: 'population', name: 'Population', icon: <Users size={16} /> },
   ];
+
+  const enhancedPrecipitationData = [
+    {
+      name: 'Annual Rainfall',
+      value: selectedYear > 2020 ? 685 : selectedYear > 2015 ? 710 : 745,
+      color: '#4575b4',
+      change: selectedYear > 2020 ? -3.5 : selectedYear > 2015 ? -2.1 : -1.2,
+      rawChange: selectedYear > 2020 ? -25 : selectedYear > 2015 ? -15 : -10
+    },
+    {
+      name: 'Dry Season',
+      value: selectedYear > 2020 ? 85 : selectedYear > 2015 ? 95 : 110,
+      color: '#74add1',
+      change: selectedYear > 2020 ? -10.5 : selectedYear > 2015 ? -7.5 : -4.5,
+      rawChange: selectedYear > 2020 ? -10 : selectedYear > 2015 ? -5 : -3
+    },
+    {
+      name: 'Wet Season',
+      value: selectedYear > 2020 ? 600 : selectedYear > 2015 ? 615 : 635,
+      color: '#91bfdb',
+      change: selectedYear > 2020 ? -2.4 : selectedYear > 2015 ? -1.6 : -0.8,
+      rawChange: selectedYear > 2020 ? -15 : selectedYear > 2015 ? -10 : -5
+    },
+    {
+      name: 'Extreme Events',
+      value: selectedYear > 2020 ? 9 : selectedYear > 2015 ? 7 : 5,
+      color: '#d73027',
+      change: selectedYear > 2020 ? 28.6 : selectedYear > 2015 ? 40 : 25,
+      rawChange: selectedYear > 2020 ? 2 : selectedYear > 2015 ? 2 : 1
+    },
+    {
+      name: 'Water Stress Index',
+      value: selectedYear > 2020 ? 68 : selectedYear > 2015 ? 58 : 48,
+      color: '#fc8d59',
+      change: selectedYear > 2020 ? 17.2 : selectedYear > 2015 ? 20.8 : 14.3,
+      rawChange: selectedYear > 2020 ? 10 : selectedYear > 2015 ? 10 : 6
+    }
+  ];
+
+  const getPrecipitationTrends = () => {
+    return `Based on the precipitation data from 2010 to 2023:
+    
+• Annual rainfall has decreased by approximately 12.2% (95mm) over the past 13 years.
+• Dry season precipitation shows the most significant decline at -22.7% (25mm).
+• The frequency of extreme weather events (droughts, flash floods) has tripled from 3 to 9 annually.
+• The Water Stress Index has increased by 78.9%, indicating growing water scarcity concerns.
+• Areas with over 500mm annual rainfall have decreased by approximately 18% in spatial coverage.
+
+This trend correlates with observed changes in vegetation patterns and may contribute to desertification processes in vulnerable areas, particularly in the northern regions.`;
+  };
 
   const keyStats = [
     { 
@@ -565,9 +631,9 @@ const Dashboard = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                       <div className="lg:col-span-2 space-y-6">
                         <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
-                          <h3 className="text-lg font-medium mb-4">Precipitation Distribution ({selectedYear})</h3>
+                          <h3 className="text-lg font-medium mb-4">Precipitation Analysis ({selectedYear})</h3>
                           <ChartCarousel 
-                            data={precipitationData} 
+                            data={enhancedPrecipitationData} 
                             timeSeriesData={precipTimeSeriesData}
                             dataType="precipitation"
                           />
@@ -575,17 +641,15 @@ const Dashboard = () => {
                             <div className="flex items-start gap-2 mb-2">
                               <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
                               <p>
-                                Precipitation data is visualized as water volume (cubic meters) based on rainfall measurements (mm)
-                                across the region. The time series shows how rainfall patterns have changed over time.
+                                Precipitation data shows rainfall measurements (mm), extreme weather event frequency, 
+                                and water stress index, which measures water scarcity relative to demand (higher values indicate 
+                                more severe water stress).
                               </p>
                             </div>
                             <div className="mt-3 p-3 bg-muted rounded-md">
                               <h4 className="font-medium mb-2">Trend Analysis:</h4>
                               <p className="whitespace-pre-line">
-                                Based on the data from 2010 to 2023, there has been a consistent decrease in annual rainfall
-                                in the Sahel region, with approximately 12% reduction over this period. This trend 
-                                correlates with observed changes in vegetation patterns and may contribute to desertification
-                                in vulnerable areas.
+                                {getPrecipitationTrends()}
                               </p>
                             </div>
                           </div>
@@ -634,215 +698,3 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white rounded-xl shadow-sm border border-border/40 p-6">
               <div className="w-10 h-10 rounded-lg bg-sahel-green/10 flex items-center justify-center mb-4">
-                <Calendar className="h-5 w-5 text-sahel-green" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Temporal Analysis</h3>
-              <p className="text-muted-foreground mb-4">Explore data trends over time with our interactive time series tools.</p>
-              <Link 
-                to="/dashboard/temporal" 
-                className="text-sm text-sahel-blue flex items-center hover:underline"
-              >
-                View time series
-                <ArrowRight size={14} className="ml-1" />
-              </Link>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-sm border border-border/40 p-6">
-              <div className="w-10 h-10 rounded-lg bg-sahel-blue/10 flex items-center justify-center mb-4">
-                <Map className="h-5 w-5 text-sahel-blue" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Spatial Analysis</h3>
-              <p className="text-muted-foreground mb-4">Analyze geographic patterns and spatial relationships in the data.</p>
-              <Link 
-                to="/map" 
-                className="text-sm text-sahel-blue flex items-center hover:underline"
-              >
-                Open interactive map
-                <ArrowRight size={14} className="ml-1" />
-              </Link>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-sm border border-border/40 p-6">
-              <div className="w-10 h-10 rounded-lg bg-sahel-earth/10 flex items-center justify-center mb-4">
-                <FileText className="h-5 w-5 text-sahel-earth" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Reports & Insights</h3>
-              <p className="text-muted-foreground mb-4">Access detailed reports and recommendations for land restoration.</p>
-              <Link 
-                to="/reports" 
-                className="text-sm text-sahel-blue flex items-center hover:underline"
-              >
-                View reports
-                <ArrowRight size={14} className="ml-1" />
-              </Link>
-            </div>
-          </div>
-          
-          <div className="bg-white dark:bg-muted rounded-xl shadow-sm border border-border/40 overflow-hidden">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Key Findings</h3>
-              <div className="bg-muted/30 rounded-lg p-6">
-                {activeTab === 'landCover' && (
-                  <div>
-                    <p className="mb-4">Analysis of 20 years of land cover data reveals several key trends:</p>
-                    <ul className="space-y-2 mb-4">
-                      <li className="flex items-start">
-                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-sahel-green"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        </div>
-                        <span className="ml-3 text-sm">Significant conversion of natural vegetation to croplands in southern Sahel regions</span>
-                      </li>
-                      <li className="flex items-start">
-                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-sahel-green"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        </div>
-                        <span className="ml-3 text-sm">Urban expansion around major cities, with a 35% increase in urban area since 2010</span>
-                      </li>
-                      <li className="flex items-start">
-                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-sahel-green"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        </div>
-                        <span className="ml-3 text-sm">Restoration efforts showing positive results in targeted areas, with 1.2M ha restored</span>
-                      </li>
-                    </ul>
-                    <Link 
-                      to="/reports" 
-                      className="text-sm text-sahel-blue flex items-center hover:underline"
-                    >
-                      View detailed land cover report
-                      <ArrowRight size={14} className="ml-1" />
-                    </Link>
-                  </div>
-                )}
-                
-                {activeTab === 'vegetation' && (
-                  <div>
-                    <p className="mb-4">Analysis of vegetation productivity data reveals:</p>
-                    <ul className="space-y-2 mb-4">
-                      <li className="flex items-start">
-                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-sahel-green"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        </div>
-                        <span className="ml-3 text-sm">Overall increase in gross primary production by 8.2% since 2010</span>
-                      </li>
-                    </ul>
-                  </div>
-                )}
-                
-                {activeTab === 'precipitation' && (
-                  <div>
-                    <p className="mb-4">Analysis of precipitation data reveals:</p>
-                    <ul className="space-y-2 mb-4">
-                      <li className="flex items-start">
-                        <div className="w-5 h-5 rounded-full bg-sahel-blue/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-sahel-blue"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        </div>
-                        <span className="ml-3 text-sm">A decrease in average annual rainfall by 5% since 2010</span>
-                      </li>
-                    </ul>
-                  </div>
-                )}
-                
-                {activeTab === 'population' && (
-                  <div>
-                    <p className="mb-4">Analysis of population data reveals:</p>
-                    <ul className="space-y-2 mb-4">
-                      <li className="flex items-start">
-                        <div className="w-5 h-5 rounded-full bg-sahel-earth/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-sahel-earth"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        </div>
-                        <span className="ml-3 text-sm">A steady increase in population density, particularly in urban areas</span>
-                      </li>
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-      
-      <Footer />
-    </div>
-  );
-};
-
-export default Dashboard;
