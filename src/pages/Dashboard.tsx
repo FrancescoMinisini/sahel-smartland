@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -33,7 +32,6 @@ const Dashboard = () => {
   const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
   const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
   
-  // Add precipitation data
   const [precipitationData] = useState([
     {
       name: 'Annual Rainfall',
@@ -58,7 +56,6 @@ const Dashboard = () => {
     }
   ]);
   
-  // Add precipitation time series data
   const [precipTimeSeriesData] = useState([
     {
       year: 2010,
@@ -596,63 +593,22 @@ const Dashboard = () => {
                       </div>
 
                       <div className="lg:col-span-1 h-full">
-                        <div className="h-[400px] bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
-                          <h3 className="text-lg font-medium mb-4">Key Indicators</h3>
-                          <div className="space-y-6">
-                            <div>
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="text-sm font-medium">Annual Rainfall</span>
-                                <span className="text-sm text-sahel-blue font-semibold">
-                                  {selectedYear > 2020 ? '685' : selectedYear > 2015 ? '710' : '745'} mm
-                                </span>
-                              </div>
-                              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-sahel-blue" 
-                                  style={{ width: `${(selectedYear > 2020 ? 685 : selectedYear > 2015 ? 710 : 745) / 10}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="text-sm font-medium">Rainy Days</span>
-                                <span className="text-sm text-sahel-blue font-semibold">
-                                  {selectedYear > 2020 ? '34' : selectedYear > 2015 ? '39' : '45'} days
-                                </span>
-                              </div>
-                              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-sahel-blue" 
-                                  style={{ width: `${(selectedYear > 2020 ? 34 : selectedYear > 2015 ? 39 : 45) / 0.6}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="text-sm font-medium">Drought Severity</span>
-                                <span className="text-sm text-sahel-earth font-semibold">
-                                  {selectedYear > 2020 ? 'High' : selectedYear > 2015 ? 'Moderate' : 'Low'}
-                                </span>
-                              </div>
-                              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-sahel-earth" 
-                                  style={{ width: `${selectedYear > 2020 ? 75 : selectedYear > 2015 ? 50 : 25}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                            
-                            <div className="mt-6 pt-6 border-t border-border/40">
-                              <h4 className="text-sm font-medium mb-4">Impact on Vegetation</h4>
-                              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span>Lower soil moisture</span>
-                                <span>Decreased productivity</span>
-                              </div>
-                              <div className="h-1.5 w-full bg-gradient-to-r from-sahel-blue to-sahel-earth/80 rounded-full mt-2"></div>
-                            </div>
-                          </div>
+                        <div className="h-[400px]">
+                          <MapVisualization 
+                            className="w-full h-full" 
+                            year={selectedYear}
+                            expandedView={true}
+                            onStatsChange={handleStatsChange}
+                          />
+                        </div>
+                        <div className="text-center mt-3">
+                          <Link 
+                            to="/map" 
+                            className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
+                          >
+                            <ZoomIn size={14} className="mr-1" /> 
+                            Open full map view
+                          </Link>
                         </div>
                       </div>
                     </div>
