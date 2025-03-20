@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Layers, Map, Info, Eye, EyeOff, Filter, Road, Waves } from 'lucide-react';
+import { Layers, Map, Info, Eye, EyeOff, Filter, MapPin, Waves } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 interface LayersControlProps {
@@ -17,7 +17,7 @@ const LayersControl = ({ activeLayers, onLayerToggle, className }: LayersControl
     { id: 'precipitation', name: 'Precipitation', icon: <Filter size={16} /> },
     { id: 'regionBoundaries', name: 'Region Boundaries', icon: <Layers size={16} /> },
     { id: 'districtBoundaries', name: 'District Boundaries', icon: <Layers size={16} /> },
-    { id: 'roadNetwork', name: 'Road Network', icon: <Road size={16} /> },
+    { id: 'roadNetwork', name: 'Road Network', icon: <MapPin size={16} /> },
     { id: 'riverNetwork', name: 'River Network', icon: <Waves size={16} /> }
   ];
 

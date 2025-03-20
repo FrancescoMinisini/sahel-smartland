@@ -51,6 +51,28 @@ export const vectorLayerColors = {
   riverNetwork: '#0078ff'
 };
 
+// Vector layer rendering function
+export const renderVectorLayer = (
+  ctx: CanvasRenderingContext2D,
+  data: number[],
+  width: number,
+  height: number,
+  layerType: string
+): void => {
+  // Use the renderTIFFToCanvas function but with vector layer specific options
+  renderTIFFToCanvas(
+    ctx,
+    data,
+    width,
+    height,
+    {
+      opacity: 0.7,
+      dataType: layerType,
+      isVectorLayer: true
+    }
+  );
+};
+
 // Load and process a GeoTIFF file
 export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{ 
   data: number[], 
@@ -323,7 +345,7 @@ export const getAccuratePrecipitationData = (year: number): Record<string, numbe
 };
 
 // Function to generate the full time series data for precipitation
-export const getPrecipitationTimeSeriesData = (): Array<Record<string, number>> => {
+export const getPrecipitationTimeSeriesData = (): Array<{ year: number, [key: string]: number }> => {
   return [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023].map(year => {
     const data = getAccuratePrecipitationData(year);
     return {
@@ -338,4 +360,3 @@ export const getPrecipitationTimeSeriesData = (): Array<Record<string, number>> 
 };
 
 // Support
-

@@ -231,6 +231,14 @@ const MapVisualization = ({
     }
   };
 
+  const renderCurrentData = () => {
+    if (!canvasRef.current) return;
+    const ctx = canvasRef.current.getContext('2d');
+    if (!ctx) return;
+    
+    renderAllLayers();
+  };
+
   useEffect(() => {
     if (isLoading || !canvasRef.current || !containerRef.current) return;
     
