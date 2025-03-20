@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -253,70 +254,73 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <div>
-                  <div className="flex flex-col lg:flex-row gap-8">
-                    <div className="flex-1">
-                      <div className="bg-muted/30 rounded-lg h-[400px] p-4 flex items-center justify-center">
-                        {activeTab === 'landCover' && (
-                          <div className="text-center p-8">
-                            <h3 className="text-xl font-semibold mb-4">Land Cover Change (2010-2023)</h3>
-                            <p className="text-muted-foreground mb-6">
-                              Visualization of land cover changes in the Sahel region over the past decade.
-                            </p>
-                            <div className="h-48 bg-sahel-sandLight rounded-lg flex items-center justify-center">
-                              <BarChart2 size={48} className="text-sahel-earth/30" />
-                            </div>
-                          </div>
-                        )}
-                        
-                        {activeTab === 'vegetation' && (
-                          <div className="text-center p-8">
-                            <h3 className="text-xl font-semibold mb-4">Vegetation Productivity (2010-2023)</h3>
-                            <p className="text-muted-foreground mb-6">
-                              Analysis of gross primary production trends across the Sahel region.
-                            </p>
-                            <div className="h-48 bg-sahel-greenLight/10 rounded-lg flex items-center justify-center">
-                              <Leaf size={48} className="text-sahel-green/30" />
-                            </div>
-                          </div>
-                        )}
-                        
-                        {activeTab === 'precipitation' && (
-                          <div className="text-center p-8">
-                            <h3 className="text-xl font-semibold mb-4">Precipitation Patterns (2010-2023)</h3>
-                            <p className="text-muted-foreground mb-6">
-                              Visualization of annual rainfall data across the Sahel region.
-                            </p>
-                            <div className="h-48 bg-sahel-blue/10 rounded-lg flex items-center justify-center">
-                              <CloudRain size={48} className="text-sahel-blue/30" />
-                            </div>
-                          </div>
-                        )}
-                        
-                        {activeTab === 'population' && (
-                          <div className="text-center p-8">
-                            <h3 className="text-xl font-semibold mb-4">Population Density (2010-2023)</h3>
-                            <p className="text-muted-foreground mb-6">
-                              Analysis of population growth and distribution in the Sahel region.
-                            </p>
-                            <div className="h-48 bg-sahel-earth/10 rounded-lg flex items-center justify-center">
-                              <Users size={48} className="text-sahel-earth/30" />
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                  {/* Modified layout to accommodate expanded map view */}
+                  <div className="flex flex-col gap-8">
+                    {/* Expanded map visualization that takes the full width */}
+                    <MapVisualization 
+                      className="w-full" 
+                      year={selectedYear}
+                      expandedView={true} 
+                    />
+                    <div className="text-center">
+                      <Link 
+                        to="/map" 
+                        className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
+                      >
+                        <ZoomIn size={14} className="mr-1" /> 
+                        Open full map view
+                      </Link>
                     </div>
-                    
-                    <div className="lg:w-1/3">
-                      <MapVisualization className="h-[400px]" year={selectedYear} />
-                      <div className="mt-2 text-center">
-                        <Link 
-                          to="/map" 
-                          className="text-sm text-sahel-blue flex items-center justify-center hover:underline"
-                        >
-                          <ZoomIn size={14} className="mr-1" /> 
-                          Open full map view
-                        </Link>
-                      </div>
+
+                    {/* Charts and visualizations below the map */}
+                    <div className="bg-muted/30 rounded-lg p-4">
+                      {activeTab === 'landCover' && (
+                        <div className="text-center p-8">
+                          <h3 className="text-xl font-semibold mb-4">Land Cover Change (2010-2023)</h3>
+                          <p className="text-muted-foreground mb-6">
+                            Visualization of land cover changes in the Sahel region over the past decade.
+                          </p>
+                          <div className="h-48 bg-sahel-sandLight rounded-lg flex items-center justify-center">
+                            <BarChart2 size={48} className="text-sahel-earth/30" />
+                          </div>
+                        </div>
+                      )}
+                      
+                      {activeTab === 'vegetation' && (
+                        <div className="text-center p-8">
+                          <h3 className="text-xl font-semibold mb-4">Vegetation Productivity (2010-2023)</h3>
+                          <p className="text-muted-foreground mb-6">
+                            Analysis of gross primary production trends across the Sahel region.
+                          </p>
+                          <div className="h-48 bg-sahel-greenLight/10 rounded-lg flex items-center justify-center">
+                            <Leaf size={48} className="text-sahel-green/30" />
+                          </div>
+                        </div>
+                      )}
+                      
+                      {activeTab === 'precipitation' && (
+                        <div className="text-center p-8">
+                          <h3 className="text-xl font-semibold mb-4">Precipitation Patterns (2010-2023)</h3>
+                          <p className="text-muted-foreground mb-6">
+                            Visualization of annual rainfall data across the Sahel region.
+                          </p>
+                          <div className="h-48 bg-sahel-blue/10 rounded-lg flex items-center justify-center">
+                            <CloudRain size={48} className="text-sahel-blue/30" />
+                          </div>
+                        </div>
+                      )}
+                      
+                      {activeTab === 'population' && (
+                        <div className="text-center p-8">
+                          <h3 className="text-xl font-semibold mb-4">Population Density (2010-2023)</h3>
+                          <p className="text-muted-foreground mb-6">
+                            Analysis of population growth and distribution in the Sahel region.
+                          </p>
+                          <div className="h-48 bg-sahel-earth/10 rounded-lg flex items-center justify-center">
+                            <Users size={48} className="text-sahel-earth/30" />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -676,4 +680,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-

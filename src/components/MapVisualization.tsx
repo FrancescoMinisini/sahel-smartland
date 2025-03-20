@@ -17,12 +17,14 @@ interface MapVisualizationProps {
   className?: string;
   year?: number;
   onStatsChange?: (stats: Record<string, number>) => void;
+  expandedView?: boolean; // New prop to control expanded view mode
 }
 
 const MapVisualization = ({ 
   className, 
   year = 2023, 
-  onStatsChange 
+  onStatsChange,
+  expandedView = false // Default to false for backwards compatibility
 }: MapVisualizationProps) => {
   const { toast } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -253,14 +255,21 @@ const MapVisualization = ({
   ];
 
   return (
-    <div className={cn("relative rounded-xl overflow-hidden shadow-lg", className)}>
+    <div className={cn(
+      "relative rounded-xl overflow-hidden shadow-lg", 
+      expandedView ? "w-full" : "", // Apply full width if expanded
+      className
+    )}>
       {/* Year indicator */}
       <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-10 bg-white/80 dark:bg-muted/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium flex items-center gap-1.5 shadow-sm">
         {year}
       </div>
       
-      {/* Map Container */}
-      <div className="w-full aspect-[4/3] bg-sahel-sandLight overflow-hidden relative">
+      {/* Map Container - Adjust aspect ratio based on expanded view */}
+      <div className={cn(
+        "w-full bg-sahel-sandLight overflow-hidden relative",
+        expandedView ? "aspect-[16/9]" : "aspect-[4/3]" // Wider aspect ratio when expanded
+      )}>
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="flex flex-col items-center">
@@ -306,31 +315,33 @@ const MapVisualization = ({
         </button>
       </div>
       
-      {/* Layer Selector */}
-      <div className="absolute top-4 left-4">
-        <div className="bg-white rounded-lg shadow-md p-2">
-          <div className="flex items-center gap-2 mb-2 px-2">
-            <Layers size={14} className="text-sahel-earth" />
-            <span className="text-xs font-medium">Layers</span>
-          </div>
-          <div className="space-y-1">
-            {mapLayers.map(layer => (
-              <button
-                key={layer.id}
-                onClick={() => handleLayerChange(layer.id)}
-                className={cn(
-                  "w-full text-left px-3 py-1.5 text-xs rounded-md flex items-center gap-2 transition-colors",
-                  activeLayer === layer.id ? "bg-sahel-green/10 text-sahel-green" : "text-sahel-earth hover:bg-muted"
-                )}
-              >
-                <span className={cn("w-2 h-2 rounded-full", layer.color)}></span>
-                {layer.name}
-                {activeLayer === layer.id && <Eye size={12} className="ml-auto" />}
-              </button>
-            ))}
+      {/* Layer Selector - Only show if not in expanded view */}
+      {!expandedView && (
+        <div className="absolute top-4 left-4">
+          <div className="bg-white rounded-lg shadow-md p-2">
+            <div className="flex items-center gap-2 mb-2 px-2">
+              <Layers size={14} className="text-sahel-earth" />
+              <span className="text-xs font-medium">Layers</span>
+            </div>
+            <div className="space-y-1">
+              {mapLayers.map(layer => (
+                <button
+                  key={layer.id}
+                  onClick={() => handleLayerChange(layer.id)}
+                  className={cn(
+                    "w-full text-left px-3 py-1.5 text-xs rounded-md flex items-center gap-2 transition-colors",
+                    activeLayer === layer.id ? "bg-sahel-green/10 text-sahel-green" : "text-sahel-earth hover:bg-muted"
+                  )}
+                >
+                  <span className={cn("w-2 h-2 rounded-full", layer.color)}></span>
+                  {layer.name}
+                  {activeLayer === layer.id && <Eye size={12} className="ml-auto" />}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
