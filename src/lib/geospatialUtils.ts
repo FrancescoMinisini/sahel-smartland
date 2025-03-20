@@ -1,4 +1,3 @@
-
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -460,7 +459,7 @@ export const getAccuratePrecipitationData = (year: number): Record<string, numbe
 };
 
 // Function to generate the full time series data for precipitation
-export const getPrecipitationTimeSeriesData = (): Array<Record<string, number>> => {
+export const getPrecipitationTimeSeriesData = (): Array<{ [key: string]: number; year: number }> => {
   return [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023].map(year => {
     const data = getAccuratePrecipitationData(year);
     return {
