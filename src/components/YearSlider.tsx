@@ -132,32 +132,29 @@ const YearSlider = ({
         {currentYear}
       </div>
       
-      <div className="flex items-center gap-2">
-        {/* Play/Pause Button - Now inline with slider */}
-        <button 
-          onClick={togglePlayPause}
-          className="p-1.5 bg-muted hover:bg-muted/80 rounded-full transition-colors flex-shrink-0"
-          aria-label={isPlaying ? "Pause" : "Play"}
-        >
-          {isPlaying ? (
-            <Pause className="h-4 w-4 text-primary" />
-          ) : (
-            <Play className="h-4 w-4 text-primary" />
-          )}
-        </button>
-        
-        {/* Slider */}
-        <Slider
-          min={actualMinYear}
-          max={actualMaxYear}
-          step={step}
-          value={[currentYear]}
-          onValueChange={handleSliderChange}
-          onValueCommit={() => handleDragEnd()}
-          onPointerDown={handleDragStart}
-          className="transition-all flex-grow"
-        />
-      </div>
+      {/* Play/Pause Button */}
+      <button 
+        onClick={togglePlayPause}
+        className="absolute -top-8 right-0 p-1.5 bg-muted hover:bg-muted/80 rounded-full transition-colors"
+        aria-label={isPlaying ? "Pause" : "Play"}
+      >
+        {isPlaying ? (
+          <Pause className="h-4 w-4 text-primary" />
+        ) : (
+          <Play className="h-4 w-4 text-primary" />
+        )}
+      </button>
+      
+      <Slider
+        min={actualMinYear}
+        max={actualMaxYear}
+        step={step}
+        value={[currentYear]}
+        onValueChange={handleSliderChange}
+        onValueCommit={() => handleDragEnd()}
+        onPointerDown={handleDragStart}
+        className="transition-all"
+      />
       
       {showLabels && (
         <div className="flex justify-between mt-2">
