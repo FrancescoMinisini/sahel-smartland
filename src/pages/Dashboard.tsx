@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -39,6 +38,7 @@ import {
   Area,
   AreaChart
 } from 'recharts';
+import ChartCarousel from '@/components/ChartCarousel';
 
 const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -394,62 +394,13 @@ const Dashboard = () => {
                         {/* Land Cover Distribution Chart */}
                         <div className="bg-white dark:bg-muted rounded-lg border border-border/40 p-6">
                           <h3 className="text-lg font-medium mb-4">Land Cover Distribution ({selectedYear})</h3>
-                          <div className="h-[400px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart
-                                data={chartData}
-                                margin={{
-                                  top: 20,
-                                  right: 30,
-                                  left: 20,
-                                  bottom: 60,
-                                }}
-                              >
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis 
-                                  dataKey="name" 
-                                  angle={-45} 
-                                  textAnchor="end" 
-                                  height={60} 
-                                />
-                                <YAxis 
-                                  label={{ 
-                                    value: 'Area (thousand pixels)', 
-                                    angle: -90, 
-                                    position: 'insideLeft',
-                                    style: { textAnchor: 'middle' }
-                                  }} 
-                                />
-                                <Tooltip 
-                                  formatter={(value, name, props) => {
-                                    if (name === "Area (thousand pixels)") {
-                                      const change = props.payload.change;
-                                      return [
-                                        `${value} thousand pixels ${change !== 0 ? `(${change > 0 ? '+' : ''}${change}%)` : ''}`, 
-                                        name
-                                      ];
-                                    }
-                                    return [value, name];
-                                  }}
-                                />
-                                <Legend verticalAlign="top" height={36} />
-                                <Bar 
-                                  dataKey="value" 
-                                  name="Area (thousand pixels)" 
-                                  fill="#8884d8"
-                                >
-                                  {chartData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} />
-                                  ))}
-                                </Bar>
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
+                          <ChartCarousel data={chartData} />
                           <div className="mt-4 text-sm text-muted-foreground">
                             <div className="flex items-start gap-2 mb-2">
                               <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
                               <p>
-                                The chart displays the distribution of land cover types measured in thousands of pixels. Each pixel represents approximately 500m², with colors matching the map visualization.
+                                The charts display the distribution of land cover types measured in thousands of pixels. 
+                                Use the arrows to switch between bar and pie chart views.
                               </p>
                             </div>
                           </div>
@@ -726,208 +677,3 @@ const Dashboard = () => {
                           </svg>
                         </div>
                         <span className="ml-3 text-sm">Overall increase in gross primary production by 8.2% since 2010</span>
-                      </li>
-                      <li className="flex items-start">
-                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-sahel-green"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        </div>
-                        <span className="ml-3 text-sm">Hotspots of declining productivity in regions with excessive agricultural expansion</span>
-                      </li>
-                      <li className="flex items-start">
-                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-sahel-green"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        </div>
-                        <span className="ml-3 text-sm">Positive correlation between restoration efforts and increased vegetation productivity</span>
-                      </li>
-                    </ul>
-                    <Link 
-                      to="/reports" 
-                      className="text-sm text-sahel-blue flex items-center hover:underline"
-                    >
-                      View detailed vegetation report
-                      <ArrowRight size={14} className="ml-1" />
-                    </Link>
-                  </div>
-                )}
-                
-                {activeTab === 'precipitation' && (
-                  <div>
-                    <p className="mb-4">Analysis of precipitation data shows:</p>
-                    <ul className="space-y-2 mb-4">
-                      <li className="flex items-start">
-                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-sahel-green"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        </div>
-                        <span className="ml-3 text-sm">Increasing variability in annual rainfall patterns across the Sahel</span>
-                      </li>
-                      <li className="flex items-start">
-                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-sahel-green"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        </div>
-                        <span className="ml-3 text-sm">Overall decrease in rainfall by 3.5% in northern regions since 2010</span>
-                      </li>
-                      <li className="flex items-start">
-                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-sahel-green"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        </div>
-                        <span className="ml-3 text-sm">Increased frequency of extreme rainfall events in southern Sahel regions</span>
-                      </li>
-                    </ul>
-                    <Link 
-                      to="/reports" 
-                      className="text-sm text-sahel-blue flex items-center hover:underline"
-                    >
-                      View detailed climate report
-                      <ArrowRight size={14} className="ml-1" />
-                    </Link>
-                  </div>
-                )}
-                
-                {activeTab === 'population' && (
-                  <div>
-                    <p className="mb-4">Analysis of population data indicates:</p>
-                    <ul className="space-y-2 mb-4">
-                      <li className="flex items-start">
-                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-sahel-green"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        </div>
-                        <span className="ml-3 text-sm">Rapid urban population growth at 4.3% annually, exceeding national averages</span>
-                      </li>
-                      <li className="flex items-start">
-                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-sahel-green"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        </div>
-                        <span className="ml-3 text-sm">Migration from rural to urban areas correlating with land degradation hotspots</span>
-                      </li>
-                      <li className="flex items-start">
-                        <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-sahel-green"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        </div>
-                        <span className="ml-3 text-sm">Population pressure on natural resources highest in peri-urban regions</span>
-                      </li>
-                    </ul>
-                    <Link 
-                      to="/reports" 
-                      className="text-sm text-sahel-blue flex items-center hover:underline"
-                    >
-                      View detailed population report
-                      <ArrowRight size={14} className="ml-1" />
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-      
-      <Footer />
-    </div>
-  );
-};
-
-export default Dashboard;
