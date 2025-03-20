@@ -1,606 +1,529 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Card } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
+import React, { useState, useEffect } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Info, CalendarDays, TrendingUp, BarChart3, Cloud, MapPin, User } from 'lucide-react';
 import YearSlider from '@/components/YearSlider';
 import MapVisualization from '@/components/MapVisualization';
-import Navbar from '@/components/Navbar';
-import { Info, Calendar, Map, BarChartHorizontal, TrendingUp, TrendingDown, HelpCircle, Droplets, Leaf } from 'lucide-react';
-import { landCoverClasses, landCoverColors } from '@/lib/geospatialUtils';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer,
-  Cell,
-  Line,
-  LineChart,
+import { Separator } from '@/components/ui/separator';
+import {
+  AreaChart,
   Area,
-  AreaChart
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  TooltipProps
 } from 'recharts';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent
+} from '@/components/ui/chart';
+import { getPrecipitationTimeSeriesData, getLandCoverTimeSeriesData, getVegetationTimeSeriesData, getAvailableYears } from '@/lib/geospatialUtils';
+import PopulationInsightsCharts from '@/components/PopulationInsightsCharts';
 
 const TemporalAnalysis = () => {
-  const [selectedYear, setSelectedYear] = useState(2010);
-  const [activeTab, setActiveTab] = useState("map");
-  const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
-  const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
-  const [timeSeriesData, setTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
-  const [selectedLayer, setSelectedLayer] = useState<'landCover' | 'precipitation' | 'vegetation'>('landCover');
+  const [year, setYear] = useState(2020);
+  const [activeDataType, setActiveDataType] = useState<'landCover' | 'precipitation' | 'vegetation' | 'population'>('landCover');
+  const [stats, setStats] = useState<Record<string, number>>({});
+  const [precipitationData, setPrecipitationData] = useState<any[]>([]);
+  const [landCoverData, setLandCoverData] = useState<any[]>([]);
+  const [vegetationData, setVegetationData] = useState<any[]>([]);
   
-  // Page transition animation
-  const pageVariants = {
-    initial: { opacity: 0, y: 20 },
-    in: { opacity: 1, y: 0 },
-    out: { opacity: 0, y: -20 },
-  };
-
-  const handleYearChange = (year: number) => {
-    // Store the previous year's stats before updating to the new year
-    setPreviousYearStats({...landCoverStats});
-    setSelectedYear(year);
-  };
-
-  const handleStatsChange = (stats: Record<string, number>) => {
-    setLandCoverStats(stats);
-    
-    // Update time series data for historical tracking
-    setTimeSeriesData(prevData => {
-      // Check if we already have data for this year
-      const existingIndex = prevData.findIndex(item => item.year === selectedYear);
+  // Load time series data
+  useEffect(() => {
+    const loadData = async () => {
+      // Load precipitation data
+      const precipData = getPrecipitationTimeSeriesData();
+      setPrecipitationData(precipData);
       
-      // Create new data point with converted values (thousand pixels)
-      const newDataPoint = { year: selectedYear };
+      // Load land cover data
+      const lcData = await getLandCoverTimeSeriesData();
+      setLandCoverData(lcData);
       
-      // Add each land cover class as a separate data point
-      Object.entries(stats)
-        .filter(([key]) => key !== '0') // Filter out "No Data" class
-        .forEach(([key, value]) => {
-          const className = landCoverClasses[Number(key) as keyof typeof landCoverClasses] || `Class ${key}`;
-          newDataPoint[className] = Math.round(value / 1000); // Convert to 1000s of pixels
-        });
-      
-      if (existingIndex >= 0) {
-        // Replace existing data for this year
-        const newData = [...prevData];
-        newData[existingIndex] = newDataPoint;
-        return newData;
-      } else {
-        // Add new data point for this year
-        return [...prevData, newDataPoint].sort((a, b) => a.year - b.year);
-      }
-    });
-  };
-
-  // Transform the statistics into chart-compatible data
-  const chartData = Object.entries(landCoverStats)
-    .filter(([key]) => key !== '0') // Filter out "No Data" class
-    .map(([key, value]) => {
-      const landCoverKey = Number(key);
-      const previousValue = previousYearStats[key] || value;
-      const changeValue = value - previousValue;
-      
-      return {
-        name: landCoverClasses[landCoverKey as keyof typeof landCoverClasses] || `Class ${key}`,
-        value: Math.round(value / 1000), // Convert to 1000s of pixels (approximate km²)
-        color: landCoverColors[landCoverKey as keyof typeof landCoverColors] || '#cccccc',
-        change: Math.round((changeValue / (previousValue || 1)) * 100), // Percent change
-        rawChange: changeValue
-      };
-    })
-    .sort((a, b) => b.value - a.value); // Sort by descending value
-    
-  // Calculate analysis insights based on land cover stats
-  const getAnalysisInsights = () => {
-    if (Object.keys(landCoverStats).length === 0) {
-      return {
-        majorChanges: [],
-        environmentalImpact: "",
-        recommendedActions: []
-      };
-    }
-    
-    // Find significant changes (over 5% or 1000 pixels)
-    const significantChanges = chartData
-      .filter(item => Math.abs(item.rawChange) > 1000 || Math.abs(item.change) > 5)
-      .sort((a, b) => Math.abs(b.rawChange) - Math.abs(a.rawChange))
-      .slice(0, 3); // Get top 3 changes
-      
-    // Determine overall environmental impact
-    let deforestationLevel = 0;
-    let urbanizationLevel = 0;
-    let desertificationLevel = 0;
-    
-    // Check for deforestation (decrease in forests, class 7)
-    const forestsChange = chartData.find(item => item.name === "Forests")?.change || 0;
-    if (forestsChange < -5) deforestationLevel = 2; // High deforestation
-    else if (forestsChange < 0) deforestationLevel = 1; // Moderate deforestation
-    
-    // Check for urbanization (increase in urban areas, class 13)
-    const urbanChange = chartData.find(item => item.name === "Urban")?.change || 0;
-    if (urbanChange > 10) urbanizationLevel = 2; // High urbanization
-    else if (urbanChange > 0) urbanizationLevel = 1; // Moderate urbanization
-    
-    // Check for desertification (increase in barren land, class 16)
-    const barrenChange = chartData.find(item => item.name === "Barren")?.change || 0;
-    if (barrenChange > 10) desertificationLevel = 2; // High desertification
-    else if (barrenChange > 0) desertificationLevel = 1; // Moderate desertification
-    
-    // Generate impact text
-    let environmentalImpact = "";
-    if (deforestationLevel > 0 && urbanizationLevel > 0 && desertificationLevel > 0) {
-      environmentalImpact = "Critical environmental degradation detected with significant deforestation, urbanization, and desertification.";
-    } else if (deforestationLevel > 0 && (urbanizationLevel > 0 || desertificationLevel > 0)) {
-      environmentalImpact = "Moderate to high environmental stress with observable deforestation and land use changes.";
-    } else if (deforestationLevel > 0 || urbanizationLevel > 0 || desertificationLevel > 0) {
-      environmentalImpact = "Early indications of environmental changes that require monitoring.";
-    } else if (forestsChange > 5) {
-      environmentalImpact = "Positive environmental trends with increasing forest coverage.";
-    } else {
-      environmentalImpact = "Stable environmental conditions with minimal land cover changes.";
-    }
-    
-    // Generate recommended actions
-    const recommendedActions = [];
-    
-    if (deforestationLevel > 0) {
-      recommendedActions.push(deforestationLevel > 1 
-        ? "Implement immediate reforestation initiatives in affected areas"
-        : "Monitor forest degradation and plan targeted conservation efforts");
-    }
-    
-    if (desertificationLevel > 0) {
-      recommendedActions.push(desertificationLevel > 1
-        ? "Deploy advanced soil conservation techniques to combat severe desertification"
-        : "Introduce sustainable land management practices to prevent further soil degradation");
-    }
-    
-    if (urbanizationLevel > 0) {
-      recommendedActions.push(urbanizationLevel > 1
-        ? "Develop comprehensive urban planning strategies to minimize environmental impact"
-        : "Encourage green infrastructure in developing urban areas");
-    }
-    
-    // Always add a general recommendation
-    recommendedActions.push("Continue monitoring land cover changes for early detection of environmental issues");
-    
-    return {
-      majorChanges: significantChanges,
-      environmentalImpact,
-      recommendedActions: recommendedActions.slice(0, 3) // Limit to top 3 recommendations
+      // Load vegetation data
+      const vegData = getVegetationTimeSeriesData();
+      setVegetationData(vegData);
     };
+    
+    loadData();
+  }, []);
+  
+  const handleYearChange = (newYear: number) => {
+    setYear(newYear);
   };
   
-  const insights = getAnalysisInsights();
-
-  // Generate trend analysis text based on time series data
-  const getTrendAnalysis = () => {
-    if (timeSeriesData.length < 2) {
-      return "Insufficient data to analyze trends. Please select multiple years to build trend data.";
-    }
-    
-    const forestData = timeSeriesData
-      .filter(d => d.Forests !== undefined)
-      .map(d => ({ year: d.year, value: d.Forests }));
-      
-    const barrenData = timeSeriesData
-      .filter(d => d.Barren !== undefined)
-      .map(d => ({ year: d.year, value: d.Barren }));
-    
-    const urbanData = timeSeriesData
-      .filter(d => d.Urban !== undefined)
-      .map(d => ({ year: d.year, value: d.Urban }));
-    
-    // Simple linear trend analysis
-    let forestTrend = "stable";
-    let barrenTrend = "stable";
-    let urbanTrend = "stable";
-    
-    if (forestData.length >= 2) {
-      const firstForest = forestData[0].value;
-      const lastForest = forestData[forestData.length - 1].value;
-      if (lastForest > firstForest * 1.05) forestTrend = "increasing";
-      else if (lastForest < firstForest * 0.95) forestTrend = "decreasing";
-    }
-    
-    if (barrenData.length >= 2) {
-      const firstBarren = barrenData[0].value;
-      const lastBarren = barrenData[barrenData.length - 1].value;
-      if (lastBarren > firstBarren * 1.05) barrenTrend = "increasing";
-      else if (lastBarren < firstBarren * 0.95) barrenTrend = "decreasing";
-    }
-    
-    if (urbanData.length >= 2) {
-      const firstUrban = urbanData[0].value;
-      const lastUrban = urbanData[urbanData.length - 1].value;
-      if (lastUrban > firstUrban * 1.05) urbanTrend = "increasing";
-      else if (lastUrban < firstUrban * 0.95) urbanTrend = "decreasing";
-    }
-    
-    let analysisText = `Based on the observed data from ${timeSeriesData[0].year} to ${timeSeriesData[timeSeriesData.length - 1].year}:\n\n`;
-    
-    analysisText += `• Forest coverage is ${forestTrend === "stable" ? "relatively stable" : forestTrend}`;
-    analysisText += forestTrend === "decreasing" ? ", indicating potential deforestation concerns.\n" : 
-                    forestTrend === "increasing" ? ", suggesting successful conservation efforts.\n" : ".\n";
-    
-    analysisText += `• Barren land is ${barrenTrend === "stable" ? "relatively stable" : barrenTrend}`;
-    analysisText += barrenTrend === "increasing" ? ", which may indicate desertification processes.\n" : 
-                    barrenTrend === "decreasing" ? ", suggesting land rehabilitation success.\n" : ".\n";
-    
-    analysisText += `• Urban areas are ${urbanTrend === "stable" ? "relatively stable" : urbanTrend}`;
-    analysisText += urbanTrend === "increasing" ? ", indicating expansion of human settlements and infrastructure.\n" : 
-                    urbanTrend === "decreasing" ? ", which is unusual and may warrant verification.\n" : ".\n";
-    
-    return analysisText;
-  };
-
-  // Get layer description based on selected layer
-  const getLayerDescription = () => {
-    switch (selectedLayer) {
-      case 'landCover':
-        return "Land cover classification showing different types of land use in the Sahel region";
+  const handleTabChange = (value: string) => {
+    switch (value) {
+      case 'land-cover':
+        setActiveDataType('landCover');
+        break;
       case 'precipitation':
-        return "Annual precipitation patterns measured in millimeters (mm)";
+        setActiveDataType('precipitation');
+        break;
       case 'vegetation':
-        return "Vegetation productivity (GPP) measured in gC/m²/year";
+        setActiveDataType('vegetation');
+        break;
+      case 'population':
+        setActiveDataType('population');
+        break;
       default:
-        return "";
+        setActiveDataType('landCover');
     }
   };
-
+  
+  const handleStatsChange = (newStats: Record<string, number>) => {
+    setStats(newStats);
+  };
+  
+  // Format statistics for display based on data type
+  const getFormattedStats = () => {
+    if (activeDataType === 'landCover') {
+      return (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 text-xs">
+          {Object.entries(stats)
+            .filter(([key]) => key !== '0' && key !== '15') // Filter out 'No Data' and 'Snow and Ice'
+            .sort(([, a], [, b]) => b - a) // Sort by value (highest first)
+            .map(([key, value]) => {
+              const landCoverClass = {
+                '7': 'Forests',
+                '8': 'Shrublands',
+                '9': 'Savannas',
+                '10': 'Grasslands',
+                '11': 'Wetlands',
+                '12': 'Croplands',
+                '13': 'Urban',
+                '14': 'Cropland/Natural Mosaic',
+                '16': 'Barren',
+              }[key] || key;
+              
+              return (
+                <Card key={key} className={`overflow-hidden ${parseInt(key) === 16 ? 'col-span-2' : ''}`}>
+                  <CardContent className="p-2">
+                    <div className="font-medium mb-1 truncate">{landCoverClass}</div>
+                    <div className="text-xs text-muted-foreground">{value.toLocaleString()} pixels</div>
+                    <div className="mt-1.5 h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          key === '7' ? 'bg-green-600' : 
+                          key === '8' ? 'bg-green-400' :
+                          key === '9' ? 'bg-yellow-400' :
+                          key === '10' ? 'bg-yellow-300' :
+                          key === '11' ? 'bg-teal-400' :
+                          key === '12' ? 'bg-orange-500' :
+                          key === '13' ? 'bg-red-600' :
+                          key === '14' ? 'bg-orange-300' :
+                          key === '16' ? 'bg-gray-400' : 'bg-blue-500'
+                        }`}
+                        style={{ width: `${Math.min(100, (value / 200000) * 100)}%` }}
+                      ></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+        </div>
+      );
+    } else if (activeDataType === 'precipitation') {
+      return (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">{stats.average?.toFixed(1) || 0} <span className="text-xs font-normal">mm</span></div>
+              <p className="text-xs text-muted-foreground">Average Precipitation</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">{stats.min?.toFixed(1) || 0} <span className="text-xs font-normal">mm</span></div>
+              <p className="text-xs text-muted-foreground">Minimum Value</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">{stats.max?.toFixed(1) || 0} <span className="text-xs font-normal">mm</span></div>
+              <p className="text-xs text-muted-foreground">Maximum Value</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">{((stats.total || 0) / 1000).toFixed(1)} <span className="text-xs font-normal">km³</span></div>
+              <p className="text-xs text-muted-foreground">Total Water Volume (est.)</p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    } else if (activeDataType === 'vegetation') {
+      return (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">{stats.average?.toFixed(1) || 0}</div>
+              <p className="text-xs text-muted-foreground">Average GPP (gC/m²/year)</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">{stats.min?.toFixed(1) || 0}</div>
+              <p className="text-xs text-muted-foreground">Minimum GPP</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">{stats.max?.toFixed(1) || 0}</div>
+              <p className="text-xs text-muted-foreground">Maximum GPP</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">{((stats.total || 0) / 1000000).toFixed(1)} <span className="text-xs font-normal">Mt</span></div>
+              <p className="text-xs text-muted-foreground">Total Carbon Sequestration</p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    } else if (activeDataType === 'population') {
+      return (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">{(stats.totalPopulation || 0).toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">Total Population</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">{(stats.averageDensity || 0).toFixed(1)}</div>
+              <p className="text-xs text-muted-foreground">Avg Density (people/km²)</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">{((stats.urbanPopulation || 0) / (stats.totalPopulation || 1) * 100).toFixed(1)}%</div>
+              <p className="text-xs text-muted-foreground">Urban Population</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">{(stats.populationGrowthRate || 0).toFixed(1)}%</div>
+              <p className="text-xs text-muted-foreground">Annual Growth Rate</p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+    
+    return null;
+  };
+  
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+    <div className="container py-6 max-w-screen-2xl">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Temporal Analysis</h1>
+        <p className="text-muted-foreground">
+          Analyze changes and trends across time periods using satellite imagery and derived environmental indices.
+        </p>
+      </div>
       
-      <motion.main
-        initial="initial"
-        animate="in"
-        exit="out"
-        variants={pageVariants}
-        transition={{ duration: 0.4 }}
-        className="container pt-24 pb-16"
-      >
-        <div className="flex flex-col space-y-8">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2">Temporal Analysis</h1>
-            <p className="text-muted-foreground">
-              Analyze environmental changes over time in the Sahel region.
-            </p>
+      <div className="mt-6">
+        <Tabs defaultValue="land-cover" onValueChange={handleTabChange}>
+          <div className="flex justify-between items-center mb-4">
+            <TabsList className="grid sm:w-auto grid-cols-2 sm:grid-cols-4 sm:inline-grid">
+              <TabsTrigger value="land-cover" className="flex items-center gap-1.5">
+                <MapPin size={14} />
+                <span className="hidden sm:inline">Land Cover</span>
+                <span className="sm:hidden">Land</span>
+              </TabsTrigger>
+              <TabsTrigger value="precipitation" className="flex items-center gap-1.5">
+                <Cloud size={14} />
+                <span className="hidden sm:inline">Precipitation</span>
+                <span className="sm:hidden">Rain</span>
+              </TabsTrigger>
+              <TabsTrigger value="vegetation" className="flex items-center gap-1.5">
+                <TrendingUp size={14} />
+                <span>Vegetation</span>
+              </TabsTrigger>
+              <TabsTrigger value="population" className="flex items-center gap-1.5">
+                <User size={14} />
+                <span>Population</span>
+              </TabsTrigger>
+            </TabsList>
+            
+            <div className="hidden md:flex items-center gap-2">
+              <CalendarDays size={16} className="text-muted-foreground" />
+              <YearSlider 
+                initialValue={year}
+                onChange={handleYearChange}
+                min={2010}
+                max={2023}
+                step={1}
+              />
+            </div>
           </div>
           
-          {/* Layer Selection and Year Slider */}
-          <Card className="p-6">
-            <div className="flex flex-wrap justify-between items-start gap-4">
-              <div className="flex-1 min-w-[250px]">
-                <div className="flex items-center gap-2 mb-4">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  <h2 className="text-xl font-semibold">Time Period</h2>
+          <div className="md:hidden mb-4">
+            <YearSlider 
+              initialValue={year}
+              onChange={handleYearChange}
+              min={2010}
+              max={2023}
+              step={1}
+            />
+          </div>
+          
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2 aspect-[4/3] md:aspect-[16/9] lg:aspect-[2/1] rounded-lg overflow-hidden">
+                  <MapVisualization 
+                    year={year} 
+                    dataType={activeDataType}
+                    onStatsChange={handleStatsChange}
+                    className="h-full w-full border"
+                  />
                 </div>
-                <p className="text-muted-foreground mb-6">
-                  Adjust the slider to see changes from 2010 to 2023
-                </p>
-                <YearSlider 
-                  minYear={2010} 
-                  maxYear={2023} 
-                  initialValue={selectedYear}
-                  onChange={handleYearChange}
-                  autoPlay={true}
-                  autoPlayInterval={1200}
-                  className="max-w-4xl"
-                />
-              </div>
-              
-              <div className="w-full sm:w-auto">
-                <div className="flex items-center gap-2 mb-4">
-                  <Map className="h-5 w-5 text-primary" />
-                  <h2 className="text-xl font-semibold">Layer Selection</h2>
+                
+                <div className="flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">
+                      {activeDataType === 'landCover' && 'Land Cover Distribution'}
+                      {activeDataType === 'precipitation' && 'Precipitation Analysis'}
+                      {activeDataType === 'vegetation' && 'Vegetation Productivity'}
+                      {activeDataType === 'population' && 'Population Statistics'}
+                      {' '}
+                      for {year}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {activeDataType === 'landCover' && 'Distribution of different land cover classes in the region based on MODIS satellite data.'}
+                      {activeDataType === 'precipitation' && 'Analysis of annual precipitation patterns based on satellite-derived rainfall estimates.'}
+                      {activeDataType === 'vegetation' && 'Measurement of vegetation productivity using Gross Primary Production (GPP) from MODIS.'}
+                      {activeDataType === 'population' && 'Population density and demographics based on gridded population data.'}
+                    </p>
+                    
+                    {getFormattedStats()}
+                  </div>
+                  
+                  <div className="flex items-center justify-start gap-2 text-xs text-muted-foreground mt-3">
+                    <Info size={14} /> 
+                    {activeDataType === 'landCover' && 'Data source: MODIS Land Cover Type yearly product (MCD12Q1)'}
+                    {activeDataType === 'precipitation' && 'Data source: CHIRPS rainfall estimates, 5km resolution'}
+                    {activeDataType === 'vegetation' && 'Data source: MODIS GPP 8-day composite (MOD17A2H)'}
+                    {activeDataType === 'population' && 'Data source: WorldPop gridded population estimates'}
+                  </div>
                 </div>
-                <p className="text-muted-foreground mb-4">
-                  Choose data type to visualize
-                </p>
-                <Select value={selectedLayer} onValueChange={(value) => setSelectedLayer(value as any)}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Select layer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="landCover" className="flex items-center gap-2">
-                      <span className="flex items-center gap-2">
-                        <Map className="h-4 w-4 text-sahel-green" />
-                        Land Cover
-                      </span>
-                    </SelectItem>
-                    <SelectItem value="precipitation" className="flex items-center gap-2">
-                      <span className="flex items-center gap-2">
-                        <Droplets className="h-4 w-4 text-sahel-blue" />
-                        Precipitation
-                      </span>
-                    </SelectItem>
-                    <SelectItem value="vegetation" className="flex items-center gap-2">
-                      <span className="flex items-center gap-2">
-                        <Leaf className="h-4 w-4 text-sahel-greenLight" />
-                        Vegetation
-                      </span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {getLayerDescription()}
-                </p>
               </div>
-            </div>
+            </CardContent>
           </Card>
           
-          {/* Visualization Tabs */}
-          <div className="grid grid-cols-1 gap-6">
-            <Tabs defaultValue="map" className="w-full" onValueChange={setActiveTab}>
-              <TabsList className="mb-4">
-                <TabsTrigger value="map" className="flex gap-1.5">
-                  <Map className="h-4 w-4" />
-                  Map View
-                </TabsTrigger>
-                <TabsTrigger value="charts" className="flex gap-1.5">
-                  <BarChartHorizontal className="h-4 w-4" />
-                  Data Charts
-                </TabsTrigger>
-                <TabsTrigger value="info" className="flex gap-1.5">
-                  <Info className="h-4 w-4" />
-                  Analysis
-                </TabsTrigger>
-              </TabsList>
-              
-              {/* Map View */}
-              <TabsContent value="map" className="mt-0">
-                <Card className="overflow-hidden">
-                  <div className="h-[500px] w-full">
-                    <MapVisualization 
-                      className="w-full h-full" 
-                      year={selectedYear} 
-                      onStatsChange={handleStatsChange}
-                      dataType={selectedLayer}
-                    />
+          <TabsContent value="land-cover" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Land Cover Change Analysis</CardTitle>
+                <CardDescription>
+                  Historical trends of land cover changes from 2010 to 2023
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[400px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={landCoverData}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="year" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Area type="monotone" dataKey="Forests" stackId="1" stroke="#1a9850" fill="#1a9850" />
+                      <Area type="monotone" dataKey="Shrublands" stackId="1" stroke="#91cf60" fill="#91cf60" />
+                      <Area type="monotone" dataKey="Savannas" stackId="1" stroke="#d9ef8b" fill="#d9ef8b" />
+                      <Area type="monotone" dataKey="Grasslands" stackId="1" stroke="#fee08b" fill="#fee08b" />
+                      <Area type="monotone" dataKey="Croplands" stackId="1" stroke="#fc8d59" fill="#fc8d59" />
+                      <Area type="monotone" dataKey="Barren" stackId="1" stroke="#bdbdbd" fill="#bdbdbd" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Insights:</h4>
+                    <ul className="text-sm space-y-1.5 list-disc list-inside text-muted-foreground">
+                      <li>Forests have declined by approximately 37% since 2010</li>
+                      <li>Grasslands show relatively stable trends with seasonal variations</li>
+                      <li>Cropland area has marginally increased, indicating agricultural expansion</li>
+                      <li>Barren land has expanded, potentially indicating desertification</li>
+                    </ul>
                   </div>
-                </Card>
-              </TabsContent>
-              
-              {/* Charts View */}
-              <TabsContent value="charts" className="mt-0">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Card className="p-6">
-                    <h3 className="text-lg font-medium mb-4">Land Cover Distribution ({selectedYear})</h3>
-                    <div className="h-[400px]">
+                  
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Implications:</h4>
+                    <ul className="text-sm space-y-1.5 list-disc list-inside text-muted-foreground">
+                      <li>Decreased forest coverage may impact biodiversity and ecosystem services</li>
+                      <li>Agricultural expansion shows adaptation to changing climate patterns</li>
+                      <li>Increasing barren land signals potential land degradation concerns</li>
+                      <li>Grassland stability provides resilience to local pastoral communities</li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Additional Land Cover Analysis Content */}
+          </TabsContent>
+          
+          <TabsContent value="precipitation" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Precipitation Trends</CardTitle>
+                <CardDescription>
+                  Annual and seasonal rainfall patterns from 2010 to 2023
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[400px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={precipitationData}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="year" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="Annual" stroke="#4575b4" strokeWidth={2} name="Annual Rainfall" />
+                      <Line type="monotone" dataKey="Wet Season" stroke="#74add1" strokeWidth={2} name="Wet Season" />
+                      <Line type="monotone" dataKey="Dry Season" stroke="#f46d43" strokeWidth={2} name="Dry Season" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Key Trends:</h4>
+                    <ul className="text-sm space-y-1.5 list-disc list-inside text-muted-foreground">
+                      <li>Annual precipitation has declined by approximately 20% since 2010</li>
+                      <li>Wet season rainfall shows a more significant reduction than dry season</li>
+                      <li>Increased variability in year-to-year precipitation since 2015</li>
+                      <li>Potential shift in the timing of rainfall across seasons</li>
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Extreme Events:</h4>
+                    <div className="h-[180px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart
-                          data={chartData}
-                          margin={{
-                            top: 20,
-                            right: 30,
-                            left: 20,
-                            bottom: 60,
-                          }}
+                          data={precipitationData}
+                          margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
                         >
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis 
-                            dataKey="name" 
-                            angle={-45} 
-                            textAnchor="end" 
-                            height={60} 
-                          />
-                          <YAxis 
-                            label={{ 
-                              value: 'Area (thousand pixels)', 
-                              angle: -90, 
-                              position: 'insideLeft',
-                              style: { textAnchor: 'middle' }
-                            }} 
-                          />
-                          <Tooltip 
-                            formatter={(value, name, props) => {
-                              if (name === "Area (thousand pixels)") {
-                                const change = props.payload.change;
-                                return [
-                                  `${value} thousand pixels ${change !== 0 ? `(${change > 0 ? '+' : ''}${change}%)` : ''}`, 
-                                  name
-                                ];
-                              }
-                              return [value, name];
-                            }}
-                          />
-                          <Legend verticalAlign="top" height={36} />
-                          <Bar 
-                            dataKey="value" 
-                            name="Area (thousand pixels)" 
-                            fill="#8884d8"
-                          >
-                            {chartData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Bar>
+                          <XAxis dataKey="year" />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Bar dataKey="Extreme Events" fill="#d73027" name="Extreme Weather Events" />
+                          <Bar dataKey="Water Stress Index" fill="#fee090" name="Water Stress Index" />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="mt-4 text-sm text-muted-foreground">
-                      <div className="flex items-start gap-2 mb-2">
-                        <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                        <p>
-                          The chart displays the distribution of land cover types measured in thousands of pixels. Each pixel represents approximately 500m², with colors matching the map visualization.
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-
-                  {/* Historical Trend Chart */}
-                  <Card className="p-6">
-                    <h3 className="text-lg font-medium mb-4">Land Cover Change Over Time</h3>
-                    <div className="h-[400px]">
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="vegetation" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Vegetation Productivity Trends</CardTitle>
+                <CardDescription>
+                  Analysis of Gross Primary Productivity (GPP) by land cover type
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[400px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={vegetationData}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="year" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="Forest" stroke="#1a9850" strokeWidth={2} />
+                      <Line type="monotone" dataKey="Grassland" stroke="#fee08b" strokeWidth={2} />
+                      <Line type="monotone" dataKey="Cropland" stroke="#fc8d59" strokeWidth={2} />
+                      <Line type="monotone" dataKey="Shrubland" stroke="#d9ef8b" strokeWidth={2} />
+                      <Line type="monotone" dataKey="Total" stroke="#66c2a5" strokeWidth={3} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Productivity Analysis:</h4>
+                    <ul className="text-sm space-y-1.5 list-disc list-inside text-muted-foreground">
+                      <li>Forests show highest productivity with 15-20% decline since 2010</li>
+                      <li>Grassland productivity shows resilience to climate changes</li>
+                      <li>Cropland productivity has increased due to agricultural practices</li>
+                      <li>Overall vegetation productivity has moderate interannual variations</li>
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Annual Change:</h4>
+                    <div className="h-[180px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart
-                          data={timeSeriesData}
-                          margin={{
-                            top: 20,
-                            right: 30,
-                            left: 20,
-                            bottom: 20,
-                          }}
+                        <BarChart
+                          data={vegetationData}
+                          margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
                         >
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis 
-                            dataKey="year" 
-                            label={{ 
-                              value: 'Year', 
-                              position: 'insideBottom',
-                              offset: -10
-                            }}
-                          />
-                          <YAxis 
-                            label={{ 
-                              value: 'Area (thousand pixels)', 
-                              angle: -90, 
-                              position: 'insideLeft',
-                              style: { textAnchor: 'middle' }
-                            }} 
-                          />
+                          <XAxis dataKey="year" />
+                          <YAxis domain={[-4, 4]} />
                           <Tooltip />
                           <Legend />
-                          
-                          {/* Show the key land cover types only to avoid overcrowding */}
-                          <Area type="monotone" dataKey="Forests" stackId="1" stroke="#1a9850" fill="#1a9850" fillOpacity={0.7} />
-                          <Area type="monotone" dataKey="Shrublands" stackId="1" stroke="#91cf60" fill="#91cf60" fillOpacity={0.7} />
-                          <Area type="monotone" dataKey="Grasslands" stackId="1" stroke="#fee08b" fill="#fee08b" fillOpacity={0.7} />
-                          <Area type="monotone" dataKey="Croplands" stackId="1" stroke="#fc8d59" fill="#fc8d59" fillOpacity={0.7} />
-                          <Area type="monotone" dataKey="Urban" stackId="1" stroke="#d73027" fill="#d73027" fillOpacity={0.7} />
-                          <Area type="monotone" dataKey="Barren" stackId="1" stroke="#bababa" fill="#bababa" fillOpacity={0.7} />
-                        </AreaChart>
+                          <Bar 
+                            dataKey="AnnualChange" 
+                            fill={(data) => (data > 0 ? "#4CAF50" : "#F44336")} 
+                            name="Annual Productivity Change (%)" 
+                          />
+                        </BarChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="mt-4 text-sm text-muted-foreground">
-                      <div className="flex items-start gap-2 mb-2">
-                        <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                        <p>
-                          This chart accumulates data as you explore different years. The stacked area chart shows how the proportion of each land cover type changes over time, which can reveal patterns of land conversion, urbanization, or environmental recovery.
-                        </p>
-                      </div>
-                      <div className="mt-3 p-3 bg-muted rounded-md">
-                        <h4 className="font-medium mb-2">Trend Analysis:</h4>
-                        <p className="whitespace-pre-line">
-                          {getTrendAnalysis()}
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              </TabsContent>
-              
-              {/* Analysis View */}
-              <TabsContent value="info" className="mt-0">
-                <Card className="p-6">
-                  <h3 className="text-lg font-medium mb-4">Environmental Analysis ({selectedYear})</h3>
-                  
-                  <div className="space-y-6">
-                    {/* Background Info on Metrics */}
-                    <div className="rounded-lg bg-muted/50 p-4 mb-6">
-                      <h4 className="font-medium mb-3">How Metrics Are Calculated</h4>
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        <p>
-                          <span className="font-medium">Land Cover Classification:</span> Based on MODIS land use data with 500m resolution. Each land cover class is counted in pixels and converted to approximate area.
-                        </p>
-                        <p>
-                          <span className="font-medium">Change Detection:</span> Calculated as percentage change from previous year's values. Significant changes are those exceeding 5% or 1000 pixels.
-                        </p>
-                        <p>
-                          <span className="font-medium">Environmental Impact:</span> Assessed by analyzing trends in key indicators:
-                        </p>
-                        <ul className="list-disc pl-5 space-y-1">
-                          <li>Deforestation: Measured by decrease in forest cover (class 7)</li>
-                          <li>Urbanization: Measured by increase in urban areas (class 13)</li>
-                          <li>Desertification: Measured by increase in barren land (class 16)</li>
-                        </ul>
-                      </div>
-                    </div>
-                    
-                    {/* Major Changes Section */}
-                    <div className="rounded-lg bg-muted p-4">
-                      <h4 className="font-medium mb-3">Key Land Cover Changes</h4>
-                      
-                      {insights.majorChanges.length > 0 ? (
-                        <div className="space-y-3">
-                          {insights.majorChanges.map((change, index) => (
-                            <div key={index} className="flex items-center gap-2">
-                              {change.change > 0 ? (
-                                <TrendingUp className="h-5 w-5 text-green-500" />
-                              ) : (
-                                <TrendingDown className="h-5 w-5 text-red-500" />
-                              )}
-                              <div>
-                                <span className="font-medium" style={{ color: change.color }}>{change.name}: </span>
-                                <span className="text-sm text-muted-foreground">
-                                  {change.change > 0 ? 'Increased by ' : 'Decreased by '}
-                                  <span className={change.change > 0 ? 'text-green-500' : 'text-red-500'}>
-                                    {Math.abs(change.change)}%
-                                  </span>
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          No significant land cover changes detected in the current period.
-                        </p>
-                      )}
-                    </div>
-                    
-                    {/* Environmental Impact Assessment */}
-                    <div className="rounded-lg bg-primary/10 p-4">
-                      <h4 className="font-medium mb-2">Environmental Impact Assessment</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {insights.environmentalImpact}
-                      </p>
-                    </div>
-                    
-                    {/* Recommended Actions */}
-                    <div className="rounded-lg bg-accent/20 p-4">
-                      <h4 className="font-medium mb-2">Recommended Actions</h4>
-                      {insights.recommendedActions.length > 0 ? (
-                        <ul className="space-y-1">
-                          {insights.recommendedActions.map((action, index) => (
-                            <li key={index} className="flex items-start">
-                              <div className="w-5 h-5 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="text-sahel-green"
-                                >
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
-                              </div>
-                              <span className="ml-3 text-sm">{action}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          Continue monitoring current land cover patterns.
-                        </p>
-                      )}
-                    </div>
                   </div>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
-      </motion.main>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="population" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Population Analysis</CardTitle>
+                <CardDescription>
+                  Demographic trends, distribution patterns, and environmental correlations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PopulationInsightsCharts />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };
