@@ -1,9 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import YearSlider from '@/components/YearSlider';
 import MapVisualization from '@/components/MapVisualization';
+import LayerSelector from '@/components/LayerSelector';
 import Navbar from '@/components/Navbar';
 import { Info, Calendar, Map, BarChartHorizontal, TrendingUp, TrendingDown, HelpCircle } from 'lucide-react';
 import { landCoverClasses, landCoverColors } from '@/lib/geospatialUtils';
@@ -29,6 +31,11 @@ const TemporalAnalysis = () => {
   const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
   const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
   const [timeSeriesData, setTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
+  const [selectedLayer, setSelectedLayer] = useState<string>('landCover');
+  const [showRegionBoundaries, setShowRegionBoundaries] = useState(false);
+  const [showDistrictBoundaries, setShowDistrictBoundaries] = useState(false);
+  const [showRoadNetwork, setShowRoadNetwork] = useState(false);
+  const [showRiverNetwork, setShowRiverNetwork] = useState(false);
   
   // Page transition animation
   const pageVariants = {
@@ -72,6 +79,34 @@ const TemporalAnalysis = () => {
         return [...prevData, newDataPoint].sort((a, b) => a.year - b.year);
       }
     });
+  };
+
+  const handleLayerChange = (layer: string) => {
+    setSelectedLayer(layer as 'landCover' | 'precipitation' | 'vegetation' | 'population');
+    
+    // Reset overlay states when changing the base layer
+    if (layer !== selectedLayer) {
+      setShowRegionBoundaries(false);
+      setShowDistrictBoundaries(false);
+      setShowRoadNetwork(false);
+      setShowRiverNetwork(false);
+    }
+  };
+
+  const toggleAdminLayer = (layerType: string) => {
+    if (layerType === 'region') {
+      setShowRegionBoundaries(!showRegionBoundaries);
+    } else if (layerType === 'districts') {
+      setShowDistrictBoundaries(!showDistrictBoundaries);
+    }
+  };
+
+  const toggleNetworkLayer = (layerType: string) => {
+    if (layerType === 'roads') {
+      setShowRoadNetwork(!showRoadNetwork);
+    } else if (layerType === 'rivers') {
+      setShowRiverNetwork(!showRiverNetwork);
+    }
   };
 
   // Transform the statistics into chart-compatible data
@@ -284,6 +319,10 @@ const TemporalAnalysis = () => {
                   <Map className="h-4 w-4" />
                   Map View
                 </TabsTrigger>
+                <TabsTrigger value="layers" className="flex gap-1.5">
+                  <Layers className="h-4 w-4" />
+                  Layer Control
+                </TabsTrigger>
                 <TabsTrigger value="charts" className="flex gap-1.5">
                   <BarChartHorizontal className="h-4 w-4" />
                   Data Charts
@@ -302,8 +341,29 @@ const TemporalAnalysis = () => {
                       className="w-full h-full" 
                       year={selectedYear} 
                       onStatsChange={handleStatsChange}
+                      dataType={selectedLayer as 'landCover' | 'precipitation' | 'vegetation' | 'population'}
+                      showRegionBoundaries={showRegionBoundaries}
+                      showDistrictBoundaries={showDistrictBoundaries}
+                      showRoadNetwork={showRoadNetwork}
+                      showRiverNetwork={showRiverNetwork}
                     />
                   </div>
+                </Card>
+              </TabsContent>
+              
+              {/* Layer Control View - NEW */}
+              <TabsContent value="layers" className="mt-0">
+                <Card className="p-6">
+                  <h3 className="text-lg font-medium mb-4">Layer Control</h3>
+                  <div className="mb-6">
+                    <p className="text-muted-foreground mb-4">
+                      Select the map layers you want to visualize. You can combine a base layer with vector overlays such as administrative boundaries or network data.
+                    </p>
+                  </div>
+                  <LayerSelector 
+                    onLayerChange={handleLayerChange} 
+                    currentLayer={selectedLayer}
+                  />
                 </Card>
               </TabsContent>
               
