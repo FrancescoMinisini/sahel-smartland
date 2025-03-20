@@ -11,9 +11,7 @@ import {
   getAvailableYears,
   calculateLandCoverStats,
   calculatePrecipitationStats,
-  precipitationColorScale,
-  renderVectorLayer,
-  vectorLayerData
+  precipitationColorScale
 } from '@/lib/geospatialUtils';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -23,7 +21,6 @@ interface MapVisualizationProps {
   onStatsChange?: (stats: Record<string, number>) => void;
   expandedView?: boolean;
   dataType?: 'landCover' | 'precipitation' | 'vegetation' | 'population';
-  enabledLayers?: string[];
 }
 
 const MapVisualization = ({ 
@@ -31,8 +28,7 @@ const MapVisualization = ({
   year = 2023, 
   onStatsChange,
   expandedView = false,
-  dataType = 'landCover',
-  enabledLayers = ['landCover']
+  dataType = 'landCover'
 }: MapVisualizationProps) => {
   const { toast } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -143,12 +139,6 @@ const MapVisualization = ({
     return () => window.removeEventListener('resize', handleResize);
   }, [isLoading]);
 
-  // Effect to re-render when enabled layers change
-  useEffect(() => {
-    if (isLoading || !canvasRef.current || !containerRef.current) return;
-    renderCurrentData();
-  }, [enabledLayers]);
-
   const adjustCanvasSize = () => {
     if (!canvasRef.current || !containerRef.current) return;
     
@@ -233,9 +223,6 @@ const MapVisualization = ({
       return;
     }
     
-    // Clear the canvas before drawing
-    ctx.clearRect(0, 0, prevYearData.width, prevYearData.height);
-    
     let renderData;
     let min = 0;
     let max = 500;
@@ -255,68 +242,20 @@ const MapVisualization = ({
       renderData = prevYearData.data;
     }
     
-    // Only render base raster layer if it's enabled
-    if (enabledLayers.includes('landCover')) {
-      // Use the enhanced rendering with appropriate options for each data type
-      renderTIFFToCanvas(
-        ctx, 
-        renderData, 
-        prevYearData.width, 
-        prevYearData.height,
-        {
-          opacity: 1,
-          dataType,
-          min,
-          max,
-          smoothing: dataType === 'precipitation'
-        }
-      );
-    }
-    
-    // Render vector layers on top if enabled
-    if (enabledLayers.includes('region')) {
-      renderVectorLayer(
-        ctx,
-        vectorLayerData.region,
-        'region',
-        prevYearData.width,
-        prevYearData.height,
-        0.8
-      );
-    }
-    
-    if (enabledLayers.includes('district')) {
-      renderVectorLayer(
-        ctx,
-        vectorLayerData.district,
-        'district',
-        prevYearData.width,
-        prevYearData.height,
-        0.8
-      );
-    }
-    
-    if (enabledLayers.includes('road')) {
-      renderVectorLayer(
-        ctx,
-        vectorLayerData.road,
-        'road',
-        prevYearData.width,
-        prevYearData.height,
-        0.8
-      );
-    }
-    
-    if (enabledLayers.includes('stream')) {
-      renderVectorLayer(
-        ctx,
-        vectorLayerData.stream,
-        'stream',
-        prevYearData.width,
-        prevYearData.height,
-        0.8
-      );
-    }
+    // Use the enhanced rendering with appropriate options for each data type
+    renderTIFFToCanvas(
+      ctx, 
+      renderData, 
+      prevYearData.width, 
+      prevYearData.height,
+      {
+        opacity: 1,
+        dataType,
+        min,
+        max,
+        smoothing: dataType === 'precipitation'
+      }
+    );
     
     if (dataType === 'landCover') {
       const stats = calculateLandCoverStats(renderData);
@@ -366,70 +305,19 @@ const MapVisualization = ({
       let min = 0;
       let max = 500;
       
-      // Clear the canvas before drawing
-      ctx.clearRect(0, 0, prevYearData.width, prevYearData.height);
-      
-      // Render base layer
-      if (enabledLayers.includes('landCover')) {
-        renderTIFFToCanvas(
-          ctx, 
-          transitionData, 
-          prevYearData.width, 
-          prevYearData.height,
-          {
-            opacity: 1,
-            dataType,
-            min,
-            max,
-            smoothing: dataType === 'precipitation'
-          }
-        );
-      }
-      
-      // Render vector layers
-      if (enabledLayers.includes('region')) {
-        renderVectorLayer(
-          ctx,
-          vectorLayerData.region,
-          'region',
-          prevYearData.width,
-          prevYearData.height,
-          0.8
-        );
-      }
-      
-      if (enabledLayers.includes('district')) {
-        renderVectorLayer(
-          ctx,
-          vectorLayerData.district,
-          'district',
-          prevYearData.width,
-          prevYearData.height,
-          0.8
-        );
-      }
-      
-      if (enabledLayers.includes('road')) {
-        renderVectorLayer(
-          ctx,
-          vectorLayerData.road,
-          'road',
-          prevYearData.width,
-          prevYearData.height,
-          0.8
-        );
-      }
-      
-      if (enabledLayers.includes('stream')) {
-        renderVectorLayer(
-          ctx,
-          vectorLayerData.stream,
-          'stream',
-          prevYearData.width,
-          prevYearData.height,
-          0.8
-        );
-      }
+      renderTIFFToCanvas(
+        ctx, 
+        transitionData, 
+        prevYearData.width, 
+        prevYearData.height,
+        {
+          opacity: 1,
+          dataType,
+          min,
+          max,
+          smoothing: dataType === 'precipitation'
+        }
+      );
       
       if (animationProgress < 1) {
         const newAnimationId = requestAnimationFrame(animateTransition);
@@ -477,7 +365,7 @@ const MapVisualization = ({
   };
 
   const renderLegend = () => {
-    if (dataType === 'landCover' && enabledLayers.includes('landCover')) {
+    if (dataType === 'landCover') {
       return (
         <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 max-w-xs max-h-36 overflow-auto text-xs shadow-md">
           <div className="grid grid-cols-2 gap-1">
@@ -495,7 +383,7 @@ const MapVisualization = ({
           </div>
         </div>
       );
-    } else if (dataType === 'precipitation' && enabledLayers.includes('landCover')) {
+    } else if (dataType === 'precipitation') {
       return (
         <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 shadow-md">
           <div className="flex flex-col">

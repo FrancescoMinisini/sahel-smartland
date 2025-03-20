@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from "@/components/ui/card";
@@ -6,7 +5,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import YearSlider from '@/components/YearSlider';
 import MapVisualization from '@/components/MapVisualization';
 import Navbar from '@/components/Navbar';
-import LayerSelector from '@/components/LayerSelector';
 import { Info, Calendar, Map, BarChartHorizontal, TrendingUp, TrendingDown, HelpCircle } from 'lucide-react';
 import { landCoverClasses, landCoverColors } from '@/lib/geospatialUtils';
 import { 
@@ -31,7 +29,6 @@ const TemporalAnalysis = () => {
   const [landCoverStats, setLandCoverStats] = useState<Record<string, number>>({});
   const [previousYearStats, setPreviousYearStats] = useState<Record<string, number>>({});
   const [timeSeriesData, setTimeSeriesData] = useState<Array<{year: number, [key: string]: number}>>([]);
-  const [enabledLayers, setEnabledLayers] = useState<string[]>(['landCover']);
   
   // Page transition animation
   const pageVariants = {
@@ -75,10 +72,6 @@ const TemporalAnalysis = () => {
         return [...prevData, newDataPoint].sort((a, b) => a.year - b.year);
       }
     });
-  };
-
-  const handleLayersChange = (layers: string[]) => {
-    setEnabledLayers(layers);
   };
 
   // Transform the statistics into chart-compatible data
@@ -303,23 +296,15 @@ const TemporalAnalysis = () => {
               
               {/* Map View */}
               <TabsContent value="map" className="mt-0">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="md:col-span-3">
-                    <Card className="overflow-hidden">
-                      <div className="h-[500px] w-full">
-                        <MapVisualization 
-                          className="w-full h-full" 
-                          year={selectedYear} 
-                          onStatsChange={handleStatsChange}
-                          enabledLayers={enabledLayers}
-                        />
-                      </div>
-                    </Card>
+                <Card className="overflow-hidden">
+                  <div className="h-[500px] w-full">
+                    <MapVisualization 
+                      className="w-full h-full" 
+                      year={selectedYear} 
+                      onStatsChange={handleStatsChange}
+                    />
                   </div>
-                  <div className="md:col-span-1">
-                    <LayerSelector onLayersChange={handleLayersChange} />
-                  </div>
-                </div>
+                </Card>
               </TabsContent>
               
               {/* Charts View */}
