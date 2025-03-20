@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
 import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2 } from 'lucide-react';
@@ -72,10 +73,26 @@ const MapVisualization = ({
       // Get the container dimensions
       const { width, height } = containerRef.current.getBoundingClientRect();
       
-      // Apply the dimensions while maintaining aspect ratio
-      if (canvasRef.current) {
-        canvasRef.current.style.width = '100%';
-        canvasRef.current.style.height = '100%';
+      // Set actual canvas dimensions to match container
+      canvasRef.current.width = width;
+      canvasRef.current.height = height;
+      
+      // Also update style dimensions
+      canvasRef.current.style.width = '100%';
+      canvasRef.current.style.height = '100%';
+      
+      // Re-render if we have data
+      const prevYearData = mapData[prevYear];
+      if (prevYearData && prevYearData.data.length > 0) {
+        const ctx = canvasRef.current.getContext('2d');
+        if (ctx) {
+          renderTIFFToCanvas(
+            ctx,
+            prevYearData.data,
+            prevYearData.width,
+            prevYearData.height
+          );
+        }
       }
     };
     
@@ -92,7 +109,7 @@ const MapVisualization = ({
       }
       resizeObserver.disconnect();
     };
-  }, []);
+  }, [mapData, prevYear]);
 
   // Preload data for all years when the component mounts
   useEffect(() => {
@@ -144,13 +161,12 @@ const MapVisualization = ({
     const prevYearData = mapData[prevYear];
     const nextYearData = mapData[nextYear];
     
-    if (!prevYearData || prevYearData.data.length === 0) return;
-    
-    // Set canvas dimensions if not already set
-    if (canvas.width !== prevYearData.width || canvas.height !== prevYearData.height) {
-      canvas.width = prevYearData.width;
-      canvas.height = prevYearData.height;
+    if (!prevYearData || prevYearData.data.length === 0) {
+      console.log("No data available for year:", prevYear);
+      return;
     }
+    
+    console.log(`Rendering map for year ${year} (using data from ${prevYear})`);
     
     // Handle smooth transition when year changes
     if (previousYearRef.current !== null && previousYearRef.current !== year) {
