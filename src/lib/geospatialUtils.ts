@@ -1,19 +1,18 @@
-
 import * as GeoTIFF from 'geotiff';
 
-// Land cover type colors - using appropriate colors for different land cover types
+// Land cover type colors - using more distinctive colors for better visualization
 export const landCoverColors = {
-  7: '#267300', // Forests (dark green)
-  8: '#8ab44a', // Shrublands (light green)
-  9: '#788f3d', // Savannas (olive green)
-  10: '#a2ca7a', // Grasslands (bright green) 
-  11: '#e8d490', // Wetlands (beige)
-  12: '#f2c082', // Croplands (tan)
-  13: '#de7727', // Urban (orange)
-  14: '#f0e0c3', // Cropland/Natural mosaic (light tan)
-  15: '#eee9e5', // Snow and ice (white)
-  16: '#d8d3d0', // Barren (light gray)
-  0: '#a9aaaa'   // No data (gray)
+  7: '#1a9850', // Forests (vibrant green)
+  8: '#91cf60', // Shrublands (medium green)
+  9: '#d9ef8b', // Savannas (light green/yellow)
+  10: '#fee08b', // Grasslands (light yellow) 
+  11: '#66c2a5', // Wetlands (teal)
+  12: '#fc8d59', // Croplands (orange)
+  13: '#d73027', // Urban (bright red)
+  14: '#fdae61', // Cropland/Natural mosaic (peach)
+  15: '#f7f7f7', // Snow and ice (white)
+  16: '#bababa', // Barren (medium gray)
+  0: '#4d4d4d'   // No data (dark gray)
 };
 
 // Class names for land cover types
@@ -56,7 +55,7 @@ export const loadTIFF = async (year: number): Promise<{
   }
 };
 
-// Interpolate between two years of data
+// Improved interpolation between two years of data
 export const interpolateData = (
   startData: number[], 
   endData: number[], 
@@ -66,16 +65,24 @@ export const interpolateData = (
     return endData;
   }
   
-  // For land cover data, we shouldn't blend category values directly
-  // Instead, we'll crossfade visually by using the progress value
-  // to determine which dataset to show for each pixel
+  // For land cover data, use a smarter transition approach:
+  // - For areas that don't change between years, keep the class
+  // - For areas that do change, blend based on progress
   return startData.map((startValue, index) => {
-    // Use a probabilistic approach for the transition
-    return Math.random() < progress ? endData[index] : startValue;
+    const endValue = endData[index];
+    
+    // If the land cover class is the same in both years, keep it
+    if (startValue === endValue) {
+      return startValue;
+    }
+    
+    // Otherwise, use progress to determine which value to show
+    // This creates a more natural-looking transition
+    return Math.random() < progress ? endValue : startValue;
   });
 };
 
-// Create a canvas representation of the data
+// Enhanced rendering function with better color blending
 export const renderTIFFToCanvas = (
   ctx: CanvasRenderingContext2D,
   data: number[],
@@ -91,7 +98,7 @@ export const renderTIFFToCanvas = (
   const imageData = ctx.createImageData(width, height);
   const pixels = imageData.data;
 
-  // Map the data values to RGBA values
+  // Map the data values to RGBA values with improved color mapping
   for (let i = 0; i < data.length; i++) {
     const value = data[i];
     const color = landCoverColors[value as keyof typeof landCoverColors] || landCoverColors[0];

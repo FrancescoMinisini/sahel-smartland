@@ -28,6 +28,8 @@ const MapVisualization = ({ className, year = 2023 }: MapVisualizationProps) => 
     [year: number]: { data: number[], width: number, height: number }
   }>({});
   const [currentStats, setCurrentStats] = useState<Record<string, number>>({});
+  const [transitionAnimationId, setTransitionAnimationId] = useState<number | null>(null);
+  const previousYearRef = useRef<number | null>(null);
   
   // Find the closest available years for interpolation
   const { prevYear, nextYear, progress } = useMemo(() => {
@@ -48,27 +50,28 @@ const MapVisualization = ({ className, year = 2023 }: MapVisualizationProps) => 
     return { prevYear, nextYear, progress };
   }, [year]);
 
-  // Load the data for the closest years
+  // Preload data for all years when the component mounts
   useEffect(() => {
-    const fetchData = async () => {
+    const preloadAllYears = async () => {
       setIsLoading(true);
       
       try {
-        // Load data for both years needed for interpolation
-        if (!mapData[prevYear]) {
-          const data = await loadTIFF(prevYear);
-          setMapData(prev => ({ ...prev, [prevYear]: data }));
-        }
+        // Get all available years
+        const availableYears = getAvailableYears();
         
-        if (prevYear !== nextYear && !mapData[nextYear]) {
-          const data = await loadTIFF(nextYear);
-          setMapData(prev => ({ ...prev, [nextYear]: data }));
+        // Create a queue to load years in sequence
+        for (const yearToLoad of availableYears) {
+          if (!mapData[yearToLoad]) {
+            // Load data for this year
+            const data = await loadTIFF(yearToLoad);
+            setMapData(prev => ({ ...prev, [yearToLoad]: data }));
+          }
         }
       } catch (error) {
-        console.error('Error loading TIFF data:', error);
+        console.error('Error preloading TIFF data:', error);
         toast({
           title: 'Error loading map data',
-          description: 'Could not load the land cover data for the selected year.',
+          description: 'Could not preload all the land cover data years.',
           variant: 'destructive'
         });
       } finally {
@@ -76,10 +79,17 @@ const MapVisualization = ({ className, year = 2023 }: MapVisualizationProps) => 
       }
     };
     
-    fetchData();
-  }, [prevYear, nextYear, toast]);
+    preloadAllYears();
+    
+    // Cleanup function
+    return () => {
+      if (transitionAnimationId !== null) {
+        cancelAnimationFrame(transitionAnimationId);
+      }
+    };
+  }, []);
 
-  // Render the data to the canvas with interpolation
+  // Render the map with smooth transitions when the year changes
   useEffect(() => {
     if (isLoading || !canvasRef.current) return;
     
@@ -92,43 +102,118 @@ const MapVisualization = ({ className, year = 2023 }: MapVisualizationProps) => 
     
     if (!prevYearData || prevYearData.data.length === 0) return;
     
-    // Set canvas dimensions
-    canvas.width = prevYearData.width;
-    canvas.height = prevYearData.height;
-    
-    // Clear the canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // If we have both years of data and they're different, interpolate
-    if (nextYearData && prevYear !== nextYear) {
-      const interpolatedData = interpolateData(
-        prevYearData.data,
-        nextYearData.data,
-        progress
-      );
-      
-      renderTIFFToCanvas(
-        ctx, 
-        interpolatedData, 
-        prevYearData.width, 
-        prevYearData.height
-      );
-      
-      // Update statistics
-      setCurrentStats(calculateLandCoverStats(interpolatedData));
-    } else {
-      // Just render the previous year's data
-      renderTIFFToCanvas(
-        ctx, 
-        prevYearData.data, 
-        prevYearData.width, 
-        prevYearData.height
-      );
-      
-      // Update statistics
-      setCurrentStats(calculateLandCoverStats(prevYearData.data));
+    // Set canvas dimensions if not already set
+    if (canvas.width !== prevYearData.width || canvas.height !== prevYearData.height) {
+      canvas.width = prevYearData.width;
+      canvas.height = prevYearData.height;
     }
-  }, [mapData, prevYear, nextYear, progress, isLoading]);
+    
+    // Handle smooth transition when year changes
+    if (previousYearRef.current !== null && previousYearRef.current !== year) {
+      // Cancel any existing animation
+      if (transitionAnimationId !== null) {
+        cancelAnimationFrame(transitionAnimationId);
+      }
+      
+      // Determine the previous year's data
+      const previousYear = previousYearRef.current;
+      const previousPrevYear = Math.max(...getAvailableYears().filter(y => y <= previousYear));
+      const previousNextYear = Math.min(...getAvailableYears().filter(y => y >= previousYear));
+      const previousProgress = (previousYear - previousPrevYear) / (previousNextYear - previousPrevYear || 1);
+      
+      const startPrevData = mapData[previousPrevYear]?.data;
+      const startNextData = mapData[previousNextYear]?.data;
+      
+      if (startPrevData && startNextData) {
+        // Create a starting interpolated data
+        const startInterpolatedData = interpolateData(
+          startPrevData,
+          startNextData,
+          previousProgress
+        );
+        
+        // Create ending interpolated data
+        const endInterpolatedData = nextYearData && prevYear !== nextYear
+          ? interpolateData(prevYearData.data, nextYearData.data, progress)
+          : prevYearData.data;
+        
+        // Animate between the two interpolated states
+        let animationProgress = 0;
+        const animationDuration = 500; // ms
+        const startTime = performance.now();
+        
+        const animateTransition = (time: number) => {
+          // Calculate progress for the animation
+          animationProgress = Math.min((time - startTime) / animationDuration, 1);
+          
+          // Interpolate between the start and end states
+          const transitionData = startInterpolatedData.map((startValue, index) => {
+            if (animationProgress >= 1) {
+              return endInterpolatedData[index];
+            }
+            
+            // Use progress to determine which value to show
+            return Math.random() < animationProgress ? endInterpolatedData[index] : startValue;
+          });
+          
+          // Render the transitional state
+          renderTIFFToCanvas(
+            ctx, 
+            transitionData, 
+            prevYearData.width, 
+            prevYearData.height
+          );
+          
+          // Continue animation if not complete
+          if (animationProgress < 1) {
+            const newAnimationId = requestAnimationFrame(animateTransition);
+            setTransitionAnimationId(newAnimationId);
+          } else {
+            setTransitionAnimationId(null);
+            // Update statistics after animation completes
+            setCurrentStats(calculateLandCoverStats(endInterpolatedData));
+          }
+        };
+        
+        // Start the animation
+        const animationId = requestAnimationFrame(animateTransition);
+        setTransitionAnimationId(animationId);
+      }
+    } else {
+      // Regular render without transition animation
+      if (nextYearData && prevYear !== nextYear) {
+        const interpolatedData = interpolateData(
+          prevYearData.data,
+          nextYearData.data,
+          progress
+        );
+        
+        renderTIFFToCanvas(
+          ctx, 
+          interpolatedData, 
+          prevYearData.width, 
+          prevYearData.height
+        );
+        
+        // Update statistics
+        setCurrentStats(calculateLandCoverStats(interpolatedData));
+      } else {
+        // Just render the previous year's data
+        renderTIFFToCanvas(
+          ctx, 
+          prevYearData.data, 
+          prevYearData.width, 
+          prevYearData.height
+        );
+        
+        // Update statistics
+        setCurrentStats(calculateLandCoverStats(prevYearData.data));
+      }
+    }
+    
+    // Update the previous year ref
+    previousYearRef.current = year;
+  }, [mapData, prevYear, nextYear, progress, isLoading, year, transitionAnimationId]);
 
   const handleZoomIn = () => {
     setZoomLevel(prev => Math.min(prev + 0.2, 3));
