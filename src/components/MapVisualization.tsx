@@ -15,7 +15,6 @@ import { useToast } from '@/components/ui/use-toast';
 interface MapVisualizationProps {
   className?: string;
   year?: number;
-  dataType?: string;
   onStatsChange?: (stats: Record<string, number>) => void;
   expandedView?: boolean;
 }
@@ -23,14 +22,13 @@ interface MapVisualizationProps {
 const MapVisualization = ({ 
   className, 
   year = 2023, 
-  dataType = 'landCover',
   onStatsChange,
   expandedView = false
 }: MapVisualizationProps) => {
   const { toast } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeLayer, setActiveLayer] = useState(dataType);
+  const [activeLayer, setActiveLayer] = useState('landCover');
   const [zoomLevel, setZoomLevel] = useState(1);
   const [mapData, setMapData] = useState<{
     [year: number]: { data: number[], width: number, height: number }
@@ -39,10 +37,7 @@ const MapVisualization = ({
   const [transitionAnimationId, setTransitionAnimationId] = useState<number | null>(null);
   const previousYearRef = useRef<number | null>(null);
   
-  useEffect(() => {
-    setActiveLayer(dataType);
-  }, [dataType]);
-  
+  // Find the closest available years for interpolation
   const { prevYear, nextYear, progress } = useMemo(() => {
     const availableYears = getAvailableYears();
     
@@ -50,30 +45,37 @@ const MapVisualization = ({
       return { prevYear: year, nextYear: year, progress: 0 };
     }
     
+    // Find the closest previous and next years
     const prevYear = Math.max(...availableYears.filter(y => y <= year));
     const nextYear = Math.min(...availableYears.filter(y => y >= year));
     
+    // Calculate interpolation progress (0-1)
     const yearRange = nextYear - prevYear;
     const progress = yearRange > 0 ? (year - prevYear) / yearRange : 0;
     
     return { prevYear, nextYear, progress };
   }, [year]);
 
+  // Notify parent component when stats change
   useEffect(() => {
     if (onStatsChange && Object.keys(currentStats).length > 0) {
       onStatsChange(currentStats);
     }
   }, [currentStats, onStatsChange]);
 
+  // Preload data for all years when the component mounts
   useEffect(() => {
     const preloadAllYears = async () => {
       setIsLoading(true);
       
       try {
+        // Get all available years
         const availableYears = getAvailableYears();
         
+        // Create a queue to load years in sequence
         for (const yearToLoad of availableYears) {
           if (!mapData[yearToLoad]) {
+            // Load data for this year
             const data = await loadTIFF(yearToLoad);
             setMapData(prev => ({ ...prev, [yearToLoad]: data }));
           }
@@ -92,6 +94,7 @@ const MapVisualization = ({
     
     preloadAllYears();
     
+    // Cleanup function
     return () => {
       if (transitionAnimationId !== null) {
         cancelAnimationFrame(transitionAnimationId);
@@ -99,6 +102,7 @@ const MapVisualization = ({
     };
   }, []);
 
+  // Render the map with smooth transitions when the year changes
   useEffect(() => {
     if (isLoading || !canvasRef.current) return;
     
@@ -111,16 +115,20 @@ const MapVisualization = ({
     
     if (!prevYearData || prevYearData.data.length === 0) return;
     
+    // Set canvas dimensions if not already set
     if (canvas.width !== prevYearData.width || canvas.height !== prevYearData.height) {
       canvas.width = prevYearData.width;
       canvas.height = prevYearData.height;
     }
     
+    // Handle smooth transition when year changes
     if (previousYearRef.current !== null && previousYearRef.current !== year) {
+      // Cancel any existing animation
       if (transitionAnimationId !== null) {
         cancelAnimationFrame(transitionAnimationId);
       }
       
+      // Determine the previous year's data
       const previousYear = previousYearRef.current;
       const previousPrevYear = Math.max(...getAvailableYears().filter(y => y <= previousYear));
       const previousNextYear = Math.min(...getAvailableYears().filter(y => y >= previousYear));
@@ -130,31 +138,38 @@ const MapVisualization = ({
       const startNextData = mapData[previousNextYear]?.data;
       
       if (startPrevData && startNextData) {
+        // Create a starting interpolated data
         const startInterpolatedData = interpolateData(
           startPrevData,
           startNextData,
           previousProgress
         );
         
+        // Create ending interpolated data
         const endInterpolatedData = nextYearData && prevYear !== nextYear
           ? interpolateData(prevYearData.data, nextYearData.data, progress)
           : prevYearData.data;
         
+        // Animate between the two interpolated states
         let animationProgress = 0;
-        const animationDuration = 500;
+        const animationDuration = 500; // ms
         const startTime = performance.now();
         
         const animateTransition = (time: number) => {
+          // Calculate progress for the animation
           animationProgress = Math.min((time - startTime) / animationDuration, 1);
           
+          // Interpolate between the start and end states
           const transitionData = startInterpolatedData.map((startValue, index) => {
             if (animationProgress >= 1) {
               return endInterpolatedData[index];
             }
             
+            // Use progress to determine which value to show
             return Math.random() < animationProgress ? endInterpolatedData[index] : startValue;
           });
           
+          // Render the transitional state
           renderTIFFToCanvas(
             ctx, 
             transitionData, 
@@ -162,19 +177,23 @@ const MapVisualization = ({
             prevYearData.height
           );
           
+          // Continue animation if not complete
           if (animationProgress < 1) {
             const newAnimationId = requestAnimationFrame(animateTransition);
             setTransitionAnimationId(newAnimationId);
           } else {
             setTransitionAnimationId(null);
+            // Update statistics after animation completes
             setCurrentStats(calculateLandCoverStats(endInterpolatedData));
           }
         };
         
+        // Start the animation
         const animationId = requestAnimationFrame(animateTransition);
         setTransitionAnimationId(animationId);
       }
     } else {
+      // Regular render without transition animation
       if (nextYearData && prevYear !== nextYear) {
         const interpolatedData = interpolateData(
           prevYearData.data,
@@ -189,9 +208,11 @@ const MapVisualization = ({
           prevYearData.height
         );
         
+        // Update statistics
         const stats = calculateLandCoverStats(interpolatedData);
         setCurrentStats(stats);
       } else {
+        // Just render the previous year's data
         renderTIFFToCanvas(
           ctx, 
           prevYearData.data, 
@@ -199,11 +220,13 @@ const MapVisualization = ({
           prevYearData.height
         );
         
+        // Update statistics
         const stats = calculateLandCoverStats(prevYearData.data);
         setCurrentStats(stats);
       }
     }
     
+    // Update the previous year ref
     previousYearRef.current = year;
   }, [mapData, prevYear, nextYear, progress, isLoading, year, transitionAnimationId]);
 
@@ -235,10 +258,12 @@ const MapVisualization = ({
       "relative rounded-xl overflow-hidden w-full h-full flex items-center justify-center", 
       className
     )}>
+      {/* Year indicator */}
       <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-10 bg-white/80 dark:bg-muted/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium flex items-center gap-1.5 shadow-sm">
         {year}
       </div>
       
+      {/* Map Container - Take full size of parent container */}
       <div className="absolute inset-0 bg-sahel-sandLight overflow-hidden">
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -260,6 +285,7 @@ const MapVisualization = ({
         )}
       </div>
       
+      {/* Map Controls */}
       <div className="absolute top-3 right-3 flex flex-col gap-1.5">
         <button 
           onClick={handleZoomIn} 
@@ -284,6 +310,7 @@ const MapVisualization = ({
         </button>
       </div>
       
+      {/* Layer Selector - Smaller version */}
       <div className="absolute top-3 left-3">
         <div className="bg-white rounded-lg shadow-md p-1.5">
           <div className="flex items-center gap-1 mb-1 px-1.5">
