@@ -73,14 +73,7 @@ const TemporalAnalysis = () => {
   };
 
   const handleLayerChange = (layer: string) => {
-    setSelectedLayer(layer as 'landCover' | 'precipitation' | 'vegetation' | 'population');
-    
-    if (layer !== selectedLayer) {
-      setShowRegionBoundaries(false);
-      setShowDistrictBoundaries(false);
-      setShowRoadNetwork(false);
-      setShowRiverNetwork(false);
-    }
+    setSelectedLayer(layer);
   };
 
   const toggleAdminLayer = (layerType: string) => {
@@ -342,6 +335,12 @@ const TemporalAnalysis = () => {
                   <LayerSelector 
                     onLayerChange={handleLayerChange} 
                     currentLayer={selectedLayer}
+                    onToggleAdminLayer={toggleAdminLayer}
+                    onToggleNetworkLayer={toggleNetworkLayer}
+                    showRegionBoundaries={showRegionBoundaries}
+                    showDistrictBoundaries={showDistrictBoundaries}
+                    showRoadNetwork={showRoadNetwork}
+                    showRiverNetwork={showRiverNetwork}
                   />
                 </Card>
               </TabsContent>
