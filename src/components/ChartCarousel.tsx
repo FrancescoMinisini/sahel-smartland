@@ -95,7 +95,8 @@ const ChartCarousel = ({
       return [min, max + (range < 50 ? 50 : 0)] as [number, number];
     }
     
-    return [0, 'auto'] as const;
+    // For non-precipitation data, use [0, 'auto'] but as a proper AxisDomain type
+    return [0, 'auto'] as [number, string];
   };
   
   // Custom tooltip formatter for different data types
@@ -310,6 +311,7 @@ const ChartCarousel = ({
                       }}
                     />
                     <YAxis 
+                      domain={[0, 'auto'] as [number, string]}
                       label={{ 
                         value: `Productivity (${displayUnit})`, 
                         angle: -90, 
@@ -374,6 +376,7 @@ const ChartCarousel = ({
                       }}
                     />
                     <YAxis 
+                      domain={[0, 'auto'] as [number, string]}
                       label={{ 
                         value: `Area (${displayUnit})`, 
                         angle: -90, 
