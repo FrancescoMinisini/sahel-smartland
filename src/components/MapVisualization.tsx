@@ -12,8 +12,10 @@ import {
   calculateLandCoverStats,
   calculatePrecipitationStats,
   calculateVegetationStats,
+  calculatePopulationStats,
   precipitationColorScale,
-  vegetationProductivityScale
+  vegetationProductivityScale,
+  populationDensityScale
 } from '@/lib/geospatialUtils';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -128,7 +130,7 @@ const MapVisualization = ({
         cancelAnimationFrame(transitionAnimationId);
       }
     };
-  }, [dataType]);
+  }, [dataType, mapData, toast, transitionAnimationId]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -167,7 +169,8 @@ const MapVisualization = ({
     canvas.style.width = `${displayWidth}px`;
     canvas.style.height = `${displayHeight}px`;
     
-    const scaleFactor = dataType === 'precipitation' || dataType === 'vegetation' ? 2 : 1;
+    const needsScaling = ['precipitation', 'vegetation', 'population'].includes(dataType);
+    const scaleFactor = needsScaling ? 2 : 1;
     canvas.width = prevYearData.width * scaleFactor; 
     canvas.height = prevYearData.height * scaleFactor;
     
@@ -244,6 +247,9 @@ const MapVisualization = ({
           validPrevData.length > 0 ? Math.max(...validPrevData) : 3000,
           validNextData.length > 0 ? Math.max(...validNextData) : 3000
         );
+      } else if (dataType === 'population') {
+        min = 0;
+        max = 1000;
       }
     } else {
       renderData = prevYearData.data;
@@ -255,6 +261,9 @@ const MapVisualization = ({
         const validData = prevYearData.data.filter(val => val !== 65533 && val > 0 && val < 3000);
         min = validData.length > 0 ? Math.min(...validData) : 0;
         max = validData.length > 0 ? Math.max(...validData) : 3000;
+      } else if (dataType === 'population') {
+        min = prevYearData.min || 0;
+        max = prevYearData.max || 1000;
       }
     }
     
@@ -268,7 +277,7 @@ const MapVisualization = ({
         dataType,
         min,
         max,
-        smoothing: dataType === 'precipitation' || dataType === 'vegetation'
+        smoothing: ['precipitation', 'vegetation', 'population'].includes(dataType)
       }
     );
     
@@ -280,6 +289,9 @@ const MapVisualization = ({
       setCurrentStats(stats);
     } else if (dataType === 'vegetation') {
       const stats = calculateVegetationStats(renderData);
+      setCurrentStats(stats);
+    } else if (dataType === 'population') {
+      const stats = calculatePopulationStats(renderData);
       setCurrentStats(stats);
     }
   };
@@ -326,6 +338,9 @@ const MapVisualization = ({
       if (dataType === 'vegetation') {
         min = 0;
         max = 3000;
+      } else if (dataType === 'population') {
+        min = 0;
+        max = 1000;
       }
       
       renderTIFFToCanvas(
@@ -338,7 +353,7 @@ const MapVisualization = ({
           dataType,
           min,
           max,
-          smoothing: dataType === 'precipitation' || dataType === 'vegetation'
+          smoothing: ['precipitation', 'vegetation', 'population'].includes(dataType)
         }
       );
       
@@ -353,6 +368,8 @@ const MapVisualization = ({
           setCurrentStats(calculatePrecipitationStats(endInterpolatedData));
         } else if (dataType === 'vegetation') {
           setCurrentStats(calculateVegetationStats(endInterpolatedData));
+        } else if (dataType === 'population') {
+          setCurrentStats(calculatePopulationStats(endInterpolatedData));
         }
       }
     };
@@ -446,6 +463,27 @@ const MapVisualization = ({
             <div className="flex justify-between text-xs mt-1">
               <span>0</span>
               <span>3000</span>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (dataType === 'population') {
+      return (
+        <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 shadow-md">
+          <div className="flex flex-col">
+            <span className="text-xs font-medium mb-1">Population Density (people/km²)</span>
+            <div className="flex h-4 w-full">
+              {populationDensityScale.map((color, i) => (
+                <div 
+                  key={i} 
+                  className="h-full flex-1" 
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+            <div className="flex justify-between text-xs mt-1">
+              <span>Low</span>
+              <span>High</span>
             </div>
           </div>
         </div>
