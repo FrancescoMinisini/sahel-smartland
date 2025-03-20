@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -40,7 +39,6 @@ import {
 } from '@/lib/geospatialUtils';
 import ChartCarousel from '@/components/ChartCarousel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import GradientAnalysis from '@/components/GradientAnalysis';
 
 const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -242,6 +240,149 @@ const Dashboard = () => {
       rawChange: selectedYear > 2020 ? 143000 : selectedYear > 2015 ? 130000 : 118000
     }
   ];
+
+  const getPopulationTrendAnalysis = () => {
+    return `Based on population data from 2010 to ${selectedYear}:
+    
+• Urban population has grown by approximately ${selectedYear > 2020 ? '23.6' : selectedYear > 2015 ? '20.4' : '15.2'}% over the past decade.
+• Rural population has increased more slowly at ${selectedYear > 2020 ? '10.1' : selectedYear > 2015 ? '8.7' : '6.5'}%.
+• Nomadic population has decreased by ${selectedYear > 2020 ? '8.2' : selectedYear > 2015 ? '6.5' : '4.1'}%, indicating continued urbanization trends.
+• Total population growth rate is ${selectedYear > 2020 ? '3.2' : selectedYear > 2015 ? '2.9' : '2.6'}% annually.
+
+The data shows rapid urbanization in the Sahel region, with people moving from nomadic lifestyles to settled communities. Urban centers are experiencing ${selectedYear > 2020 ? 'significant' : 'moderate'} strain on resources and infrastructure due to this migration pattern.
+
+These demographic shifts have important implications for land use planning, resource allocation, and climate adaptation strategies in the region.`;
+  };
+
+  const getTrendAnalysis = () => {
+    if (timeSeriesData.length < 2) {
+      return "Insufficient data to analyze trends. Please select multiple years to build trend data.";
+    }
+    
+    const forestData = timeSeriesData
+      .filter(d => d.Forests !== undefined)
+      .map(d => ({ year: d.year, value: d.Forests }));
+      
+    const barrenData = timeSeriesData
+      .filter(d => d.Barren !== undefined)
+      .map(d => ({ year: d.year, value: d.Barren }));
+    
+    const grasslandsData = timeSeriesData
+      .filter(d => d.Grasslands !== undefined)
+      .map(d => ({ year: d.year, value: d.Grasslands }));
+    
+    let forestTrend = "stable";
+    let barrenTrend = "stable";
+    let grasslandsTrend = "stable";
+    
+    if (forestData.length >= 2) {
+      const firstForest = forestData[0].value;
+      const lastForest = forestData[forestData.length - 1].value;
+      if (lastForest > firstForest * 1.05) forestTrend = "increasing";
+      else if (lastForest < firstForest * 0.95) forestTrend = "decreasing";
+    }
+    
+    if (barrenData.length >= 2) {
+      const firstBarren = barrenData[0].value;
+      const lastBarren = barrenData[barrenData.length - 1].value;
+      if (lastBarren > firstBarren * 1.05) barrenTrend = "increasing";
+      else if (lastBarren < firstBarren * 0.95) barrenTrend = "decreasing";
+    }
+    
+    if (grasslandsData.length >= 2) {
+      const firstGrasslands = grasslandsData[0].value;
+      const lastGrasslands = grasslandsData[grasslandsData.length - 1].value;
+      if (lastGrasslands > firstGrasslands * 1.05) grasslandsTrend = "increasing";
+      else if (lastGrasslands < firstGrasslands * 0.95) grasslandsTrend = "decreasing";
+    }
+    
+    let analysisText = `Based on the observed data from ${timeSeriesData[0].year} to ${timeSeriesData[timeSeriesData.length - 1].year}:\n\n`;
+    
+    analysisText += `• Forest coverage is ${forestTrend === "stable" ? "relatively stable" : forestTrend}`;
+    analysisText += forestTrend === "decreasing" ? ", indicating potential deforestation concerns.\n" : 
+                    forestTrend === "increasing" ? ", suggesting successful conservation efforts.\n" : ".\n";
+    
+    analysisText += `• Barren land is ${barrenTrend === "stable" ? "relatively stable" : barrenTrend}`;
+    analysisText += barrenTrend === "increasing" ? ", which may indicate desertification processes.\n" : 
+                    barrenTrend === "decreasing" ? ", suggesting land rehabilitation success.\n" : ".\n";
+    
+    analysisText += `• Grasslands are ${grasslandsTrend === "stable" ? "relatively stable" : grasslandsTrend}`;
+    analysisText += grasslandsTrend === "increasing" ? ", which may indicate conversion from other land types.\n" : 
+                    grasslandsTrend === "decreasing" ? ", suggesting possible conversion to cropland or urban areas.\n" : ".\n";
+    
+    return analysisText;
+  };
+
+  const getVegetationTrendAnalysis = () => {
+    if (vegetationTimeSeriesData.length < 2) {
+      return "Insufficient data to analyze vegetation productivity trends.";
+    }
+    
+    const firstYearData = vegetationTimeSeriesData[0];
+    const lastYearData = vegetationTimeSeriesData[vegetationTimeSeriesData.length - 1];
+    
+    const forestChange = ((lastYearData.Forest - firstYearData.Forest) / firstYearData.Forest) * 100;
+    const grasslandChange = ((lastYearData.Grassland - firstYearData.Grassland) / firstYearData.Grassland) * 100;
+    const croplandChange = ((lastYearData.Cropland - firstYearData.Cropland) / firstYearData.Cropland) * 100;
+    const shrublandChange = ((lastYearData.Shrubland - firstYearData.Shrubland) / firstYearData.Shrubland) * 100;
+    
+    return `Based on Gross Primary Production (GPP) data from ${firstYearData.year} to ${lastYearData.year}:
+    
+• Forest productivity has changed by ${forestChange.toFixed(1)}% over the past ${lastYearData.year - firstYearData.year} years.
+• Grassland productivity has changed by ${grasslandChange.toFixed(1)}%.
+• Cropland productivity has changed by ${croplandChange.toFixed(1)}%.
+• Shrubland productivity has changed by ${shrublandChange.toFixed(1)}%.
+
+The data indicates ${forestChange > 0 ? "improvements" : "declines"} in forest carbon sequestration and ${croplandChange > 0 ? "gains" : "losses"} in agricultural productivity. 
+${
+  Math.abs(forestChange) > Math.abs(grasslandChange) && 
+  Math.abs(forestChange) > Math.abs(croplandChange) && 
+  Math.abs(forestChange) > Math.abs(shrublandChange)
+    ? "Forests show the most significant changes, suggesting they are most responsive to environmental factors."
+    : Math.abs(croplandChange) > Math.abs(grasslandChange) && 
+      Math.abs(croplandChange) > Math.abs(shrublandChange)
+      ? "Croplands show the most significant changes, which may be related to agricultural practices and climate factors."
+      : "Multiple vegetation types show significant changes, indicating complex ecosystem dynamics."
+}
+
+These productivity trends can help identify areas for conservation focus and agricultural improvement.`;
+  };
+
+  const getPrecipitationTrends = () => {
+    if (regionalPrecipitationData.length < 2) {
+      return "Insufficient data to analyze precipitation trends by region.";
+    }
+    
+    const firstYearData = regionalPrecipitationData[0];
+    const lastYearData = regionalPrecipitationData[regionalPrecipitationData.length - 1];
+    
+    const calculateChange = (region: keyof typeof firstYearData) => {
+      if (region === 'year') return 0;
+      return ((lastYearData[region] - firstYearData[region]) / firstYearData[region]) * 100;
+    };
+    
+    const overallChange = calculateChange('Overall');
+    const southChange = calculateChange('South');
+    const centerChange = calculateChange('Center');
+    const northChange = calculateChange('North');
+    
+    return `Based on the precipitation data by region from ${firstYearData.year} to ${lastYearData.year}:
+    
+• Overall precipitation index has changed by approximately ${overallChange.toFixed(1)}% over the past ${lastYearData.year - firstYearData.year} years.
+• The Southern region shows a change of ${southChange.toFixed(1)}%.
+• The Central region shows a change of ${centerChange.toFixed(1)}%.
+• The Northern region shows a change of ${northChange.toFixed(1)}%.
+
+Regional variations show that precipitation patterns differ significantly across the Sahel region, with the most pronounced changes seen in the ${
+      Math.abs(southChange) > Math.abs(centerChange) && Math.abs(southChange) > Math.abs(northChange) 
+        ? 'Southern' 
+        : Math.abs(centerChange) > Math.abs(northChange) 
+          ? 'Central' 
+          : 'Northern'
+    } region.
+    
+This regional analysis is essential for targeted water resource management and climate adaptation strategies.`;
+  };
 
   const keyStats = [
     { 
@@ -455,6 +596,12 @@ const Dashboard = () => {
                                 The time series chart shows how land cover has changed over the years.
                               </p>
                             </div>
+                            <div className="mt-3 p-3 bg-muted rounded-md">
+                              <h4 className="font-medium mb-2">Trend Analysis:</h4>
+                              <p className="whitespace-pre-line">
+                                {getTrendAnalysis()}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -502,6 +649,12 @@ const Dashboard = () => {
                                 Higher GPP values indicate greater photosynthetic activity and carbon sequestration.
                               </p>
                             </div>
+                            <div className="mt-3 p-3 bg-muted rounded-md">
+                              <h4 className="font-medium mb-2">Vegetation Productivity Analysis:</h4>
+                              <p className="whitespace-pre-line">
+                                {getVegetationTrendAnalysis()}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -547,6 +700,12 @@ const Dashboard = () => {
                               <p>
                                 The charts show precipitation index values across different regions of the Sahel.
                                 Higher values indicate greater rainfall in that region during the selected year.
+                              </p>
+                            </div>
+                            <div className="mt-3 p-3 bg-muted rounded-md">
+                              <h4 className="font-medium mb-2">Precipitation Trend Analysis:</h4>
+                              <p className="whitespace-pre-line">
+                                {getPrecipitationTrends()}
                               </p>
                             </div>
                           </div>
@@ -601,6 +760,12 @@ const Dashboard = () => {
                                 Population trends reflect migration patterns and demographic changes in the region.
                               </p>
                             </div>
+                            <div className="mt-3 p-3 bg-muted rounded-md">
+                              <h4 className="font-medium mb-2">Population Trend Analysis:</h4>
+                              <p className="whitespace-pre-line">
+                                {getPopulationTrendAnalysis()}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -648,29 +813,6 @@ const Dashboard = () => {
                 year={selectedYear}
               />
             ))}
-          </div>
-          
-          {/* New Gradient Analysis Section */}
-          <div className="bg-white dark:bg-muted rounded-xl shadow-sm border border-border/40 overflow-hidden mb-8">
-            <div className="flex items-center justify-between border-b border-border/40 px-6 py-4">
-              <div className="flex items-center">
-                <Trees size={18} className="text-primary mr-2" />
-                <h3 className="text-lg font-medium">Land Cover Transition & Gradient Analysis</h3>
-              </div>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info size={16} className="text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p>This section analyzes how land cover types transition into one another over time, revealing patterns of environmental change.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <div className="p-6">
-              <GradientAnalysis year={selectedYear} />
-            </div>
           </div>
         </div>
       </main>
