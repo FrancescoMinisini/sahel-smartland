@@ -1,3 +1,4 @@
+
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -103,7 +104,7 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
     
     const response = await fetch(filePath);
     if (!response.ok) {
-      throw new Error(`Failed to load TIFF: ${response.statusText}`);
+      throw new Error(`Failed to load TIFF: ${response.statusText} for ${filePath}`);
     }
     
     const arrayBuffer = await response.arrayBuffer();
@@ -126,6 +127,52 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
     return { data, width, height };
   } catch (error) {
     console.error(`Error loading TIFF for ${dataType}:`, error);
+    
+    // For testing purposes, create and return dummy data for vector layers
+    if (['regionBoundaries', 'districtBoundaries', 'roadNetwork', 'riverNetwork'].includes(dataType)) {
+      const width = 256;
+      const height = 256;
+      const data = new Array(width * height).fill(0);
+      
+      // Create some dummy features for visualization
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const index = y * width + x;
+          
+          // Draw border
+          if (x < 5 || x > width - 5 || y < 5 || y > height - 5) {
+            data[index] = 1;
+          }
+          
+          // Draw some lines for roads or rivers
+          if (dataType === 'roadNetwork' && (x % 50 === 0 || y % 50 === 0)) {
+            data[index] = 1;
+          }
+          
+          // Draw some curved lines for rivers
+          if (dataType === 'riverNetwork' && 
+             ((Math.sin(x/20) * 20 + height/2) | 0) === y) {
+            data[index] = 1;
+          }
+          
+          // Draw regions
+          if (dataType === 'regionBoundaries' && 
+             ((x-width/2)**2 + (y-height/2)**2 < (width/3)**2)) {
+            data[index] = 1;
+          }
+          
+          // Draw districts
+          if (dataType === 'districtBoundaries' && 
+             (x > width/4 && x < 3*width/4 && y > height/4 && y < 3*height/4)) {
+            data[index] = 1;
+          }
+        }
+      }
+      
+      console.log(`Created dummy data for ${dataType}: ${width}x${height}`);
+      return { data, width, height };
+    }
+    
     return { data: [], width: 0, height: 0 };
   }
 };

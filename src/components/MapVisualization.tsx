@@ -153,12 +153,19 @@ const MapVisualization = ({
   useEffect(() => {
     const loadVectorLayers = async () => {
       const vectorLayers = ['regionBoundaries', 'districtBoundaries', 'roadNetwork', 'riverNetwork'];
+      let loadingStarted = false;
       
       for (const layerType of vectorLayers) {
         if (activeLayers[layerType] && !mapData[layerType]?.[0]) {
-          try {
+          if (!loadingStarted) {
             setIsLoading(true);
+            loadingStarted = true;
+          }
+          
+          try {
+            console.log(`Loading vector layer: ${layerType}`);
             const data = await loadTIFF(0, layerType);
+            console.log(`Loaded ${layerType} data:`, data);
             
             setMapData(prev => ({
               ...prev,
@@ -173,10 +180,12 @@ const MapVisualization = ({
               description: `Could not load the ${layerType} layer.`,
               variant: 'destructive'
             });
-          } finally {
-            setIsLoading(false);
           }
         }
+      }
+      
+      if (loadingStarted) {
+        setIsLoading(false);
       }
     };
     
@@ -279,18 +288,22 @@ const MapVisualization = ({
     }
     
     if (activeLayers.regionBoundaries) {
+      console.log("Rendering region boundaries:", mapData.regionBoundaries?.[0]);
       renderVectorLayerOnCanvas('regionBoundaries', ctx);
     }
     
     if (activeLayers.districtBoundaries) {
+      console.log("Rendering district boundaries:", mapData.districtBoundaries?.[0]);
       renderVectorLayerOnCanvas('districtBoundaries', ctx);
     }
     
     if (activeLayers.roadNetwork) {
+      console.log("Rendering road network:", mapData.roadNetwork?.[0]);
       renderVectorLayerOnCanvas('roadNetwork', ctx);
     }
     
     if (activeLayers.riverNetwork) {
+      console.log("Rendering river network:", mapData.riverNetwork?.[0]);
       renderVectorLayerOnCanvas('riverNetwork', ctx);
     }
   };
@@ -354,6 +367,8 @@ const MapVisualization = ({
       console.error(`No data for vector layer ${layerType}`);
       return;
     }
+    
+    console.log(`Rendering vector layer ${layerType} with data width ${layerData.width}, height ${layerData.height}`);
     
     renderVectorLayer(
       ctx,
