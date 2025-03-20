@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -677,3 +678,19 @@ const Dashboard = () => {
                           </svg>
                         </div>
                         <span className="ml-3 text-sm">Overall increase in gross primary production by 8.2% since 2010</span>
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
+    </div>
+  );
+};
+
+export default Dashboard;
