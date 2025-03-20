@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Layers, Map, Landscape, Droplets, Globe } from 'lucide-react';
+import { Layers, Map, Mountain, Droplets, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card } from '@/components/ui/card';
@@ -23,7 +23,7 @@ const LayerSelector = ({ onLayersChange }: LayerSelectorProps) => {
     { id: 'landCover', name: 'Land Cover', icon: <Globe className="h-4 w-4" /> },
     { id: 'region', name: 'Region Borders', icon: <Map className="h-4 w-4" /> },
     { id: 'district', name: 'District Borders', icon: <Map className="h-4 w-4" /> },
-    { id: 'road', name: 'Road Network', icon: <Landscape className="h-4 w-4" /> },
+    { id: 'road', name: 'Road Network', icon: <Mountain className="h-4 w-4" /> },
     { id: 'stream', name: 'Stream Water', icon: <Droplets className="h-4 w-4" /> },
   ];
 
