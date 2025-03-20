@@ -7,6 +7,7 @@ import DataCard from '@/components/DataCard';
 import Footer from '@/components/Footer';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BarChart2, CloudRain, Leaf, Map, Users, Download } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const Index = () => {
   // Scroll to top on page load
@@ -47,21 +48,26 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Add Theme Toggle */}
+      <div className="fixed z-50 top-4 right-4">
+        <ThemeToggle />
+      </div>
+      
       <HeroSection />
       
       <FeatureSection />
       
       {/* Key Statistics Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white dark:bg-gray-900">
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
-            <span className="inline-block px-3 py-1 text-xs font-medium bg-sahel-earth/10 text-sahel-earth rounded-full mb-4">
+            <span className="inline-block px-3 py-1 text-xs font-medium bg-sahel-earth/10 text-sahel-earth dark:bg-sahel-earth/20 dark:text-sahel-earth/90 rounded-full mb-4">
               Key Insights
             </span>
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 dark:text-white">
               Sahel Region at a Glance
             </h2>
-            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto dark:text-gray-300">
               Understanding the current state of land use, climate patterns, and human impact 
               through comprehensive data analysis.
             </p>
@@ -93,7 +99,7 @@ const Index = () => {
       </section>
       
       {/* Map Visualization Section */}
-      <section className="py-20 bg-gradient-to-b from-white to-sahel-sandLight/20">
+      <section className="py-20 bg-gradient-to-b from-white to-sahel-sandLight/20 dark:from-gray-900 dark:to-gray-800">
         <div className="container mx-auto px-6">
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1 lg:order-2">
@@ -103,20 +109,20 @@ const Index = () => {
             </div>
             
             <div className="flex-1 lg:order-1">
-              <span className="inline-block px-3 py-1 text-xs font-medium bg-sahel-blue/10 text-sahel-blue rounded-full mb-4">
+              <span className="inline-block px-3 py-1 text-xs font-medium bg-sahel-blue/10 text-sahel-blue dark:bg-sahel-blue/20 dark:text-sahel-blue/90 rounded-full mb-4">
                 Interactive Visualization
               </span>
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">
+              <h2 className="text-3xl md:text-4xl font-bold mb-6 dark:text-white">
                 Explore Geographic Data Through Interactive Maps
               </h2>
-              <p className="text-lg text-muted-foreground mb-8">
+              <p className="text-lg text-muted-foreground mb-8 dark:text-gray-300">
                 Our interactive map provides a powerful tool to visualize land cover changes, 
                 vegetation productivity, precipitation patterns, and population density across the Sahel region.
               </p>
               
               <ul className="space-y-4 mb-8">
                 <li className="flex items-start">
-                  <div className="w-6 h-6 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-6 h-6 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5 dark:bg-sahel-green/20">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="16"
@@ -132,10 +138,10 @@ const Index = () => {
                       <path d="M20 6 9 17l-5-5" />
                     </svg>
                   </div>
-                  <span className="ml-3 text-muted-foreground">Toggle between different data layers to explore various environmental factors</span>
+                  <span className="ml-3 text-muted-foreground dark:text-gray-300">Toggle between different data layers to explore various environmental factors</span>
                 </li>
                 <li className="flex items-start">
-                  <div className="w-6 h-6 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-6 h-6 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5 dark:bg-sahel-green/20">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="16"
@@ -151,10 +157,10 @@ const Index = () => {
                       <path d="M20 6 9 17l-5-5" />
                     </svg>
                   </div>
-                  <span className="ml-3 text-muted-foreground">Zoom in to focus on specific regions and analyze local trends</span>
+                  <span className="ml-3 text-muted-foreground dark:text-gray-300">Zoom in to focus on specific regions and analyze local trends</span>
                 </li>
                 <li className="flex items-start">
-                  <div className="w-6 h-6 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-6 h-6 rounded-full bg-sahel-green/10 flex items-center justify-center shrink-0 mt-0.5 dark:bg-sahel-green/20">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="16"
@@ -170,7 +176,7 @@ const Index = () => {
                       <path d="M20 6 9 17l-5-5" />
                     </svg>
                   </div>
-                  <span className="ml-3 text-muted-foreground">View historical data to understand changes over the past two decades</span>
+                  <span className="ml-3 text-muted-foreground dark:text-gray-300">View historical data to understand changes over the past two decades</span>
                 </li>
               </ul>
               
@@ -187,7 +193,7 @@ const Index = () => {
       </section>
       
       {/* Call to Action Section */}
-      <section className="py-20 bg-sahel-green text-white">
+      <section className="py-20 bg-sahel-green text-white dark:bg-sahel-green/80">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">
             Join the Effort to Restore the Sahel Region
