@@ -39,7 +39,6 @@ import {
   loadPrecipitationByRegion,
   regionalPrecipitationColors
 } from '@/lib/geospatialUtils';
-import PopulationInsightsCharts from '@/components/PopulationInsightsCharts';
 
 const TemporalAnalysis = () => {
   const [searchParams] = useSearchParams();
@@ -128,13 +127,6 @@ const TemporalAnalysis = () => {
     
     return [
       {
-        name: 'Overall',
-        value: currentYearPrecipData.Overall,
-        color: regionalPrecipitationColors.Overall,
-        change: -1.5,
-        rawChange: -8
-      },
-      {
         name: 'South',
         value: currentYearPrecipData.South,
         color: regionalPrecipitationColors.South,
@@ -217,13 +209,6 @@ const TemporalAnalysis = () => {
         color: '#ff7043',
         change: year > 2020 ? -1.5 : year > 2015 ? -1.2 : -0.8,
         rawChange: year > 2020 ? -12000 : year > 2015 ? -10000 : -7000
-      },
-      {
-        name: 'Total',
-        value: year > 2020 ? 6980000 : year > 2015 ? 6570000 : 6250000,
-        color: '#5e35b1',
-        change: year > 2020 ? 3.2 : year > 2015 ? 2.9 : 2.6,
-        rawChange: year > 2020 ? 143000 : year > 2015 ? 130000 : 118000
       }
     ];
   };
@@ -568,7 +553,7 @@ These demographic shifts have important implications for land use planning, reso
               </TabsTrigger>
             </TabsList>
             
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2 flex-grow ml-4">
               <CalendarDays size={16} className="text-muted-foreground" />
               <YearSlider 
                 initialValue={year}
@@ -576,17 +561,19 @@ These demographic shifts have important implications for land use planning, reso
                 min={2010}
                 max={2023}
                 step={1}
+                className="flex-grow"
               />
             </div>
           </div>
           
-          <div className="md:hidden mb-4">
+          <div className="md:hidden mb-4 w-full">
             <YearSlider 
               initialValue={year}
               onChange={handleYearChange}
               min={2010}
               max={2023}
               step={1}
+              className="w-full"
             />
           </div>
           
@@ -860,10 +847,6 @@ These demographic shifts have important implications for land use planning, reso
                       </p>
                     </div>
                   </div>
-                </div>
-                
-                <div className="mt-6">
-                  <PopulationInsightsCharts />
                 </div>
               </CardContent>
             </Card>
