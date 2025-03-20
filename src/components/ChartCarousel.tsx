@@ -52,6 +52,20 @@ const ChartCarousel = ({ data, timeSeriesData = [], className }: ChartCarouselPr
     return colorMap[type] || `#${Math.floor(Math.random()*16777215).toString(16)}`;
   };
 
+  // Make sure urban areas are present in the data
+  const ensureUrbanData = () => {
+    const hasUrban = filteredData.some(item => item.name === 'Urban' || item.name.includes('Urban'));
+    // Log the urban data presence for debugging
+    console.log('Urban data in charts:', hasUrban, 
+      filteredData.filter(item => item.name === 'Urban' || item.name.includes('Urban')));
+    
+    // Log all data for verification
+    console.log('All chart data:', filteredData);
+  };
+
+  // Call the check function
+  ensureUrbanData();
+
   return (
     <div className={cn("relative", className)}>
       <Carousel
