@@ -1,7 +1,7 @@
 
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from "@/lib/utils";
-import { Layers, ZoomIn, ZoomOut, RotateCcw, Eye, Loader2, Info } from 'lucide-react';
+import { Layers, ZoomIn, ZoomOut, RotateCcw, Loader2, Info } from 'lucide-react';
 import { 
   loadTIFF, 
   renderTIFFToCanvas, 
@@ -167,7 +167,14 @@ const MapVisualization = ({
     canvas.style.width = `${displayWidth}px`;
     canvas.style.height = `${displayHeight}px`;
     
-    const scaleFactor = dataType === 'precipitation' || dataType === 'vegetation' ? 2 : 1;
+    // Use a higher scale factor for precipitation to improve resolution
+    let scaleFactor = 1;
+    if (dataType === 'precipitation') {
+      scaleFactor = 4; // Increased from 2 to 4 for better resolution
+    } else if (dataType === 'vegetation') {
+      scaleFactor = 2;
+    }
+    
     canvas.width = prevYearData.width * scaleFactor; 
     canvas.height = prevYearData.height * scaleFactor;
     
@@ -206,7 +213,7 @@ const MapVisualization = ({
 
   const renderCurrentData = () => {
     if (!canvasRef.current) return;
-    const ctx = canvasRef.current.getContext('2d');
+    const ctx = canvasRef.current.getContext('2d', { alpha: true, willReadFrequently: true });
     if (!ctx) return;
     
     const dataForType = mapData[dataType] || {};
@@ -258,20 +265,45 @@ const MapVisualization = ({
       }
     }
     
-    renderTIFFToCanvas(
-      ctx, 
-      renderData, 
-      prevYearData.width, 
-      prevYearData.height,
-      {
-        opacity: 1,
-        dataType,
-        min,
-        max,
-        smoothing: dataType === 'precipitation' || dataType === 'vegetation'
-      }
-    );
+    // Special enhanced rendering for precipitation data
+    if (dataType === 'precipitation') {
+      // Clear canvas with a light blue background
+      ctx.fillStyle = '#f7fbff20'; // Very light blue with some transparency
+      ctx.fillRect(0, 0, prevYearData.width, prevYearData.height);
+      
+      // Use enhanced rendering for precipitation
+      renderTIFFToCanvas(
+        ctx, 
+        renderData, 
+        prevYearData.width, 
+        prevYearData.height,
+        {
+          opacity: 1,
+          dataType,
+          min,
+          max,
+          smoothing: true,
+          highQuality: true // New option for higher quality rendering
+        }
+      );
+    } else {
+      // Regular rendering for other data types
+      renderTIFFToCanvas(
+        ctx, 
+        renderData, 
+        prevYearData.width, 
+        prevYearData.height,
+        {
+          opacity: 1,
+          dataType,
+          min,
+          max,
+          smoothing: dataType === 'vegetation'
+        }
+      );
+    }
     
+    // Calculate and update stats based on data type
     if (dataType === 'landCover') {
       const stats = calculateLandCoverStats(renderData);
       setCurrentStats(stats);
@@ -328,19 +360,40 @@ const MapVisualization = ({
         max = 3000;
       }
       
-      renderTIFFToCanvas(
-        ctx, 
-        transitionData, 
-        prevYearData.width, 
-        prevYearData.height,
-        {
-          opacity: 1,
-          dataType,
-          min,
-          max,
-          smoothing: dataType === 'precipitation' || dataType === 'vegetation'
-        }
-      );
+      // Special handling for precipitation during transition
+      if (dataType === 'precipitation') {
+        ctx.fillStyle = '#f7fbff20'; // Light blue background
+        ctx.fillRect(0, 0, prevYearData.width, prevYearData.height);
+        
+        renderTIFFToCanvas(
+          ctx, 
+          transitionData, 
+          prevYearData.width, 
+          prevYearData.height,
+          {
+            opacity: 1,
+            dataType,
+            min,
+            max,
+            smoothing: true,
+            highQuality: true
+          }
+        );
+      } else {
+        renderTIFFToCanvas(
+          ctx, 
+          transitionData, 
+          prevYearData.width, 
+          prevYearData.height,
+          {
+            opacity: 1,
+            dataType,
+            min,
+            max,
+            smoothing: dataType === 'vegetation'
+          }
+        );
+      }
       
       if (animationProgress < 1) {
         const newAnimationId = requestAnimationFrame(animateTransition);

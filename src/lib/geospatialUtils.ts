@@ -38,7 +38,7 @@ export const regionalPrecipitationColors = {
   'North': '#66bd63'
 };
 
-// Colors for precipitation visualization (blue intensity)
+// Improved color scale for precipitation visualization (more vibrant blue intensity)
 export const precipitationColorScale = [
   '#f7fbff', // Very light blue - lowest precipitation
   '#deebf7',
@@ -87,33 +87,57 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
     }
     
     const response = await fetch(filePath);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch TIFF file: ${response.status} ${response.statusText}`);
+    }
+    
     const arrayBuffer = await response.arrayBuffer();
     const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
     const image = await tiff.getImage();
     const width = image.getWidth();
     const height = image.getHeight();
-    const values = await image.readRasters();
     
-    // Convert the TypedArray to a regular Array
-    const data = Array.from(values[0] as Uint8Array | Float32Array);
-    
-    // For precipitation and vegetation, we need min/max to normalize values for color scale
-    if (dataType === 'precipitation' || dataType === 'vegetation') {
-      // Filter out no-data values (typically negative or very high values in GPP data)
-      const validData = dataType === 'vegetation' 
-                      ? data.filter(val => val > 0 && val < 3000)
-                      : data.filter(val => val > 0);
+    // Special handling for precipitation data
+    if (dataType === 'precipitation') {
+      try {
+        // Try to get the highest quality image available (typically index 0)
+        const values = await image.readRasters({ interleave: true });
+        
+        // Convert the TypedArray to a regular Array
+        const data = Array.from(values[0] as Float32Array);
+        
+        // Filter out no-data values and find min/max
+        const validData = data.filter(val => val > 0);
+        const min = validData.length > 0 ? Math.min(...validData) : 0;
+        const max = validData.length > 0 ? Math.max(...validData) : 500;
+        
+        return { data, width, height, min, max };
+      } catch (error) {
+        console.error(`Error processing precipitation data at higher quality, falling back:`, error);
+        const values = await image.readRasters();
+        const data = Array.from(values[0] as Uint8Array | Float32Array);
+        return { data, width, height, min: 0, max: 500 };
+      }
+    } else {
+      // Regular processing for other data types
+      const values = await image.readRasters();
+      const data = Array.from(values[0] as Uint8Array | Float32Array);
       
-      const min = validData.length > 0 ? Math.min(...validData) : 0;
-      const max = validData.length > 0 ? Math.max(...validData) : 500;
+      if (dataType === 'vegetation') {
+        // Filter out no-data values (typically negative or very high values in GPP data)
+        const validData = data.filter(val => val > 0 && val < 3000);
+        const min = validData.length > 0 ? Math.min(...validData) : 0;
+        const max = validData.length > 0 ? Math.max(...validData) : 3000;
+        return { data, width, height, min, max };
+      }
       
-      return { data, width, height, min, max };
+      return { data, width, height };
     }
-    
-    return { data, width, height };
   } catch (error) {
     console.error(`Error loading TIFF for year ${year} and type ${dataType}:`, error);
-    return { data: [], width: 0, height: 0 };
+    // Return a minimal dataset to avoid crashes
+    return { data: [], width: 1, height: 1 };
   }
 };
 
@@ -166,7 +190,7 @@ export const getVegetationColor = (value: number, min: number, max: number): str
   return vegetationProductivityScale[index];
 };
 
-// Enhanced rendering function that handles land cover, precipitation, and vegetation data
+// Enhanced rendering function with special handling for precipitation data
 export const renderTIFFToCanvas = (
   ctx: CanvasRenderingContext2D,
   data: number[],
@@ -177,7 +201,8 @@ export const renderTIFFToCanvas = (
     dataType?: string,
     min?: number,
     max?: number,
-    smoothing?: boolean
+    smoothing?: boolean,
+    highQuality?: boolean
   } = {}
 ): void => {
   if (!ctx || data.length === 0 || width === 0 || height === 0) {
@@ -189,19 +214,84 @@ export const renderTIFFToCanvas = (
     dataType = 'landCover',
     min = 0,
     max = 500,
-    smoothing = false
+    smoothing = false,
+    highQuality = false
   } = options;
 
   // Set image smoothing property based on the data type
-  // For precipitation and vegetation we want smoothing, for land cover we don't
-  ctx.imageSmoothingEnabled = dataType === 'precipitation' || dataType === 'vegetation' ? true : smoothing;
-  ctx.imageSmoothingQuality = 'high';
+  ctx.imageSmoothingEnabled = smoothing || (dataType === 'precipitation' || dataType === 'vegetation');
+  ctx.imageSmoothingQuality = highQuality ? 'high' : 'medium';
 
   // Create an ImageData object
   const imageData = ctx.createImageData(width, height);
   const pixels = imageData.data;
+  
+  // Clear the canvas first if we're in high quality mode for precipitation
+  if (dataType === 'precipitation' && highQuality) {
+    ctx.clearRect(0, 0, width, height);
+  }
 
-  // Map the data values to RGBA values
+  // Special handling for precipitation data with high quality rendering
+  if (dataType === 'precipitation' && highQuality) {
+    // First pass: create the initial image with enhanced contrast
+    for (let i = 0; i < data.length; i++) {
+      const value = data[i];
+      
+      // Skip very low values for clearer visualization
+      if (value < min * 0.1) {
+        pixels[i * 4] = 0;
+        pixels[i * 4 + 1] = 0;
+        pixels[i * 4 + 2] = 0;
+        pixels[i * 4 + 3] = 0; // Transparent
+        continue;
+      }
+      
+      // Apply a higher contrast mapping for precipitation
+      const enhancedValue = Math.pow((value - min) / (max - min || 1), 0.7) * (max - min) + min;
+      const color = getPrecipitationColor(enhancedValue, min, max);
+      
+      // Convert hex color to RGB
+      const r = parseInt(color.slice(1, 3), 16);
+      const g = parseInt(color.slice(3, 5), 16);
+      const b = parseInt(color.slice(5, 7), 16);
+      
+      // Set RGB values with enhanced saturation
+      pixels[i * 4] = Math.min(255, r * 1.2);     // Enhance red slightly
+      pixels[i * 4 + 1] = Math.min(255, g * 1.1); // Enhance green slightly
+      pixels[i * 4 + 2] = Math.min(255, b * 1.3); // Enhance blue more
+      
+      // Set alpha based on value intensity - higher values are more opaque
+      const normalizedValue = (value - min) / (max - min || 1);
+      pixels[i * 4 + 3] = Math.min(255, 50 + normalizedValue * 205) * opacity;
+    }
+    
+    // Put the initial ImageData onto the canvas
+    ctx.putImageData(imageData, 0, 0);
+    
+    // Second pass: apply post-processing for smoother appearance
+    // Create a temporary canvas for post-processing
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+    const tempCtx = tempCanvas.getContext('2d', { alpha: true });
+    
+    if (tempCtx) {
+      // Copy our original image data to the temp canvas
+      tempCtx.putImageData(imageData, 0, 0);
+      
+      // Clear the original canvas
+      ctx.clearRect(0, 0, width, height);
+      
+      // Apply blur for a smoother look
+      ctx.filter = 'blur(1px) contrast(1.1) saturate(1.2)';
+      ctx.drawImage(tempCanvas, 0, 0);
+      ctx.filter = 'none';
+    }
+    
+    return;
+  }
+
+  // Standard rendering for other data types or non-high-quality precipitation
   for (let i = 0; i < data.length; i++) {
     const value = data[i];
     let color;
@@ -238,7 +328,7 @@ export const renderTIFFToCanvas = (
   ctx.putImageData(imageData, 0, 0);
   
   // If we're rendering precipitation or vegetation, apply post-processing for smoother appearance
-  if (dataType === 'precipitation' || dataType === 'vegetation') {
+  if ((dataType === 'precipitation' && !highQuality) || dataType === 'vegetation') {
     // Create a temporary canvas for post-processing
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = width;
