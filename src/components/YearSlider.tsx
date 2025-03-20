@@ -123,45 +123,49 @@ const YearSlider = ({
   const yearPercentage = ((currentYear - actualMinYear) / (actualMaxYear - actualMinYear)) * 100;
 
   return (
-    <div className={cn("relative pt-6 pb-8 px-1 w-full", className)}>
-      {/* Year Display */}
-      <div 
-        className="absolute text-sm font-semibold bg-primary text-primary-foreground px-2 py-0.5 rounded-md transform -translate-x-1/2 -top-1 transition-all duration-150"
-        style={{ left: `${yearPercentage}%` }}
-      >
-        {currentYear}
-      </div>
-      
-      {/* Play/Pause Button */}
-      <button 
-        onClick={togglePlayPause}
-        className="absolute -top-8 right-0 p-1.5 bg-muted hover:bg-muted/80 rounded-full transition-colors"
-        aria-label={isPlaying ? "Pause" : "Play"}
-      >
-        {isPlaying ? (
-          <Pause className="h-4 w-4 text-primary" />
-        ) : (
-          <Play className="h-4 w-4 text-primary" />
-        )}
-      </button>
-      
-      <Slider
-        min={actualMinYear}
-        max={actualMaxYear}
-        step={step}
-        value={[currentYear]}
-        onValueChange={handleSliderChange}
-        onValueCommit={() => handleDragEnd()}
-        onPointerDown={handleDragStart}
-        className="transition-all"
-      />
-      
-      {showLabels && (
-        <div className="flex justify-between mt-2">
-          <span className="text-xs text-muted-foreground">{actualMinYear}</span>
-          <span className="text-xs text-muted-foreground">{actualMaxYear}</span>
+    <div className={cn("relative pt-6 pb-8 px-1 flex-1", className)}>
+      <div className="flex items-center gap-3">
+        {/* Play/Pause Button */}
+        <button 
+          onClick={togglePlayPause}
+          className="p-1.5 bg-muted hover:bg-muted/80 rounded-full transition-colors"
+          aria-label={isPlaying ? "Pause" : "Play"}
+        >
+          {isPlaying ? (
+            <Pause className="h-4 w-4 text-primary" />
+          ) : (
+            <Play className="h-4 w-4 text-primary" />
+          )}
+        </button>
+        
+        <div className="relative flex-1">
+          {/* Year Display */}
+          <div 
+            className="absolute text-sm font-semibold bg-primary text-primary-foreground px-2 py-0.5 rounded-md transform -translate-x-1/2 -top-1 transition-all duration-150"
+            style={{ left: `${yearPercentage}%` }}
+          >
+            {currentYear}
+          </div>
+          
+          <Slider
+            min={actualMinYear}
+            max={actualMaxYear}
+            step={step}
+            value={[currentYear]}
+            onValueChange={handleSliderChange}
+            onValueCommit={() => handleDragEnd()}
+            onPointerDown={handleDragStart}
+            className="transition-all"
+          />
+          
+          {showLabels && (
+            <div className="flex justify-between mt-2">
+              <span className="text-xs text-muted-foreground">{actualMinYear}</span>
+              <span className="text-xs text-muted-foreground">{actualMaxYear}</span>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

@@ -26,8 +26,10 @@ const ChartCarousel = ({
   className, 
   dataType = 'landCover' 
 }: ChartCarouselProps) => {
-  // Filter out any data points with zero values
-  const filteredData = data.filter(item => item.value > 0);
+  // Filter out any data points with zero values and remove "Overall"/"Total" values for charts
+  const filteredData = data
+    .filter(item => item.value > 0)
+    .filter(item => item.name !== 'Overall' && item.name !== 'Total');
   
   let convertedData = filteredData;
   let convertedTimeSeriesData = timeSeriesData;
@@ -66,7 +68,7 @@ const ChartCarousel = ({
     displayUnit = 'precipitation index';
     
     // For regional precipitation time series, we keep the data as is
-    // The timeSeriesData should contain regional data (Overall, South, Center, North)
+    // The timeSeriesData should contain regional data (South, Center, North)
     convertedTimeSeriesData = timeSeriesData;
   } else if (dataType === 'vegetation') {
     // For vegetation data, we'll show GPP values in gC/m²/year
@@ -76,26 +78,30 @@ const ChartCarousel = ({
     // For vegetation time series, we keep the data as is
     convertedTimeSeriesData = timeSeriesData;
   }
-  
-  // Debug function to ensure proper data
-  const ensureDataIntegrity = () => {
+
+  // Helper function to calculate Y-axis domain for better scaling
+  const calculateYDomain = () => {
     if (dataType === 'precipitation') {
-      console.log('Precipitation data for charts:', convertedData);
-      console.log('Precipitation time series data:', convertedTimeSeriesData);
-    } else if (dataType === 'vegetation') {
-      console.log('Vegetation data for charts:', convertedData);
-      console.log('Vegetation time series data:', convertedTimeSeriesData);
+      // Find min and max values for precipitation data
+      const values = convertedData.map(item => item.value);
+      if (values.length === 0) return [0, 500];
+      
+      const min = Math.floor(Math.min(...values) * 0.95);
+      const max = Math.ceil(Math.max(...values) * 1.05);
+      const range = max - min;
+      
+      // Ensure we have a reasonable range to display
+      return [min, max + (range < 50 ? 50 : 0)];
     }
+    
+    return [0, 'auto'];
   };
-
-  // Call the check function
-  ensureDataIntegrity();
-
+  
   // Custom tooltip formatter for different data types
   const formatTooltip = (value: number, name: string, entry: any) => {
     if (dataType === 'precipitation') {
       if (entry && entry.payload) {
-        if (name === 'Overall' || name === 'South' || name === 'Center' || name === 'North') {
+        if (name === 'South' || name === 'Center' || name === 'North') {
           // For regional precipitation data
           return [`${value.toLocaleString()} (index)`, name];
         } else if (name === 'Extreme Events') {
@@ -107,7 +113,7 @@ const ChartCarousel = ({
       return [`${value.toLocaleString()}`, name];
     } else if (dataType === 'vegetation') {
       // For vegetation productivity data
-      if (name === 'Forest' || name === 'Grassland' || name === 'Cropland' || name === 'Shrubland' || name === 'Total') {
+      if (name === 'Forest' || name === 'Grassland' || name === 'Cropland' || name === 'Shrubland') {
         return [`${value.toLocaleString()} ${displayUnit}`, name];
       } else if (name === 'AnnualChange') {
         return [`${value > 0 ? '+' : ''}${value.toLocaleString()}%`, `Annual Change`];
@@ -130,7 +136,6 @@ const ChartCarousel = ({
       'Grassland': '#fee08b',
       'Cropland': '#fc8d59',
       'Shrubland': '#91cf60',
-      'Total': '#6baed6',
       'AnnualChange': '#d53e4f'
     };
     return colorMap[key] || '#999999';
@@ -167,6 +172,7 @@ const ChartCarousel = ({
                     height={60} 
                   />
                   <YAxis 
+                    domain={calculateYDomain()}
                     label={{ 
                       value: dataType === 'precipitation' ? 
                         'Precipitation Index' : 
@@ -246,6 +252,7 @@ const ChartCarousel = ({
                       }}
                     />
                     <YAxis 
+                      domain={calculateYDomain()}
                       label={{ 
                         value: 'Precipitation Index', 
                         angle: -90, 
@@ -256,15 +263,7 @@ const ChartCarousel = ({
                     <Tooltip formatter={formatTooltip} />
                     <Legend />
                     
-                    {/* Regional precipitation data shown as lines */}
-                    <Line 
-                      type="monotone" 
-                      dataKey="Overall" 
-                      stroke={getRegionalColor('Overall')} 
-                      strokeWidth={2}
-                      dot={{ r: 5 }}
-                      name="Overall"
-                    />
+                    {/* Regional precipitation data shown as lines - without Overall */}
                     <Line 
                       type="monotone" 
                       dataKey="South" 
@@ -454,17 +453,6 @@ const ChartCarousel = ({
                     <Tooltip formatter={formatTooltip} />
                     <Legend />
                     
-                    {/* Total productivity as area */}
-                    <Area 
-                      yAxisId="left"
-                      type="monotone" 
-                      dataKey="Total" 
-                      fill={getVegetationColor('Total')} 
-                      stroke={getVegetationColor('Total')}
-                      fillOpacity={0.2}
-                      name="Total Productivity"
-                    />
-                    
                     {/* Annual change as line with right axis */}
                     <Line 
                       yAxisId="right"
@@ -479,12 +467,12 @@ const ChartCarousel = ({
                 </ResponsiveContainer>
               </div>
               <div className="text-xs text-center mt-1 text-muted-foreground">
-                Total Vegetation Productivity and Annual Change Rate
+                Vegetation Productivity Annual Change Rate
               </div>
             </CarouselItem>
           )}
 
-          {/* Specialized Chart for Water Stress Index and Extreme Events - Only for Precipitation */}
+          {/* Specialized Chart for Regional Precipitation - Only for Precipitation */}
           {dataType === 'precipitation' && (
             <CarouselItem className="md:basis-full">
               <div className="h-[400px] w-full">
@@ -508,6 +496,7 @@ const ChartCarousel = ({
                       }}
                     />
                     <YAxis 
+                      domain={calculateYDomain()}
                       label={{ 
                         value: 'Regional Variations', 
                         angle: -90, 

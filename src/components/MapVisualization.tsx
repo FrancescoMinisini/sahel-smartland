@@ -406,20 +406,26 @@ const MapVisualization = ({
 
   const renderLegend = () => {
     if (dataType === 'landCover') {
+      const nonZeroClasses = {
+        '7': 'Forests',
+        '10': 'Grasslands',
+        '12': 'Croplands',
+        '13': 'Urban',
+        '16': 'Barren'
+      };
+      
       return (
         <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 max-w-xs max-h-36 overflow-auto text-xs shadow-md">
           <div className="grid grid-cols-2 gap-1">
-            {Object.entries(landCoverClasses)
-              .filter(([key]) => key !== '0')
-              .map(([key, name]) => (
-                <div key={key} className="flex items-center">
-                  <div 
-                    className="w-3 h-3 rounded-sm mr-1"
-                    style={{ backgroundColor: landCoverColors[Number(key) as keyof typeof landCoverColors] }}
-                  />
-                  <span className="truncate">{name}</span>
-                </div>
-              ))}
+            {Object.entries(nonZeroClasses).map(([key, name]) => (
+              <div key={key} className="flex items-center">
+                <div 
+                  className="w-3 h-3 rounded-sm mr-1"
+                  style={{ backgroundColor: landCoverColors[Number(key) as keyof typeof landCoverColors] }}
+                />
+                <span className="truncate">{name}</span>
+              </div>
+            ))}
           </div>
         </div>
       );

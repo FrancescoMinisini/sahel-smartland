@@ -124,16 +124,9 @@ const TemporalAnalysis = () => {
   
   const getPrecipitationChartData = () => {
     const currentYearPrecipData = regionalPrecipitationData.find(d => d.year === year) || 
-                                 { year: year, Overall: 500, South: 500, Center: 500, North: 500 };
+                                 { year: year, South: 500, Center: 500, North: 500 };
     
     return [
-      {
-        name: 'Overall',
-        value: currentYearPrecipData.Overall,
-        color: regionalPrecipitationColors.Overall,
-        change: -1.5,
-        rawChange: -8
-      },
       {
         name: 'South',
         value: currentYearPrecipData.South,
@@ -217,13 +210,6 @@ const TemporalAnalysis = () => {
         color: '#ff7043',
         change: year > 2020 ? -1.5 : year > 2015 ? -1.2 : -0.8,
         rawChange: year > 2020 ? -12000 : year > 2015 ? -10000 : -7000
-      },
-      {
-        name: 'Total',
-        value: year > 2020 ? 6980000 : year > 2015 ? 6570000 : 6250000,
-        color: '#5e35b1',
-        change: year > 2020 ? 3.2 : year > 2015 ? 2.9 : 2.6,
-        rawChange: year > 2020 ? 143000 : year > 2015 ? 130000 : 118000
       }
     ];
   };
@@ -455,12 +441,6 @@ These demographic shifts have important implications for land use planning, reso
               <p className="text-xs text-muted-foreground">Maximum Value</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="text-2xl font-bold">{((stats.total || 0) / 1000).toFixed(1)} <span className="text-xs font-normal">km³</span></div>
-              <p className="text-xs text-muted-foreground">Total Water Volume (est.)</p>
-            </CardContent>
-          </Card>
         </div>
       );
     } else if (activeDataType === 'vegetation') {
@@ -482,12 +462,6 @@ These demographic shifts have important implications for land use planning, reso
             <CardContent className="pt-4">
               <div className="text-2xl font-bold">{stats.max?.toFixed(1) || 0}</div>
               <p className="text-xs text-muted-foreground">Maximum GPP</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="text-2xl font-bold">{((stats.total || 0) / 1000000).toFixed(1)} <span className="text-xs font-normal">Mt</span></div>
-              <p className="text-xs text-muted-foreground">Total Carbon Sequestration</p>
             </CardContent>
           </Card>
         </div>
@@ -860,10 +834,6 @@ These demographic shifts have important implications for land use planning, reso
                       </p>
                     </div>
                   </div>
-                </div>
-                
-                <div className="mt-6">
-                  <PopulationInsightsCharts />
                 </div>
               </CardContent>
             </Card>
