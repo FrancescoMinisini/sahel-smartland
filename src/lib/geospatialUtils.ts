@@ -101,27 +101,22 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
     if (dataType === 'landCover') {
       filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
     } else if (dataType === 'landCoverGradient') {
-      // Point to the land cover gradient/transition files if they exist
-      filePath = `/Datasets_Hackathon/land_cover_transition/${year}GRAD.tif`;
+      filePath = `/Datasets_Hackathon/land_cover_gradient/${year}GRAD.tif`;
     } else if (dataType === 'precipitation') {
       filePath = `/Datasets_Hackathon/Climate_Precipitation_Data/${year}R.tif`;
     } else if (dataType === 'precipitationGradient') {
-      // Point to precipitation gradient files
       filePath = `/Datasets_Hackathon/precipitation_gradient/${year}PRGRAD.tif`;
     } else if (dataType === 'vegetation') {
       filePath = `/Datasets_Hackathon/MODIS_Gross_Primary_Production_GPP/${year}_GP.tif`;
     } else if (dataType === 'vegetationGradient') {
-      // Point to vegetation gradient files
       filePath = `/Datasets_Hackathon/vegetation_gradient/${year}VEGGRAD.tif`;
     } else if (dataType === 'population') {
-      // We only have data for 2010, 2015, and 2020, so match the closest year
       const availableYears = [2010, 2015, 2020];
       const closestYear = availableYears.reduce((prev, curr) => 
         (Math.abs(curr - year) < Math.abs(prev - year) ? curr : prev)
       );
       filePath = `/Datasets_Hackathon/Gridded_Population_Density_Data/Assaba_Pop_${closestYear}.tif`;
     } else {
-      // If gradient files don't exist, fall back to regular files
       console.warn(`Gradient files for ${dataType} not found, falling back to standard files`);
       if (dataType === 'landCoverGradient') {
         filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
@@ -130,7 +125,6 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
       } else if (dataType === 'vegetationGradient') {
         filePath = `/Datasets_Hackathon/MODIS_Gross_Primary_Production_GPP/${year}_GP.tif`;
       } else {
-        // Default to land cover
         filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
       }
     }
