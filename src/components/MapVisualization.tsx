@@ -11,16 +11,20 @@ import {
   getAvailableYears,
   calculateLandCoverStats,
   calculatePrecipitationStats,
-  precipitationColorScale
+  precipitationColorScale,
+  loadVectorLayer,
+  renderVectorLayer,
+  vectorLayerStyles
 } from '@/lib/geospatialUtils';
 import { useToast } from '@/components/ui/use-toast';
+import LayersControl, { LayerOption } from './LayersControl';
 
 interface MapVisualizationProps {
   className?: string;
   year?: number;
   onStatsChange?: (stats: Record<string, number>) => void;
   expandedView?: boolean;
-  dataType?: 'landCover' | 'precipitation' | 'vegetation' | 'population';
+  dataType?: 'landCover' | 'precipitation';
 }
 
 const MapVisualization = ({ 
@@ -34,7 +38,7 @@ const MapVisualization = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeLayer, setActiveLayer] = useState(dataType);
+  const [activeLayer, setActiveLayer] = useState<string>(dataType);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [mapData, setMapData] = useState<{
     [dataType: string]: {
@@ -52,10 +56,30 @@ const MapVisualization = ({
     vegetation: {},
     population: {}
   });
+  const [vectorData, setVectorData] = useState<{
+    [layerType: string]: any[]
+  }>({
+    region: [],
+    district: [],
+    road: [],
+    stream: []
+  });
+  const [selectedBaseLayer, setSelectedBaseLayer] = useState<string>(dataType);
+  const [activeOverlays, setActiveOverlays] = useState<string[]>([]);
   const [currentStats, setCurrentStats] = useState<Record<string, number>>({});
   const [transitionAnimationId, setTransitionAnimationId] = useState<number | null>(null);
   const previousYearRef = useRef<number | null>(null);
   const previousDataTypeRef = useRef<string | null>(null);
+
+  // Define layer options
+  const layerOptions: LayerOption[] = [
+    { id: 'landCover', name: 'Land Cover', type: 'base', icon: <Layers size={12} /> },
+    { id: 'precipitation', name: 'Precipitation', type: 'base', icon: <Eye size={12} /> },
+    { id: 'region', name: 'Region Boundaries', type: 'overlay', icon: <Globe size={12} /> },
+    { id: 'district', name: 'District Boundaries', type: 'overlay', icon: <Globe size={12} /> },
+    { id: 'road', name: 'Road Network', type: 'overlay', icon: <MapPin size={12} /> },
+    { id: 'stream', name: 'Stream Network', type: 'overlay', icon: <Droplets size={12} /> },
+  ];
   
   const { prevYear, nextYear, progress } = useMemo(() => {
     const availableYears = getAvailableYears(dataType);
@@ -83,6 +107,34 @@ const MapVisualization = ({
     setActiveLayer(dataType);
     previousDataTypeRef.current = dataType;
   }, [dataType]);
+
+  // Load vector layers on component mount
+  useEffect(() => {
+    const loadVectorLayers = async () => {
+      const vectorLayerTypes = ['region', 'district', 'road', 'stream'] as const;
+      
+      for (const layerType of vectorLayerTypes) {
+        try {
+          const features = await loadVectorLayer(layerType);
+          console.log(`Loaded ${features.length} features for layer type: ${layerType}`);
+          
+          setVectorData(prev => ({
+            ...prev,
+            [layerType]: features
+          }));
+        } catch (error) {
+          console.error(`Error loading ${layerType} vector layer:`, error);
+          toast({
+            title: `Error loading ${layerType} data`,
+            description: `Could not load the ${layerType} boundaries.`,
+            variant: 'destructive'
+          });
+        }
+      }
+    };
+    
+    loadVectorLayers();
+  }, [toast]);
 
   useEffect(() => {
     const preloadAllYears = async () => {
@@ -144,7 +196,7 @@ const MapVisualization = ({
     
     const canvas = canvasRef.current;
     const container = containerRef.current;
-    const dataForType = mapData[dataType] || {};
+    const dataForType = mapData[selectedBaseLayer] || {};
     const prevYearData = dataForType[prevYear];
     
     if (!prevYearData) return;
@@ -171,7 +223,7 @@ const MapVisualization = ({
     canvas.style.height = `${displayHeight}px`;
     
     // For better rendering quality, set canvas dimensions higher than display size
-    const scaleFactor = dataType === 'precipitation' ? 2 : 1; // Higher resolution for precipitation
+    const scaleFactor = selectedBaseLayer === 'precipitation' ? 2 : 1; // Higher resolution for precipitation
     canvas.width = prevYearData.width * scaleFactor; 
     canvas.height = prevYearData.height * scaleFactor;
     
@@ -207,71 +259,94 @@ const MapVisualization = ({
     
     previousYearRef.current = year;
     previousDataTypeRef.current = dataType;
-  }, [mapData, prevYear, nextYear, progress, isLoading, year, dataType, transitionAnimationId]);
+  }, [mapData, prevYear, nextYear, progress, isLoading, year, dataType, transitionAnimationId, selectedBaseLayer, activeOverlays]);
 
   const renderCurrentData = () => {
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
     
-    const dataForType = mapData[dataType] || {};
+    // Clear canvas before drawing
+    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    
+    // Render the base layer (land cover or precipitation)
+    const dataForType = mapData[selectedBaseLayer] || {};
     const prevYearData = dataForType[prevYear];
     const nextYearData = dataForType[nextYear];
     
-    if (!prevYearData || prevYearData.data.length === 0) {
-      console.error(`No data for ${dataType} for year ${prevYear}`);
-      return;
-    }
-    
-    let renderData;
-    let min = 0;
-    let max = 500;
-    
-    if (nextYearData && prevYear !== nextYear) {
-      renderData = interpolateData(
-        prevYearData.data,
-        nextYearData.data,
-        progress
+    if (prevYearData && prevYearData.data.length > 0) {
+      let renderData;
+      let min = 0;
+      let max = 500;
+      
+      if (nextYearData && prevYear !== nextYear) {
+        renderData = interpolateData(
+          prevYearData.data,
+          nextYearData.data,
+          progress
+        );
+        
+        if (selectedBaseLayer === 'precipitation') {
+          min = 0;
+          max = 500;
+        }
+      } else {
+        renderData = prevYearData.data;
+      }
+      
+      // Use the enhanced rendering with appropriate options for the base layer
+      renderTIFFToCanvas(
+        ctx, 
+        renderData, 
+        prevYearData.width, 
+        prevYearData.height,
+        {
+          opacity: 1,
+          dataType: selectedBaseLayer,
+          min,
+          max,
+          smoothing: selectedBaseLayer === 'precipitation'
+        }
       );
       
-      if (dataType === 'precipitation') {
-        min = 0;
-        max = 500;
+      if (selectedBaseLayer === 'landCover') {
+        const stats = calculateLandCoverStats(renderData);
+        setCurrentStats(stats);
+      } else if (selectedBaseLayer === 'precipitation') {
+        const stats = calculatePrecipitationStats(renderData);
+        setCurrentStats(stats);
       }
     } else {
-      renderData = prevYearData.data;
+      console.warn(`No data available for ${selectedBaseLayer} at year ${prevYear}`);
     }
     
-    // Use the enhanced rendering with appropriate options for each data type
-    renderTIFFToCanvas(
-      ctx, 
-      renderData, 
-      prevYearData.width, 
-      prevYearData.height,
-      {
-        opacity: 1,
-        dataType,
-        min,
-        max,
-        smoothing: dataType === 'precipitation'
+    // Render overlay layers on top of the base layer
+    for (const overlayId of activeOverlays) {
+      const overlayFeatures = vectorData[overlayId];
+      if (overlayFeatures && overlayFeatures.length > 0) {
+        const canvasWidth = canvasRef.current.width;
+        const canvasHeight = canvasRef.current.height;
+        
+        renderVectorLayer(
+          ctx,
+          overlayFeatures,
+          overlayId as 'region' | 'district' | 'road' | 'stream',
+          canvasWidth,
+          canvasHeight,
+          0.8
+        );
+      } else {
+        console.warn(`No vector data available for overlay: ${overlayId}`);
       }
-    );
-    
-    if (dataType === 'landCover') {
-      const stats = calculateLandCoverStats(renderData);
-      setCurrentStats(stats);
-    } else if (dataType === 'precipitation') {
-      const stats = calculatePrecipitationStats(renderData);
-      setCurrentStats(stats);
     }
   };
 
   const animateYearTransition = () => {
-    const dataForType = mapData[dataType] || {};
+    const dataForType = mapData[selectedBaseLayer] || {};
     const prevYearData = dataForType[prevYear];
     const nextYearData = dataForType[nextYear];
     
-    if (!canvasRef.current || !prevYearData || !nextYearData) return;
+    if (!canvasRef.current || !prevYearData) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
     
@@ -305,6 +380,9 @@ const MapVisualization = ({
       let min = 0;
       let max = 500;
       
+      // Clear canvas before drawing
+      ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
+      
       renderTIFFToCanvas(
         ctx, 
         transitionData, 
@@ -312,21 +390,39 @@ const MapVisualization = ({
         prevYearData.height,
         {
           opacity: 1,
-          dataType,
+          dataType: selectedBaseLayer,
           min,
           max,
-          smoothing: dataType === 'precipitation'
+          smoothing: selectedBaseLayer === 'precipitation'
         }
       );
+      
+      // Render overlay layers after the base layer
+      for (const overlayId of activeOverlays) {
+        const overlayFeatures = vectorData[overlayId];
+        if (overlayFeatures && overlayFeatures.length > 0) {
+          const canvasWidth = canvasRef.current!.width;
+          const canvasHeight = canvasRef.current!.height;
+          
+          renderVectorLayer(
+            ctx,
+            overlayFeatures,
+            overlayId as 'region' | 'district' | 'road' | 'stream',
+            canvasWidth,
+            canvasHeight,
+            0.8
+          );
+        }
+      }
       
       if (animationProgress < 1) {
         const newAnimationId = requestAnimationFrame(animateTransition);
         setTransitionAnimationId(newAnimationId);
       } else {
         setTransitionAnimationId(null);
-        if (dataType === 'landCover') {
+        if (selectedBaseLayer === 'landCover') {
           setCurrentStats(calculateLandCoverStats(endInterpolatedData));
-        } else if (dataType === 'precipitation') {
+        } else if (selectedBaseLayer === 'precipitation') {
           setCurrentStats(calculatePrecipitationStats(endInterpolatedData));
         }
       }
@@ -348,24 +444,18 @@ const MapVisualization = ({
     setZoomLevel(1);
   };
 
-  const handleLayerChange = (layer: 'landCover' | 'precipitation' | 'vegetation' | 'population') => {
-    setActiveLayer(layer);
+  const handleBaseLayerChange = (layerId: string) => {
+    setSelectedBaseLayer(layerId);
+    setActiveLayer(layerId);
   };
 
-  const mapLayers = [
-    { id: 'landCover' as const, name: 'Land Cover', color: 'bg-sahel-green' },
-    { id: 'vegetation' as const, name: 'Vegetation', color: 'bg-sahel-greenLight' },
-    { id: 'precipitation' as const, name: 'Rainfall', color: 'bg-sahel-blue' },
-    { id: 'population' as const, name: 'Population', color: 'bg-sahel-earth' },
-  ];
-
-  const getCurrentLayerName = () => {
-    const currentLayer = mapLayers.find(layer => layer.id === activeLayer);
-    return currentLayer ? currentLayer.name : 'Layer';
+  const handleOverlayChange = (overlayIds: string[]) => {
+    setActiveOverlays(overlayIds);
+    renderCurrentData();
   };
 
   const renderLegend = () => {
-    if (dataType === 'landCover') {
+    if (selectedBaseLayer === 'landCover') {
       return (
         <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 max-w-xs max-h-36 overflow-auto text-xs shadow-md">
           <div className="grid grid-cols-2 gap-1">
@@ -383,7 +473,7 @@ const MapVisualization = ({
           </div>
         </div>
       );
-    } else if (dataType === 'precipitation') {
+    } else if (selectedBaseLayer === 'precipitation') {
       return (
         <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 shadow-md">
           <div className="flex flex-col">
@@ -405,6 +495,39 @@ const MapVisualization = ({
         </div>
       );
     }
+    
+    // Add legend for vector layers if any are active
+    if (activeOverlays.length > 0) {
+      return (
+        <div className="absolute bottom-3 right-3 bg-white/90 rounded-lg p-2 shadow-md">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium">Overlays</span>
+            {activeOverlays.map(overlayId => {
+              const style = vectorLayerStyles[overlayId as keyof typeof vectorLayerStyles];
+              const layerOption = layerOptions.find(l => l.id === overlayId);
+              
+              return (
+                <div key={overlayId} className="flex items-center">
+                  <div 
+                    className="w-3 h-3 mr-1"
+                    style={{ 
+                      backgroundColor: overlayId.includes('road') || overlayId.includes('stream') 
+                        ? 'transparent'
+                        : style.fillColor || 'transparent',
+                      borderColor: style.lineColor,
+                      borderWidth: style.lineWidth,
+                      borderStyle: 'solid'
+                    }}
+                  />
+                  <span className="text-xs truncate">{layerOption?.name}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+    
     return null;
   };
 
@@ -462,13 +585,14 @@ const MapVisualization = ({
         </button>
       </div>
       
-      <div className="absolute top-3 left-3">
-        <div className="bg-white rounded-lg shadow-md p-1.5">
-          <div className="flex items-center gap-1 px-1.5">
-            <Layers size={12} className="text-sahel-earth" />
-            <span className="text-xs font-medium">{getCurrentLayerName()}</span>
-          </div>
-        </div>
+      <div className="absolute top-3 left-3 bg-white/90 rounded-lg shadow-md p-2 max-w-[200px]">
+        <LayersControl
+          options={layerOptions}
+          selectedBaseLayer={selectedBaseLayer}
+          activeOverlays={activeOverlays}
+          onBaseLayerChange={handleBaseLayerChange}
+          onOverlayChange={handleOverlayChange}
+        />
       </div>
       
       {renderLegend()}
