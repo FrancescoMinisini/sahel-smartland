@@ -31,16 +31,26 @@ const gradientData = [
 
 interface LandCoverGradientChartProps {
   className?: string;
+  selectedYear?: number;
+  showSingleYear?: boolean;
 }
 
-const LandCoverGradientChart = ({ className }: LandCoverGradientChartProps) => {
+const LandCoverGradientChart = ({ className, selectedYear = 2022, showSingleYear = false }: LandCoverGradientChartProps) => {
+  const chartData = showSingleYear 
+    ? gradientData.filter(item => item.year === selectedYear)
+    : gradientData;
+  
+  const chartTitle = showSingleYear 
+    ? `Land Cover Gradient (${selectedYear})` 
+    : 'Land Cover Gradient (2010-2022)';
+
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle>Land Cover Gradient (2010-2022)</CardTitle>
+        <CardTitle>{chartTitle}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <div className="h-[400px]">
           <ChartContainer 
             config={{
               improvement: { label: "Improvement", color: "#4ade80" },
@@ -49,12 +59,13 @@ const LandCoverGradientChart = ({ className }: LandCoverGradientChartProps) => {
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={gradientData}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                data={chartData}
+                margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
+                barSize={showSingleYear ? 80 : 20}
               >
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" />
-                <YAxis />
+                <XAxis dataKey="year" angle={0} textAnchor="middle" height={40} />
+                <YAxis width={50} />
                 <ChartTooltip 
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
@@ -82,7 +93,7 @@ const LandCoverGradientChart = ({ className }: LandCoverGradientChartProps) => {
                     return null;
                   }}
                 />
-                <Legend />
+                <Legend verticalAlign="bottom" height={36} />
                 <Bar dataKey="improvement_sqm" name="Improvement" fill="#4ade80" />
                 <Bar dataKey="deterioration_sqm" name="Deterioration" fill="#f87171" />
               </BarChart>
