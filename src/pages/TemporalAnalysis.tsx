@@ -63,7 +63,6 @@ const TemporalAnalysis = () => {
   const [regionalPrecipitationData, setRegionalPrecipitationData] = useState<any[]>([]);
   const [previousStats, setPreviousStats] = useState<Record<string, number>>({});
   
-  // New state for advanced features
   const [timeWindow, setTimeWindow] = useState<[number, number]>([2015, 2023]);
   const [selectedRegions, setSelectedRegions] = useState<string[]>(['north', 'center', 'south']);
   const [analysisView, setAnalysisView] = useState<'temporal' | 'correlation'>('temporal');
@@ -75,7 +74,6 @@ const TemporalAnalysis = () => {
     { id: 'south', name: 'Southern Region', color: regionalPrecipitationColors.South },
   ];
   
-  // Add correlation variables based on data type
   const getCorrelationVariables = () => {
     const variables = [
       { id: 'year', name: 'Year', unit: '' },
@@ -223,7 +221,6 @@ const TemporalAnalysis = () => {
     });
   };
   
-  // Filter data based on time window and selected regions
   const getFilteredData = () => {
     let filteredData: any[] = [];
     
@@ -543,7 +540,7 @@ These demographic shifts have important implications for land use planning, reso
             .filter(([key, value]) => key !== '0' && key !== '15' && value > 0)
             .sort(([, a], [, b]) => b - a)
             .map(([key, value]) => {
-              const landCoverClass = {
+              const landCoverKey = {
                 '7': 'Forests',
                 '8': 'Shrublands',
                 '9': 'Savannas',
@@ -558,7 +555,7 @@ These demographic shifts have important implications for land use planning, reso
               return (
                 <Card key={key} className={`overflow-hidden ${parseInt(key) === 16 ? 'col-span-2' : ''}`}>
                   <CardContent className="p-2">
-                    <div className="font-medium mb-1 truncate">{landCoverClass}</div>
+                    <div className="font-medium mb-1 truncate">{landCoverKey}</div>
                     <div className="text-xs text-muted-foreground">{value.toLocaleString()} pixels</div>
                     <div className="mt-1.5 h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
                       <div
@@ -662,7 +659,6 @@ These demographic shifts have important implications for land use planning, reso
     return null;
   };
   
-  // Get insight text based on active data type
   const getInsightText = () => {
     switch (activeDataType) {
       case 'landCover':
@@ -679,7 +675,7 @@ These demographic shifts have important implications for land use planning, reso
   };
   
   return (
-    <div className="container py-6 max-w-screen-2xl">
+    <div className="container py-6 max-w-full px-4 md:px-6">
       <div className="flex justify-between items-center mb-4">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Temporal Analysis</h1>
@@ -709,45 +705,32 @@ These demographic shifts have important implications for land use planning, reso
         </div>
       </div>
       
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="md:col-span-3">
-          <Tabs defaultValue={initialTab === 'landCover' ? 'land-cover' : initialTab === 'precipitation' ? 'precipitation' : initialTab === 'vegetation' ? 'vegetation' : 'population'} onValueChange={handleTabChange}>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 sm:gap-0">
-              <TabsList className="grid sm:w-auto grid-cols-2 sm:grid-cols-4 sm:inline-grid">
-                <TabsTrigger value="land-cover" className="flex items-center gap-1.5">
-                  <MapPin size={14} />
-                  <span className="hidden sm:inline">Land Cover</span>
-                  <span className="sm:hidden">Land</span>
-                </TabsTrigger>
-                <TabsTrigger value="precipitation" className="flex items-center gap-1.5">
-                  <Cloud size={14} />
-                  <span className="hidden sm:inline">Precipitation</span>
-                  <span className="sm:hidden">Rain</span>
-                </TabsTrigger>
-                <TabsTrigger value="vegetation" className="flex items-center gap-1.5">
-                  <TrendingUp size={14} />
-                  <span>Vegetation</span>
-                </TabsTrigger>
-                <TabsTrigger value="population" className="flex items-center gap-1.5">
-                  <User size={14} />
-                  <span>Population</span>
-                </TabsTrigger>
-              </TabsList>
-              
-              <div className="hidden md:flex items-center gap-2 flex-1 max-w-xl">
-                <CalendarDays size={16} className="text-muted-foreground flex-shrink-0" />
-                <YearSlider 
-                  initialValue={year}
-                  onChange={handleYearChange}
-                  min={2010}
-                  max={2023}
-                  step={1}
-                  className="w-full"
-                />
-              </div>
-            </div>
+      <div className="mt-6 grid grid-cols-1 gap-6">
+        <Tabs defaultValue={initialTab === 'landCover' ? 'land-cover' : initialTab === 'precipitation' ? 'precipitation' : initialTab === 'vegetation' ? 'vegetation' : 'population'} onValueChange={handleTabChange}>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 sm:gap-0">
+            <TabsList className="grid sm:w-auto grid-cols-2 sm:grid-cols-4 sm:inline-grid">
+              <TabsTrigger value="land-cover" className="flex items-center gap-1.5">
+                <MapPin size={14} />
+                <span className="hidden sm:inline">Land Cover</span>
+                <span className="sm:hidden">Land</span>
+              </TabsTrigger>
+              <TabsTrigger value="precipitation" className="flex items-center gap-1.5">
+                <Cloud size={14} />
+                <span className="hidden sm:inline">Precipitation</span>
+                <span className="sm:hidden">Rain</span>
+              </TabsTrigger>
+              <TabsTrigger value="vegetation" className="flex items-center gap-1.5">
+                <TrendingUp size={14} />
+                <span>Vegetation</span>
+              </TabsTrigger>
+              <TabsTrigger value="population" className="flex items-center gap-1.5">
+                <User size={14} />
+                <span>Population</span>
+              </TabsTrigger>
+            </TabsList>
             
-            <div className="md:hidden mb-4 w-full">
+            <div className="hidden md:flex items-center gap-2 flex-1 max-w-xl">
+              <CalendarDays size={16} className="text-muted-foreground flex-shrink-0" />
               <YearSlider 
                 initialValue={year}
                 onChange={handleYearChange}
@@ -757,254 +740,266 @@ These demographic shifts have important implications for land use planning, reso
                 className="w-full"
               />
             </div>
-            
-            <Card className="mb-6">
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="md:col-span-2 aspect-[16/9] rounded-lg overflow-hidden">
-                    <MapVisualization 
-                      year={year} 
-                      dataType={activeDataType}
-                      onStatsChange={handleStatsChange}
-                      className="h-full w-full border"
-                    />
+          </div>
+          
+          <div className="md:hidden mb-4 w-full">
+            <YearSlider 
+              initialValue={year}
+              onChange={handleYearChange}
+              min={2010}
+              max={2023}
+              step={1}
+              className="w-full"
+            />
+          </div>
+          
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2 aspect-[16/9] rounded-lg overflow-hidden">
+                  <MapVisualization 
+                    year={year} 
+                    dataType={activeDataType}
+                    onStatsChange={handleStatsChange}
+                    className="h-full w-full border"
+                  />
+                </div>
+                
+                <div className="md:col-span-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">
+                      {activeDataType === 'landCover' && 'Land Cover Distribution'}
+                      {activeDataType === 'precipitation' && 'Precipitation Analysis'}
+                      {activeDataType === 'vegetation' && 'Vegetation Productivity'}
+                      {activeDataType === 'population' && 'Population Statistics'}
+                      {' '}
+                      for {year}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {activeDataType === 'landCover' && 'Distribution of different land cover classes in the region based on MODIS satellite data.'}
+                      {activeDataType === 'precipitation' && 'Analysis of annual precipitation patterns based on satellite-derived rainfall estimates.'}
+                      {activeDataType === 'vegetation' && 'Measurement of vegetation productivity using Gross Primary Production (GPP) from MODIS.'}
+                      {activeDataType === 'population' && 'Population density and demographics based on gridded population data.'}
+                    </p>
+                    
+                    {getFormattedStats()}
                   </div>
                   
-                  <div className="md:col-span-1 flex flex-col justify-between">
-                    <div>
-                      <h3 className="text-lg font-medium mb-2">
-                        {activeDataType === 'landCover' && 'Land Cover Distribution'}
-                        {activeDataType === 'precipitation' && 'Precipitation Analysis'}
-                        {activeDataType === 'vegetation' && 'Vegetation Productivity'}
-                        {activeDataType === 'population' && 'Population Statistics'}
-                        {' '}
-                        for {year}
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        {activeDataType === 'landCover' && 'Distribution of different land cover classes in the region based on MODIS satellite data.'}
-                        {activeDataType === 'precipitation' && 'Analysis of annual precipitation patterns based on satellite-derived rainfall estimates.'}
-                        {activeDataType === 'vegetation' && 'Measurement of vegetation productivity using Gross Primary Production (GPP) from MODIS.'}
-                        {activeDataType === 'population' && 'Population density and demographics based on gridded population data.'}
-                      </p>
-                      
-                      {getFormattedStats()}
-                    </div>
-                    
-                    <div className="flex items-center justify-start gap-2 text-xs text-muted-foreground mt-3">
-                      <Info size={14} /> 
-                      {activeDataType === 'landCover' && 'Data source: MODIS Land Cover Type yearly product (MCD12Q1)'}
-                      {activeDataType === 'precipitation' && 'Data source: CHIRPS rainfall estimates, 5km resolution'}
-                      {activeDataType === 'vegetation' && 'Data source: MODIS GPP 8-day composite (MOD17A2H)'}
-                      {activeDataType === 'population' && 'Data source: WorldPop gridded population estimates'}
-                    </div>
+                  <div className="flex items-center justify-start gap-2 text-xs text-muted-foreground mt-3">
+                    <Info size={14} /> 
+                    {activeDataType === 'landCover' && 'Data source: MODIS Land Cover Type yearly product (MCD12Q1)'}
+                    {activeDataType === 'precipitation' && 'Data source: CHIRPS rainfall estimates, 5km resolution'}
+                    {activeDataType === 'vegetation' && 'Data source: MODIS GPP 8-day composite (MOD17A2H)'}
+                    {activeDataType === 'population' && 'Data source: WorldPop gridded population estimates'}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              <div className="lg:col-span-2">
+              </div>
+            </CardContent>
+          </Card>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+            <div className="lg:col-span-3">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Analysis View</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        size="sm" 
+                        variant={analysisView === 'temporal' ? 'default' : 'outline'} 
+                        onClick={() => setAnalysisView('temporal')}
+                        className="h-8"
+                      >
+                        Temporal
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant={analysisView === 'correlation' ? 'default' : 'outline'} 
+                        onClick={() => setAnalysisView('correlation')}
+                        className="h-8"
+                      >
+                        Correlation
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {analysisView === 'temporal' ? (
+                    <div className="h-[350px]">
+                      <ChartCarousel 
+                        data={
+                          activeDataType === 'landCover' ? getLandCoverChartData() :
+                          activeDataType === 'precipitation' ? getPrecipitationChartData() :
+                          activeDataType === 'vegetation' ? getVegetationChartData() :
+                          getPopulationChartData()
+                        } 
+                        timeSeriesData={getFilteredData()} 
+                        dataType={activeDataType}
+                      />
+                    </div>
+                  ) : (
+                    <CorrelationAnalysis 
+                      data={getFilteredData()}
+                      variables={getCorrelationVariables()}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+              
+              <TabsContent value="land-cover" className="mt-6">
                 <Card>
                   <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle>Analysis View</CardTitle>
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          size="sm" 
-                          variant={analysisView === 'temporal' ? 'default' : 'outline'} 
-                          onClick={() => setAnalysisView('temporal')}
-                          className="h-8"
-                        >
-                          Temporal
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant={analysisView === 'correlation' ? 'default' : 'outline'} 
-                          onClick={() => setAnalysisView('correlation')}
-                          className="h-8"
-                        >
-                          Correlation
-                        </Button>
-                      </div>
-                    </div>
+                    <CardTitle>Insights & Implications</CardTitle>
+                    <CardDescription>
+                      Analysis of land cover changes and their environmental impact
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {analysisView === 'temporal' ? (
-                      <div className="h-[350px]">
-                        <ChartCarousel 
-                          data={
-                            activeDataType === 'landCover' ? getLandCoverChartData() :
-                            activeDataType === 'precipitation' ? getPrecipitationChartData() :
-                            activeDataType === 'vegetation' ? getVegetationChartData() :
-                            getPopulationChartData()
-                          } 
-                          timeSeriesData={getFilteredData()} 
-                          dataType={activeDataType}
-                        />
+                    <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Key Findings:</h4>
+                        <ul className="text-sm space-y-1.5 list-disc list-inside text-muted-foreground">
+                          <li>Forests have declined by approximately 37% since 2010</li>
+                          <li>Grasslands show relatively stable trends with seasonal variations</li>
+                          <li>Cropland area has marginally increased, indicating agricultural expansion</li>
+                          <li>Barren land has expanded, potentially indicating desertification</li>
+                        </ul>
                       </div>
-                    ) : (
-                      <CorrelationAnalysis 
-                        data={getFilteredData()}
-                        variables={getCorrelationVariables()}
-                      />
-                    )}
+                      
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Implications:</h4>
+                        <ul className="text-sm space-y-1.5 list-disc list-inside text-muted-foreground">
+                          <li>Decreased forest coverage may impact biodiversity and ecosystem services</li>
+                          <li>Agricultural expansion shows adaptation to changing climate patterns</li>
+                          <li>Increasing barren land signals potential land degradation concerns</li>
+                          <li>Grassland stability provides resilience to local pastoral communities</li>
+                        </ul>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
-                
-                <TabsContent value="land-cover" className="mt-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Insights & Implications</CardTitle>
-                      <CardDescription>
-                        Analysis of land cover changes and their environmental impact
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Key Findings:</h4>
-                          <ul className="text-sm space-y-1.5 list-disc list-inside text-muted-foreground">
-                            <li>Forests have declined by approximately 37% since 2010</li>
-                            <li>Grasslands show relatively stable trends with seasonal variations</li>
-                            <li>Cropland area has marginally increased, indicating agricultural expansion</li>
-                            <li>Barren land has expanded, potentially indicating desertification</li>
-                          </ul>
-                        </div>
-                        
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Implications:</h4>
-                          <ul className="text-sm space-y-1.5 list-disc list-inside text-muted-foreground">
-                            <li>Decreased forest coverage may impact biodiversity and ecosystem services</li>
-                            <li>Agricultural expansion shows adaptation to changing climate patterns</li>
-                            <li>Increasing barren land signals potential land degradation concerns</li>
-                            <li>Grassland stability provides resilience to local pastoral communities</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="precipitation" className="mt-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Extreme Events Analysis</CardTitle>
-                      <CardDescription>
-                        Frequency and distribution of precipitation extremes
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="h-[180px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart
-                            data={precipitationData.filter(d => d.year >= timeWindow[0] && d.year <= timeWindow[1])}
-                            margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="year" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Bar dataKey="Extreme Events" fill="#d73027" name="Extreme Weather Events" />
-                            <Bar dataKey="Water Stress Index" fill="#fee090" name="Water Stress Index" />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="vegetation" className="mt-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Productivity Analysis</CardTitle>
-                      <CardDescription>
-                        Annual changes in vegetation productivity
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="h-[180px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart
-                            data={vegetationData.filter(d => d.year >= timeWindow[0] && d.year <= timeWindow[1])}
-                            margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="year" />
-                            <YAxis domain={[-4, 4]} />
-                            <Tooltip />
-                            <Legend />
-                            <Bar 
-                              dataKey="AnnualChange" 
-                              name="Annual Productivity Change (%)"
-                            >
-                              {vegetationData.map((entry, index) => (
-                                <Cell 
-                                  key={`cell-${index}`} 
-                                  fill={entry.AnnualChange > 0 ? "#4CAF50" : "#F44336"}
-                                />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="population" className="mt-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Population Dynamics</CardTitle>
-                      <CardDescription>
-                        Demographic changes and environmental impacts
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <PopulationInsightsCharts />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </div>
+              </TabsContent>
               
-              <div className="space-y-6">
-                <TimeWindowSelector
-                  startYear={timeWindow[0]}
-                  endYear={timeWindow[1]}
-                  minYear={2010}
-                  maxYear={2023}
-                  onChange={handleTimeWindowChange}
-                />
-                
-                <RegionFilter
-                  regions={regions}
-                  selectedRegions={selectedRegions}
-                  onChange={handleRegionChange}
-                />
-                
+              <TabsContent value="precipitation" className="mt-6">
                 <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Analysis Summary</CardTitle>
+                  <CardHeader>
+                    <CardTitle>Extreme Events Analysis</CardTitle>
+                    <CardDescription>
+                      Frequency and distribution of precipitation extremes
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="p-4 bg-muted rounded-md h-full">
-                      <p className="text-sm whitespace-pre-line">
-                        {getInsightText()}
-                      </p>
+                    <div className="h-[180px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={precipitationData.filter(d => d.year >= timeWindow[0] && d.year <= timeWindow[1])}
+                          margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="year" />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Bar dataKey="Extreme Events" fill="#d73027" name="Extreme Weather Events" />
+                          <Bar dataKey="Water Stress Index" fill="#fee090" name="Water Stress Index" />
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
                   </CardContent>
                 </Card>
-                
-                <ReportGenerator
-                  data={getFilteredData()}
-                  charts={[]}
-                  insights={getInsightText()}
-                  timestamp={new Date().toLocaleString()}
-                />
-              </div>
+              </TabsContent>
+              
+              <TabsContent value="vegetation" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Productivity Analysis</CardTitle>
+                    <CardDescription>
+                      Annual changes in vegetation productivity
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[180px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={vegetationData.filter(d => d.year >= timeWindow[0] && d.year <= timeWindow[1])}
+                          margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="year" />
+                          <YAxis domain={[-4, 4]} />
+                          <Tooltip />
+                          <Legend />
+                          <Bar 
+                            dataKey="AnnualChange" 
+                            name="Annual Productivity Change (%)"
+                          >
+                            {vegetationData.map((entry, index) => (
+                              <Cell 
+                                key={`cell-${index}`} 
+                                fill={entry.AnnualChange > 0 ? "#4CAF50" : "#F44336"}
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="population" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Population Dynamics</CardTitle>
+                    <CardDescription>
+                      Demographic changes and environmental impacts
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <PopulationInsightsCharts />
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </div>
-          </Tabs>
-        </div>
+            
+            <div className="lg:col-span-1 space-y-6">
+              <TimeWindowSelector
+                startYear={timeWindow[0]}
+                endYear={timeWindow[1]}
+                minYear={2010}
+                maxYear={2023}
+                onChange={handleTimeWindowChange}
+              />
+              
+              <RegionFilter
+                regions={regions}
+                selectedRegions={selectedRegions}
+                onChange={handleRegionChange}
+                className="w-full"
+              />
+              
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Analysis Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="p-4 bg-muted rounded-md h-full">
+                    <p className="text-sm whitespace-pre-line">
+                      {getInsightText()}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <ReportGenerator
+                data={getFilteredData()}
+                charts={[]}
+                insights={getInsightText()}
+                timestamp={new Date().toLocaleString()}
+              />
+            </div>
+          </div>
+        </Tabs>
       </div>
     </div>
   );
