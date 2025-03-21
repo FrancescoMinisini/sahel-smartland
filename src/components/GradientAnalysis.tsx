@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import LandCoverGradientChart from './LandCoverGradientChart';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { RefreshCw, Layers, Sun, CloudRain } from 'lucide-react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 
@@ -52,6 +52,110 @@ interface GradientChartProps {
   showSingleYear?: boolean;
 }
 
+const VegetationTrendChart = ({ className }: { className?: string }) => {
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle>Vegetation Trends (2010-2022)</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[400px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={vegetationGradientData}
+              margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="year" angle={0} textAnchor="middle" height={40} />
+              <YAxis width={50} />
+              <Tooltip 
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="bg-background border border-border/50 shadow-xl rounded-lg p-2 min-w-[8rem]">
+                        <div className="text-sm font-bold">{label}</div>
+                        <div className="grid grid-cols-2 gap-2 mt-1">
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 rounded-full bg-green-400 mr-1" />
+                            <span className="text-xs">Increase:</span>
+                          </div>
+                          <span className="text-xs font-medium text-right">{payload[0]?.value} km²</span>
+                          
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 rounded-full bg-red-400 mr-1" />
+                            <span className="text-xs">Decrease:</span>
+                          </div>
+                          <span className="text-xs font-medium text-right">{payload[1]?.value} km²</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Legend verticalAlign="bottom" height={36} />
+              <Line type="monotone" dataKey="increase_sqm" name="Increase" stroke="#4ade80" strokeWidth={2} dot={{ r: 4 }} />
+              <Line type="monotone" dataKey="decrease_sqm" name="Decrease" stroke="#f87171" strokeWidth={2} dot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const PrecipitationTrendChart = ({ className }: { className?: string }) => {
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle>Precipitation Trends (2010-2022)</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[400px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={precipitationGradientData}
+              margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="year" angle={0} textAnchor="middle" height={40} />
+              <YAxis width={50} />
+              <Tooltip 
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="bg-background border border-border/50 shadow-xl rounded-lg p-2 min-w-[8rem]">
+                        <div className="text-sm font-bold">{label}</div>
+                        <div className="grid grid-cols-2 gap-2 mt-1">
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 rounded-full bg-blue-400 mr-1" />
+                            <span className="text-xs">Increase:</span>
+                          </div>
+                          <span className="text-xs font-medium text-right">{payload[0]?.value} km²</span>
+                          
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 rounded-full bg-orange-400 mr-1" />
+                            <span className="text-xs">Decrease:</span>
+                          </div>
+                          <span className="text-xs font-medium text-right">{payload[1]?.value} km²</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Legend verticalAlign="bottom" height={36} />
+              <Line type="monotone" dataKey="increase_sqm" name="Increase" stroke="#60a5fa" strokeWidth={2} dot={{ r: 4 }} />
+              <Line type="monotone" dataKey="decrease_sqm" name="Decrease" stroke="#f97316" strokeWidth={2} dot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 const VegetationGradientChart = ({ className, selectedYear = 2022, showSingleYear = false }: GradientChartProps) => {
   const chartData = showSingleYear 
     ? vegetationGradientData.filter(item => item.year === selectedYear)
@@ -68,54 +172,45 @@ const VegetationGradientChart = ({ className, selectedYear = 2022, showSingleYea
       </CardHeader>
       <CardContent>
         <div className="h-[400px]">
-          <ChartContainer 
-            config={{
-              increase: { label: "Increase", color: "#4ade80" },
-              decrease: { label: "Decrease", color: "#f87171" }
-            }}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
-                barSize={showSingleYear ? 80 : 20}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" angle={0} textAnchor="middle" height={40} />
-                <YAxis width={50} />
-                <ChartTooltip 
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <ChartTooltipContent>
-                          <div className="px-2 py-1">
-                            <div className="text-sm font-bold">{payload[0]?.payload.year}</div>
-                            <div className="grid grid-cols-2 gap-2 mt-1">
-                              <div className="flex items-center">
-                                <div className="w-3 h-3 rounded-full bg-green-400 mr-1" />
-                                <span className="text-xs">Increase:</span>
-                              </div>
-                              <span className="text-xs font-medium text-right">{payload[0]?.value} km²</span>
-                              
-                              <div className="flex items-center">
-                                <div className="w-3 h-3 rounded-full bg-red-400 mr-1" />
-                                <span className="text-xs">Decrease:</span>
-                              </div>
-                              <span className="text-xs font-medium text-right">{payload[1]?.value} km²</span>
-                            </div>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={chartData}
+              margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
+              barSize={showSingleYear ? 80 : 20}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="year" angle={0} textAnchor="middle" height={40} />
+              <YAxis width={50} />
+              <Tooltip 
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="bg-background border border-border/50 shadow-xl rounded-lg p-2 min-w-[8rem]">
+                        <div className="text-sm font-bold">{payload[0]?.payload.year}</div>
+                        <div className="grid grid-cols-2 gap-2 mt-1">
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 rounded-full bg-green-400 mr-1" />
+                            <span className="text-xs">Increase:</span>
                           </div>
-                        </ChartTooltipContent>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Legend verticalAlign="bottom" height={36} />
-                <Bar dataKey="increase_sqm" name="Increase" fill="#4ade80" />
-                <Bar dataKey="decrease_sqm" name="Decrease" fill="#f87171" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+                          <span className="text-xs font-medium text-right">{payload[0]?.value} km²</span>
+                          
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 rounded-full bg-red-400 mr-1" />
+                            <span className="text-xs">Decrease:</span>
+                          </div>
+                          <span className="text-xs font-medium text-right">{payload[1]?.value} km²</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Legend verticalAlign="bottom" height={36} />
+              <Bar dataKey="increase_sqm" name="Increase" fill="#4ade80" />
+              <Bar dataKey="decrease_sqm" name="Decrease" fill="#f87171" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </CardContent>
     </Card>
@@ -138,54 +233,45 @@ const PrecipitationGradientChart = ({ className, selectedYear = 2022, showSingle
       </CardHeader>
       <CardContent>
         <div className="h-[400px]">
-          <ChartContainer 
-            config={{
-              increase: { label: "Increase", color: "#60a5fa" },
-              decrease: { label: "Decrease", color: "#f97316" }
-            }}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
-                barSize={showSingleYear ? 80 : 20}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" angle={0} textAnchor="middle" height={40} />
-                <YAxis width={50} />
-                <ChartTooltip 
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <ChartTooltipContent>
-                          <div className="px-2 py-1">
-                            <div className="text-sm font-bold">{payload[0]?.payload.year}</div>
-                            <div className="grid grid-cols-2 gap-2 mt-1">
-                              <div className="flex items-center">
-                                <div className="w-3 h-3 rounded-full bg-blue-400 mr-1" />
-                                <span className="text-xs">Increase:</span>
-                              </div>
-                              <span className="text-xs font-medium text-right">{payload[0]?.value} km²</span>
-                              
-                              <div className="flex items-center">
-                                <div className="w-3 h-3 rounded-full bg-orange-400 mr-1" />
-                                <span className="text-xs">Decrease:</span>
-                              </div>
-                              <span className="text-xs font-medium text-right">{payload[1]?.value} km²</span>
-                            </div>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={chartData}
+              margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
+              barSize={showSingleYear ? 80 : 20}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="year" angle={0} textAnchor="middle" height={40} />
+              <YAxis width={50} />
+              <Tooltip 
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="bg-background border border-border/50 shadow-xl rounded-lg p-2 min-w-[8rem]">
+                        <div className="text-sm font-bold">{payload[0]?.payload.year}</div>
+                        <div className="grid grid-cols-2 gap-2 mt-1">
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 rounded-full bg-blue-400 mr-1" />
+                            <span className="text-xs">Increase:</span>
                           </div>
-                        </ChartTooltipContent>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Legend verticalAlign="bottom" height={36} />
-                <Bar dataKey="increase_sqm" name="Increase" fill="#60a5fa" />
-                <Bar dataKey="decrease_sqm" name="Decrease" fill="#f97316" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+                          <span className="text-xs font-medium text-right">{payload[0]?.value} km²</span>
+                          
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 rounded-full bg-orange-400 mr-1" />
+                            <span className="text-xs">Decrease:</span>
+                          </div>
+                          <span className="text-xs font-medium text-right">{payload[1]?.value} km²</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Legend verticalAlign="bottom" height={36} />
+              <Bar dataKey="increase_sqm" name="Increase" fill="#60a5fa" />
+              <Bar dataKey="decrease_sqm" name="Decrease" fill="#f97316" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </CardContent>
     </Card>
@@ -306,6 +392,10 @@ const GradientAnalysis = ({ year = 2023, className }: GradientAnalysisProps) => 
                 <VegetationGradientChart className="w-full" selectedYear={year} showSingleYear={true} />
               </div>
               
+              <div className="col-span-full">
+                <VegetationTrendChart className="w-full" />
+              </div>
+              
               <Card>
                 <CardHeader className="py-4">
                   <CardTitle className="text-sm font-medium">Key Metrics</CardTitle>
@@ -373,6 +463,10 @@ const GradientAnalysis = ({ year = 2023, className }: GradientAnalysisProps) => 
               
               <div className="col-span-full">
                 <PrecipitationGradientChart className="w-full" selectedYear={year} showSingleYear={true} />
+              </div>
+              
+              <div className="col-span-full">
+                <PrecipitationTrendChart className="w-full" />
               </div>
               
               <Card>
