@@ -10,9 +10,7 @@ interface YearSliderProps {
   min?: number; // Add support for both naming conventions
   max?: number; // Add support for both naming conventions
   initialValue?: number;
-  value?: number;
   onChange?: (year: number) => void;
-  onValueChange?: (year: number) => void;
   className?: string;
   showLabels?: boolean;
   autoPlay?: boolean;
@@ -26,9 +24,7 @@ const YearSlider = ({
   min,
   max,
   initialValue,
-  value,
   onChange,
-  onValueChange,
   className,
   showLabels = true,
   autoPlay = false,
@@ -39,18 +35,7 @@ const YearSlider = ({
   const actualMinYear = minYear !== undefined ? minYear : (min !== undefined ? min : 2010);
   const actualMaxYear = maxYear !== undefined ? maxYear : (max !== undefined ? max : 2023);
   
-  // Use value if provided, otherwise use initialValue or default
-  const [currentYear, setCurrentYear] = useState<number>(
-    value !== undefined ? value : (initialValue || actualMinYear)
-  );
-  
-  // Update internal state when value prop changes
-  useEffect(() => {
-    if (value !== undefined) {
-      setCurrentYear(value);
-    }
-  }, [value]);
-  
+  const [currentYear, setCurrentYear] = useState<number>(initialValue || actualMinYear);
   const [isPlaying, setIsPlaying] = useState<boolean>(autoPlay);
   const autoPlayTimerRef = useRef<number | null>(null);
   const isDraggingRef = useRef<boolean>(false);
@@ -76,10 +61,9 @@ const YearSlider = ({
           const nextYear = prevYear >= actualMaxYear ? actualMinYear : prevYear + step;
           
           // Only trigger onChange when the year actually changes and is different from previous
-          if ((onChange || onValueChange) && nextYear !== previousYearRef.current) {
+          if (onChange && nextYear !== previousYearRef.current) {
             previousYearRef.current = nextYear; // Set the previous year reference before triggering onChange
-            if (onChange) onChange(nextYear);
-            if (onValueChange) onValueChange(nextYear);
+            onChange(nextYear);
           }
           return nextYear;
         });
@@ -102,7 +86,7 @@ const YearSlider = ({
         autoPlayTimerRef.current = null;
       }
     };
-  }, [isPlaying, actualMinYear, actualMaxYear, onChange, onValueChange, autoPlayInterval, step]);
+  }, [isPlaying, actualMinYear, actualMaxYear, onChange, autoPlayInterval, step]);
 
   const handleSliderChange = (value: number[]) => {
     const year = value[0];
@@ -111,9 +95,6 @@ const YearSlider = ({
       previousYearRef.current = year; // Set the previous year reference before triggering onChange
       if (onChange) {
         onChange(year);
-      }
-      if (onValueChange) {
-        onValueChange(year);
       }
     }
   };
@@ -142,10 +123,9 @@ const YearSlider = ({
           const nextYear = prevYear >= actualMaxYear ? actualMinYear : prevYear + step;
           
           // Only trigger onChange when the year actually changes and is different from previous
-          if ((onChange || onValueChange) && nextYear !== previousYearRef.current) {
+          if (onChange && nextYear !== previousYearRef.current) {
             previousYearRef.current = nextYear; // Set before triggering onChange
-            if (onChange) onChange(nextYear);
-            if (onValueChange) onValueChange(nextYear);
+            onChange(nextYear);
           }
           return nextYear;
         });
