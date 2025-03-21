@@ -9,7 +9,7 @@ import { Badge } from './ui/badge';
 import { TooltipProvider, Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Import the land cover gradient data
-import landCoverGradientData from '../../../Datasets_Hackathon/Graph_data/land_cover_gradient.csv';
+import landCoverGradientData from '../../Datasets_Hackathon/Graph_data/land_cover_gradient.csv';
 
 type GradientData = {
   year: number;
@@ -775,4 +775,3 @@ These rainfall gradients correlate strongly with vegetation changes and suggest 
 };
 
 export default GradientAnalysis;
-
