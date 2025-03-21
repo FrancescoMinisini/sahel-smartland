@@ -24,6 +24,7 @@ const MapVisualization = ({
   } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeLayer, setActiveLayer] = useState(dataType);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -73,19 +74,32 @@ const MapVisualization = ({
       progress
     };
   }, [year, dataType]);
+  
   useEffect(() => {
     if (onStatsChange && Object.keys(currentStats).length > 0) {
       onStatsChange(currentStats);
     }
   }, [currentStats, onStatsChange]);
+  
   useEffect(() => {
     setActiveLayer(dataType);
     previousDataTypeRef.current = dataType;
   }, [dataType]);
+  
+  const isGradientImage = dataType.includes('Gradient');
+  
   useEffect(() => {
     const preloadAllYears = async () => {
       setIsLoading(true);
       try {
+        if (isGradientImage) {
+          if (imageRef.current) {
+            imageRef.current = null;
+          }
+          setIsLoading(false);
+          return;
+        }
+        
         const availableYears = getAvailableYears(dataType);
         for (const yearToLoad of availableYears) {
           if (!mapData[dataType]?.[yearToLoad]) {
@@ -110,25 +124,93 @@ const MapVisualization = ({
         setIsLoading(false);
       }
     };
-    if (!mapData[dataType] || Object.keys(mapData[dataType]).length === 0) {
+    
+    if (isGradientImage) {
+      preloadAllYears();
+    } else if (!mapData[dataType] || Object.keys(mapData[dataType]).length === 0) {
       preloadAllYears();
     } else {
       setIsLoading(false);
     }
+    
     return () => {
       if (transitionAnimationId !== null) {
         cancelAnimationFrame(transitionAnimationId);
       }
     };
-  }, [dataType, mapData, toast, transitionAnimationId]);
+  }, [dataType, mapData, toast, transitionAnimationId, isGradientImage]);
+  
   useEffect(() => {
     const handleResize = () => {
-      if (isLoading || !canvasRef.current || !containerRef.current) return;
-      adjustCanvasSize();
+      if (isLoading || !containerRef.current) return;
+      
+      if (isGradientImage) {
+        adjustImageSize();
+      } else if (canvasRef.current) {
+        adjustCanvasSize();
+      }
     };
+    
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [isLoading]);
+  }, [isLoading, isGradientImage]);
+  
+  const adjustImageSize = () => {
+    if (!containerRef.current) return;
+    
+    const img = document.createElement('img');
+    img.onload = () => {
+      if (!containerRef.current) return;
+      
+      const container = containerRef.current;
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+      const imgAspectRatio = img.width / img.height;
+      
+      let displayWidth, displayHeight;
+      if (containerWidth / containerHeight > imgAspectRatio) {
+        displayHeight = containerHeight;
+        displayWidth = displayHeight * imgAspectRatio;
+      } else {
+        displayWidth = containerWidth;
+        displayHeight = displayWidth / imgAspectRatio;
+      }
+      
+      const imgElement = document.createElement('img');
+      imgElement.src = img.src;
+      imgElement.style.width = `${displayWidth}px`;
+      imgElement.style.height = `${displayHeight}px`;
+      imgElement.style.objectFit = 'contain';
+      imgElement.style.maxWidth = '100%';
+      imgElement.style.maxHeight = '100%';
+      imgElement.style.position = 'absolute';
+      imgElement.style.top = '50%';
+      imgElement.style.left = '50%';
+      imgElement.style.transform = `translate(-50%, -50%) scale(${zoomLevel})`;
+      imgElement.style.transition = 'transform 0.3s ease-out';
+      
+      const previousImage = container.querySelector('img');
+      if (previousImage) {
+        container.removeChild(previousImage);
+      }
+      
+      container.appendChild(imgElement);
+      imageRef.current = imgElement;
+    };
+    
+    let imagePath = '';
+    
+    if (dataType === 'landCoverGradient') {
+      imagePath = `/lovable-uploads/e5e26823-8aa4-46ee-8550-ea1164d47810.png`;
+    } else if (dataType === 'vegetationGradient') {
+      imagePath = `/lovable-uploads/e5e26823-8aa4-46ee-8550-ea1164d47810.png`;
+    } else if (dataType === 'precipitationGradient') {
+      imagePath = `/lovable-uploads/e5e26823-8aa4-46ee-8550-ea1164d47810.png`;
+    }
+    
+    img.src = imagePath;
+  };
+  
   const adjustCanvasSize = () => {
     if (!canvasRef.current || !containerRef.current) return;
     const canvas = canvasRef.current;
@@ -158,25 +240,33 @@ const MapVisualization = ({
       renderCurrentData();
     }
   };
+  
   useEffect(() => {
-    if (isLoading || !canvasRef.current || !containerRef.current) return;
-    adjustCanvasSize();
-    if (previousYearRef.current !== null && (previousYearRef.current !== year || previousDataTypeRef.current !== dataType)) {
-      if (transitionAnimationId !== null) {
-        cancelAnimationFrame(transitionAnimationId);
-      }
-      const dataTypeChanged = previousDataTypeRef.current !== dataType;
-      if (dataTypeChanged) {
-        renderCurrentData();
+    if (isLoading || !containerRef.current) return;
+    
+    if (isGradientImage) {
+      adjustImageSize();
+    } else if (canvasRef.current) {
+      adjustCanvasSize();
+      if (previousYearRef.current !== null && (previousYearRef.current !== year || previousDataTypeRef.current !== dataType)) {
+        if (transitionAnimationId !== null) {
+          cancelAnimationFrame(transitionAnimationId);
+        }
+        const dataTypeChanged = previousDataTypeRef.current !== dataType;
+        if (dataTypeChanged) {
+          renderCurrentData();
+        } else {
+          animateYearTransition();
+        }
       } else {
-        animateYearTransition();
+        renderCurrentData();
       }
-    } else {
-      renderCurrentData();
     }
+    
     previousYearRef.current = year;
     previousDataTypeRef.current = dataType;
-  }, [mapData, prevYear, nextYear, progress, isLoading, year, dataType, transitionAnimationId]);
+  }, [mapData, prevYear, nextYear, progress, isLoading, year, dataType, transitionAnimationId, isGradientImage]);
+  
   const renderCurrentData = () => {
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
@@ -240,6 +330,7 @@ const MapVisualization = ({
       setCurrentStats(stats);
     }
   };
+  
   const animateYearTransition = () => {
     const dataForType = mapData[dataType] || {};
     const prevYearData = dataForType[prevYear];
@@ -299,21 +390,42 @@ const MapVisualization = ({
     const animationId = requestAnimationFrame(animateTransition);
     setTransitionAnimationId(animationId);
   };
+  
   const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 0.2, 3));
+    setZoomLevel(prev => {
+      const newZoom = Math.min(prev + 0.2, 3);
+      if (isGradientImage && imageRef.current) {
+        imageRef.current.style.transform = `translate(-50%, -50%) scale(${newZoom})`;
+      }
+      return newZoom;
+    });
   };
+  
   const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
+    setZoomLevel(prev => {
+      const newZoom = Math.max(prev - 0.2, 0.5);
+      if (isGradientImage && imageRef.current) {
+        imageRef.current.style.transform = `translate(-50%, -50%) scale(${newZoom})`;
+      }
+      return newZoom;
+    });
   };
+  
   const handleResetView = () => {
     setZoomLevel(1);
+    if (isGradientImage && imageRef.current) {
+      imageRef.current.style.transform = `translate(-50%, -50%) scale(1)`;
+    }
   };
+  
   const handleLayerChange = (layer: 'landCover' | 'precipitation' | 'vegetation' | 'population' | 'landCoverGradient' | 'vegetationGradient' | 'precipitationGradient') => {
     setActiveLayer(layer);
   };
+  
   const getMapDataType = () => {
     return activeLayer;
   };
+  
   const mapLayers = [{
     id: 'landCover' as const,
     name: 'Land Cover',
@@ -343,10 +455,12 @@ const MapVisualization = ({
     name: 'Population',
     color: 'bg-sahel-earth'
   }];
+  
   const getCurrentLayerName = () => {
     const currentLayer = mapLayers.find(layer => layer.id === activeLayer);
     return currentLayer ? currentLayer.name : 'Layer';
   };
+  
   const renderLegend = () => {
     if (dataType === 'landCover') {
       const nonZeroClasses = {
@@ -462,6 +576,7 @@ const MapVisualization = ({
     }
     return null;
   };
+  
   return <div className={cn("relative rounded-xl overflow-hidden w-full h-full flex items-center justify-center", className)} ref={containerRef}>
       <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-10 bg-white/80 dark:bg-muted/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium flex items-center gap-1.5 shadow-sm">
         {year}
@@ -480,15 +595,23 @@ const MapVisualization = ({
               </div>
               <p className="text-sm text-sahel-earth mt-4">Loading map data...</p>
             </div>
-          </div> : <div className="absolute inset-0 flex items-center justify-center transition-transform duration-300 ease-out" style={{
-        transform: `scale(${zoomLevel})`,
-        maxWidth: "90%",
-        margin: "0 auto",
-        left: "5%",
-        right: "5%"
-      }}>
-            <canvas ref={canvasRef} className="max-w-full max-h-full object-contain" />
-          </div>}
+          </div> : (
+            isGradientImage ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                {/* The image will be added via JavaScript */}
+              </div>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center transition-transform duration-300 ease-out" style={{
+                transform: `scale(${zoomLevel})`,
+                maxWidth: "90%",
+                margin: "0 auto",
+                left: "5%",
+                right: "5%"
+              }}>
+                <canvas ref={canvasRef} className="max-w-full max-h-full object-contain" />
+              </div>
+            )
+          )}
       </div>
       
       <div className="absolute top-3 right-3 flex flex-col gap-1.5">
