@@ -3,7 +3,9 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import LandCoverGradientChart from './LandCoverGradientChart';
-import { BarChart2, RefreshCw, Layers, Sun, CloudRain } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { RefreshCw, Layers, Sun, CloudRain } from 'lucide-react';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 
 // Generated sample data for vegetation gradient
 const vegetationGradientData = [
@@ -44,7 +46,13 @@ interface GradientAnalysisProps {
   className?: string;
 }
 
-const VegetationGradientChart = ({ className, selectedYear = 2022, showSingleYear = false }) => {
+interface GradientChartProps {
+  className?: string;
+  selectedYear?: number;
+  showSingleYear?: boolean;
+}
+
+const VegetationGradientChart = ({ className, selectedYear = 2022, showSingleYear = false }: GradientChartProps) => {
   const chartData = showSingleYear 
     ? vegetationGradientData.filter(item => item.year === selectedYear)
     : vegetationGradientData;
@@ -75,26 +83,28 @@ const VegetationGradientChart = ({ className, selectedYear = 2022, showSingleYea
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="year" angle={0} textAnchor="middle" height={40} />
                 <YAxis width={50} />
-                <Tooltip 
+                <ChartTooltip 
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="bg-background p-2 border rounded-md shadow-md">
-                          <div className="text-sm font-bold">{payload[0]?.payload.year}</div>
-                          <div className="grid grid-cols-2 gap-2 mt-1">
-                            <div className="flex items-center">
-                              <div className="w-3 h-3 rounded-full bg-green-400 mr-1" />
-                              <span className="text-xs">Increase:</span>
+                        <ChartTooltipContent>
+                          <div className="px-2 py-1">
+                            <div className="text-sm font-bold">{payload[0]?.payload.year}</div>
+                            <div className="grid grid-cols-2 gap-2 mt-1">
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 rounded-full bg-green-400 mr-1" />
+                                <span className="text-xs">Increase:</span>
+                              </div>
+                              <span className="text-xs font-medium text-right">{payload[0]?.value} km²</span>
+                              
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 rounded-full bg-red-400 mr-1" />
+                                <span className="text-xs">Decrease:</span>
+                              </div>
+                              <span className="text-xs font-medium text-right">{payload[1]?.value} km²</span>
                             </div>
-                            <span className="text-xs font-medium text-right">{payload[0]?.value} km²</span>
-                            
-                            <div className="flex items-center">
-                              <div className="w-3 h-3 rounded-full bg-red-400 mr-1" />
-                              <span className="text-xs">Decrease:</span>
-                            </div>
-                            <span className="text-xs font-medium text-right">{payload[1]?.value} km²</span>
                           </div>
-                        </div>
+                        </ChartTooltipContent>
                       );
                     }
                     return null;
@@ -112,7 +122,7 @@ const VegetationGradientChart = ({ className, selectedYear = 2022, showSingleYea
   );
 };
 
-const PrecipitationGradientChart = ({ className, selectedYear = 2022, showSingleYear = false }) => {
+const PrecipitationGradientChart = ({ className, selectedYear = 2022, showSingleYear = false }: GradientChartProps) => {
   const chartData = showSingleYear 
     ? precipitationGradientData.filter(item => item.year === selectedYear)
     : precipitationGradientData;
@@ -143,26 +153,28 @@ const PrecipitationGradientChart = ({ className, selectedYear = 2022, showSingle
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="year" angle={0} textAnchor="middle" height={40} />
                 <YAxis width={50} />
-                <Tooltip 
+                <ChartTooltip 
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="bg-background p-2 border rounded-md shadow-md">
-                          <div className="text-sm font-bold">{payload[0]?.payload.year}</div>
-                          <div className="grid grid-cols-2 gap-2 mt-1">
-                            <div className="flex items-center">
-                              <div className="w-3 h-3 rounded-full bg-blue-400 mr-1" />
-                              <span className="text-xs">Increase:</span>
+                        <ChartTooltipContent>
+                          <div className="px-2 py-1">
+                            <div className="text-sm font-bold">{payload[0]?.payload.year}</div>
+                            <div className="grid grid-cols-2 gap-2 mt-1">
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 rounded-full bg-blue-400 mr-1" />
+                                <span className="text-xs">Increase:</span>
+                              </div>
+                              <span className="text-xs font-medium text-right">{payload[0]?.value} km²</span>
+                              
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 rounded-full bg-orange-400 mr-1" />
+                                <span className="text-xs">Decrease:</span>
+                              </div>
+                              <span className="text-xs font-medium text-right">{payload[1]?.value} km²</span>
                             </div>
-                            <span className="text-xs font-medium text-right">{payload[0]?.value} km²</span>
-                            
-                            <div className="flex items-center">
-                              <div className="w-3 h-3 rounded-full bg-orange-400 mr-1" />
-                              <span className="text-xs">Decrease:</span>
-                            </div>
-                            <span className="text-xs font-medium text-right">{payload[1]?.value} km²</span>
                           </div>
-                        </div>
+                        </ChartTooltipContent>
                       );
                     }
                     return null;
@@ -209,11 +221,11 @@ const GradientAnalysis = ({ year = 2023, className }: GradientAnalysisProps) => 
           <TabsContent value="landCover" className="mt-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="col-span-full">
-                <LandCoverGradientChart />
+                <LandCoverGradientChart className="w-full" />
               </div>
               
               <div className="col-span-full">
-                <LandCoverGradientChart selectedYear={year} showSingleYear={true} />
+                <LandCoverGradientChart className="w-full" selectedYear={year} showSingleYear={true} />
               </div>
               
               <Card>
@@ -287,11 +299,11 @@ const GradientAnalysis = ({ year = 2023, className }: GradientAnalysisProps) => 
           <TabsContent value="vegetation" className="mt-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="col-span-full">
-                <VegetationGradientChart />
+                <VegetationGradientChart className="w-full" />
               </div>
               
               <div className="col-span-full">
-                <VegetationGradientChart selectedYear={year} showSingleYear={true} />
+                <VegetationGradientChart className="w-full" selectedYear={year} showSingleYear={true} />
               </div>
               
               <Card>
@@ -356,11 +368,11 @@ const GradientAnalysis = ({ year = 2023, className }: GradientAnalysisProps) => 
           <TabsContent value="precipitation" className="mt-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="col-span-full">
-                <PrecipitationGradientChart />
+                <PrecipitationGradientChart className="w-full" />
               </div>
               
               <div className="col-span-full">
-                <PrecipitationGradientChart selectedYear={year} showSingleYear={true} />
+                <PrecipitationGradientChart className="w-full" selectedYear={year} showSingleYear={true} />
               </div>
               
               <Card>
