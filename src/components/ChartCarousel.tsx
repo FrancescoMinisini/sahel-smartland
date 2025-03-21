@@ -1,3 +1,4 @@
+
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart, LineChart, Line, ComposedChart, Scatter } from 'recharts';
 import { cn } from "@/lib/utils";
@@ -20,7 +21,7 @@ const PIXEL_TO_SQ_KM = 0.2144;
 const DISPLAY_IN_THOUSANDS = 1000;
 
 const ChartCarousel = ({ 
-  data, 
+  data = [], 
   timeSeriesData = [], 
   className, 
   dataType = 'landCover' 
@@ -180,6 +181,11 @@ const ChartCarousel = ({
   };
 
   const sortedLandCoverTimeSeriesData = prepareLandCoverTimeSeriesData();
+
+  // Fetch and prepare land cover gradient data for the gradient visualization
+  const prepareLandCoverGradientData = (data: any[]) => {
+    return data;
+  };
 
   return (
     <div className={cn("relative", className)}>
