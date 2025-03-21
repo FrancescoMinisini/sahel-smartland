@@ -43,8 +43,9 @@ export const ChartContainer = ({
   );
 };
 
+// Fix the type error by changing the content prop type
 interface ChartTooltipProps {
-  content: (props: any) => React.ReactNode;
+  content: React.ReactNode | ((props: any) => React.ReactNode);
   className?: string;
 }
 
