@@ -1,4 +1,3 @@
-
 import { ReactNode, useState } from 'react';
 import { cn } from "@/lib/utils";
 import { ArrowUpRight, X } from 'lucide-react';
@@ -46,6 +45,7 @@ interface DataCardProps {
     correlation: number;
   }>;
   year?: number;
+  helperText?: string;
 }
 
 const DataCard = ({
@@ -58,11 +58,11 @@ const DataCard = ({
   onClick,
   analyticsData,
   correlations,
-  year = 2023
+  year = 2023,
+  helperText
 }: DataCardProps) => {
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   
-  // Generate sample data if none provided
   const defaultTimeSeriesData = [
     { year: 2018, value: typeof value === 'number' ? value * 0.75 : 50 },
     { year: 2019, value: typeof value === 'number' ? value * 0.85 : 60 },
@@ -74,7 +74,6 @@ const DataCard = ({
 
   const timeSeriesData = analyticsData || defaultTimeSeriesData;
   
-  // Sample correlation data if none provided
   const defaultCorrelations = [
     { name: "Precipitation", value: 75, correlation: 0.67 },
     { name: "Temperature", value: 82, correlation: -0.45 },
@@ -126,7 +125,6 @@ const DataCard = ({
         </div>
       </div>
 
-      {/* Analytics Drawer */}
       <Drawer open={isAnalyticsOpen} onOpenChange={setIsAnalyticsOpen}>
         <DrawerContent className="max-h-[90vh] overflow-y-auto">
           <DrawerHeader className="border-b pb-4">
@@ -142,7 +140,6 @@ const DataCard = ({
           </DrawerHeader>
           
           <div className="p-6 grid gap-8 overflow-y-auto">
-            {/* Key Metrics Section */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Key Metrics</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -175,7 +172,6 @@ const DataCard = ({
               </div>
             </div>
             
-            {/* Time Series Analysis */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Historical Trend (2018-2023)</h3>
               <div className="bg-white dark:bg-muted rounded-lg p-4 border border-border/30 h-[300px]">
@@ -202,7 +198,6 @@ const DataCard = ({
               </div>
             </div>
             
-            {/* Correlation Analysis */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Correlation Analysis</h3>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -263,7 +258,6 @@ const DataCard = ({
               </div>
             </div>
             
-            {/* Key Insights */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Key Insights</h3>
               <div className="bg-muted/30 rounded-lg p-4">

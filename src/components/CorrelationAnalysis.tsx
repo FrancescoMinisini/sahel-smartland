@@ -7,17 +7,20 @@ import { ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid
 import { Info, Shuffle, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+interface CorrelationVariable {
+  id: string;
+  name: string;
+  unit: string;
+}
+
 interface CorrelationAnalysisProps {
   data: any[];
-  variables: {
-    id: string;
-    name: string;
-    unit: string;
-  }[];
+  variables: CorrelationVariable[];
+  year?: number;
   className?: string;
 }
 
-const CorrelationAnalysis = ({ data, variables, className }: CorrelationAnalysisProps) => {
+const CorrelationAnalysis = ({ data, variables, year, className }: CorrelationAnalysisProps) => {
   const [xVariable, setXVariable] = useState(variables[0]?.id || '');
   const [yVariable, setYVariable] = useState(variables[1]?.id || '');
   const [confidenceLevel, setConfidenceLevel] = useState(90);

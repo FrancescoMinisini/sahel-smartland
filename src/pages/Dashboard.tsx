@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -68,9 +67,35 @@ const landCoverTimeSeriesData = [
   { year: 2021, "Forests": 1532, "Grasslands": 3214, "Croplands": 2156, "Urban": 423, "Barren": 978 },
 ];
 
+const regions = [
+  { id: "north", name: "Northern District", color: "#4575b4" },
+  { id: "central", name: "Central District", color: "#91bfdb" },
+  { id: "south", name: "Southern District", color: "#e0f3f8" },
+  { id: "west", name: "Western District", color: "#fee08b" },
+  { id: "east", name: "Eastern District", color: "#fc8d59" }
+];
+
+const correlationVariables = [
+  { id: "forestCover", name: "Forest Cover", unit: "km²" },
+  { id: "precipitation", name: "Annual Precipitation", unit: "mm" },
+  { id: "temperature", name: "Temperature", unit: "°C" },
+  { id: "ndvi", name: "Vegetation Health", unit: "NDVI" },
+  { id: "population", name: "Population Density", unit: "people/km²" }
+];
+
+const correlationData = [
+  { year: 2015, forestCover: 1580, precipitation: 250, temperature: 28.5, ndvi: 0.62, population: 45 },
+  { year: 2016, forestCover: 1568, precipitation: 245, temperature: 28.7, ndvi: 0.61, population: 46 },
+  { year: 2017, forestCover: 1553, precipitation: 235, temperature: 29.1, ndvi: 0.60, population: 48 },
+  { year: 2018, forestCover: 1547, precipitation: 230, temperature: 29.2, ndvi: 0.59, population: 49 },
+  { year: 2019, forestCover: 1540, precipitation: 225, temperature: 29.5, ndvi: 0.58, population: 51 },
+  { year: 2020, forestCover: 1535, precipitation: 220, temperature: 29.7, ndvi: 0.57, population: 52 },
+  { year: 2021, forestCover: 1532, precipitation: 215, temperature: 29.9, ndvi: 0.56, population: 54 }
+];
+
 const Dashboard = () => {
   const [year, setYear] = useState(2022);
-  const [correlationData, setCorrelationData] = useState([]);
+  const [selectedRegions, setSelectedRegions] = useState<string[]>(regions.map(region => region.id));
   const { isMobile } = useMobileView();
   const { toast } = useToast();
 
@@ -79,7 +104,6 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    // Just a simulation of data loading that would happen in real app
     const timer = setTimeout(() => {
       toast({
         title: "Dashboard updated",
@@ -105,7 +129,7 @@ const Dashboard = () => {
           
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
             <YearSlider
-              value={year}
+              initialValue={year}
               onValueChange={handleYearChange}
               min={2010}
               max={2023}
@@ -146,33 +170,33 @@ const Dashboard = () => {
           <DataCard 
             title="Forest Cover" 
             value="1,532 km²" 
-            change={-2.3}
+            trend={{ value: 2.3, isPositive: false }}
             icon={<div className="w-12 h-12 rounded-full bg-sahel-green/20 flex items-center justify-center"><div className="w-8 h-8 rounded-full bg-sahel-green"></div></div>}
-            helperText="Change since last year"
+            description="Change since last year"
           />
           
           <DataCard 
             title="Annual Precipitation" 
             value="231 mm" 
-            change={-3.8}
+            trend={{ value: 3.8, isPositive: false }}
             icon={<div className="w-12 h-12 rounded-full bg-sahel-blue/20 flex items-center justify-center"><div className="w-8 h-8 rounded-full bg-sahel-blue"></div></div>}
-            helperText="Change since last year"
+            description="Change since last year"
           />
           
           <DataCard 
             title="Vegetation Health" 
             value="0.64 NDVI" 
-            change={2.1}
+            trend={{ value: 2.1, isPositive: true }}
             icon={<div className="w-12 h-12 rounded-full bg-sahel-green/20 flex items-center justify-center"><div className="w-8 h-8 rounded-full bg-sahel-green"></div></div>}
-            helperText="Change since last year"
+            description="Change since last year"
           />
           
           <DataCard 
             title="Cropland Area" 
             value="2,156 km²" 
-            change={3.8}
+            trend={{ value: 3.8, isPositive: true }}
             icon={<div className="w-12 h-12 rounded-full bg-sahel-earth/20 flex items-center justify-center"><div className="w-8 h-8 rounded-full bg-sahel-earth"></div></div>}
-            helperText="Change since last year"
+            description="Change since last year"
           />
         </div>
         
@@ -220,7 +244,11 @@ const Dashboard = () => {
                   <CardTitle>Regional Comparisons</CardTitle>
                   <CardDescription>District-level environmental indicators</CardDescription>
                 </div>
-                <RegionFilter />
+                <RegionFilter 
+                  regions={regions}
+                  selectedRegions={selectedRegions}
+                  onChange={setSelectedRegions}
+                />
               </div>
             </CardHeader>
             <CardContent>
@@ -251,7 +279,10 @@ const Dashboard = () => {
         </div>
         
         <div className="grid grid-cols-1 gap-6 mb-6">
-          <CorrelationAnalysis year={year} />
+          <CorrelationAnalysis 
+            data={correlationData} 
+            variables={correlationVariables}
+          />
         </div>
         
         <div className="grid grid-cols-1 gap-6">
