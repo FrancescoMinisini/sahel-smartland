@@ -25,8 +25,7 @@ import {
   Sprout,
   Trees,
   Expand,
-  Thermometer,
-  Cell
+  Thermometer
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -689,7 +688,7 @@ const Dashboard = () => {
                                       barSize={40}
                                     >
                                       {gddData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                        <RechartsCell key={`cell-${index}`} fill={entry.color} />
                                       ))}
                                     </Bar>
                                   </BarChart>
