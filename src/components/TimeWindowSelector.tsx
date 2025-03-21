@@ -24,7 +24,15 @@ const TimeWindowSelector = ({
 }: TimeWindowSelectorProps) => {
   const handleChange = (values: number[]) => {
     if (values.length === 2) {
-      onChange(values[0], values[1]);
+      // Make sure start is always less than or equal to end
+      const [newStart, newEnd] = values[0] <= values[1] 
+        ? [values[0], values[1]] 
+        : [values[1], values[0]];
+      
+      // Only trigger onChange if values actually changed
+      if (newStart !== startYear || newEnd !== endYear) {
+        onChange(newStart, newEnd);
+      }
     }
   };
 

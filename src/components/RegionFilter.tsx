@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +28,8 @@ const RegionFilter = ({ regions, selectedRegions, onChange, className }: RegionF
     } else {
       onChange([...selectedRegions, regionId]);
     }
+    
+    console.log("Region selection updated:", selectedRegions);
   };
 
   const toggleAll = () => {

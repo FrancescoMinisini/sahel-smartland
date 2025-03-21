@@ -24,14 +24,32 @@ const CorrelationAnalysis = ({ data, variables, className }: CorrelationAnalysis
   const [sampleSize, setSampleSize] = useState(50);
 
   const calculateCorrelation = (x: string, y: string) => {
-    if (!data.length || !x || !y) return 0;
+    if (!data || !Array.isArray(data) || data.length === 0 || !x || !y) {
+      console.log("Invalid data for correlation calculation:", { data, x, y });
+      return 0;
+    }
 
-    const values = data.map(item => ({
-      x: item[x],
-      y: item[y]
-    })).filter(item => item.x !== undefined && item.y !== undefined);
-
-    if (values.length < 2) return 0;
+    const values = data
+      .filter(item => item !== null && typeof item === 'object')
+      .map(item => {
+        const xVal = item[x];
+        const yVal = item[y];
+        
+        if (xVal === undefined || yVal === undefined) {
+          console.log(`Missing values for correlation: ${x}=${xVal}, ${y}=${yVal} in item:`, item);
+        }
+        
+        return {
+          x: typeof xVal === 'number' ? xVal : parseFloat(xVal),
+          y: typeof yVal === 'number' ? yVal : parseFloat(yVal)
+        };
+      })
+      .filter(item => !isNaN(item.x) && !isNaN(item.y));
+    
+    if (values.length < 2) {
+      console.log("Not enough valid data points for correlation calculation");
+      return 0;
+    }
 
     const xMean = values.reduce((sum, val) => sum + val.x, 0) / values.length;
     const yMean = values.reduce((sum, val) => sum + val.y, 0) / values.length;

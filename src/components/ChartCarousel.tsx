@@ -16,9 +16,8 @@ interface ChartCarouselProps {
   dataType?: 'landCover' | 'precipitation' | 'vegetation' | 'population';
 }
 
-// Conversion factors based on MODIS pixel resolution (approximately 463m per pixel)
-const PIXEL_TO_SQ_KM = 0.2144; // One MODIS pixel is about 0.2144 sq km (463m × 463m / 1000000)
-const DISPLAY_IN_THOUSANDS = 1000; // Threshold to display in thousands of sq km
+const PIXEL_TO_SQ_KM = 0.2144;
+const DISPLAY_IN_THOUSANDS = 1000;
 
 const ChartCarousel = ({ 
   data, 
@@ -26,7 +25,6 @@ const ChartCarousel = ({
   className, 
   dataType = 'landCover' 
 }: ChartCarouselProps) => {
-  // Filter out any data points with zero values and remove "Overall"/"Total" values for charts
   const filteredData = data
     .filter(item => item.value > 0)
     .filter(item => item.name !== 'Overall' && item.name !== 'Total');
@@ -35,22 +33,18 @@ const ChartCarousel = ({
   let convertedTimeSeriesData = timeSeriesData;
   let displayUnit = 'sq km';
   
-  // Process based on data type
   if (dataType === 'landCover') {
-    // Determine if we need to display in thousands based on max value
     const maxValue = Math.max(...filteredData.map(item => item.value * PIXEL_TO_SQ_KM));
     const useThousands = maxValue > DISPLAY_IN_THOUSANDS;
     const displayDivisor = useThousands ? 1000 : 1;
     displayUnit = useThousands ? 'thousand sq km' : 'sq km';
     
-    // Convert pixel data to square kilometers for display
     convertedData = filteredData.map(item => ({
       ...item,
-      value: Math.round((item.value * PIXEL_TO_SQ_KM) / displayDivisor * 10) / 10, // Round to 1 decimal place
+      value: Math.round((item.value * PIXEL_TO_SQ_KM) / displayDivisor * 10) / 10,
       rawSqKm: item.value * PIXEL_TO_SQ_KM,
     }));
     
-    // Convert time series data to square kilometers
     convertedTimeSeriesData = timeSeriesData.map(yearData => {
       const convertedYearData: {year: number, [key: string]: number} = { year: yearData.year };
       
@@ -63,26 +57,19 @@ const ChartCarousel = ({
       return convertedYearData;
     });
   } else if (dataType === 'precipitation') {
-    // For precipitation data, we'll show regional data
     convertedData = filteredData;
     displayUnit = 'mm';
     
-    // For regional precipitation time series, we keep the data as is
-    // The timeSeriesData should contain regional data (South, Center, North)
     convertedTimeSeriesData = timeSeriesData;
   } else if (dataType === 'vegetation') {
-    // For vegetation data, we'll show GPP values in gC/m²/year
     convertedData = filteredData;
     displayUnit = 'gC/m²/year';
     
-    // For vegetation time series, we keep the data as is
     convertedTimeSeriesData = timeSeriesData;
   }
 
-  // Helper function to calculate Y-axis domain for better scaling
   const calculateYDomain = () => {
     if (dataType === 'precipitation') {
-      // Find min and max values for precipitation data
       const values = convertedData.map(item => item.value);
       if (values.length === 0) return [0, 500] as [number, number];
       
@@ -90,20 +77,16 @@ const ChartCarousel = ({
       const max = Math.ceil(Math.max(...values) * 1.05);
       const range = max - min;
       
-      // Ensure we have a reasonable range to display
       return [min, max + (range < 50 ? 50 : 0)] as [number, number];
     }
     
-    // For non-precipitation data, use [0, 'auto'] but as a proper AxisDomain type
     return [0, 'auto'] as [number, string];
   };
-  
-  // Custom tooltip formatter for different data types
+
   const formatTooltip = (value: number, name: string, entry: any) => {
     if (dataType === 'precipitation') {
       if (entry && entry.payload) {
         if (name === 'South' || name === 'Center' || name === 'North') {
-          // For regional precipitation data
           return [`${value.toLocaleString()} mm`, name];
         } else if (name === 'Extreme Events') {
           return [`${value.toLocaleString()} events`, name];
@@ -113,7 +96,6 @@ const ChartCarousel = ({
       }
       return [`${value.toLocaleString()} mm`, name];
     } else if (dataType === 'vegetation') {
-      // For vegetation productivity data
       if (name === 'Forest' || name === 'Grassland' || name === 'Cropland' || name === 'Shrubland') {
         return [`${value.toLocaleString()} ${displayUnit}`, name];
       } else if (name === 'AnnualChange') {
@@ -121,16 +103,13 @@ const ChartCarousel = ({
       }
       return [`${value.toLocaleString()} ${displayUnit}`, name];
     }
-    // Default for land cover
     return [`${value.toLocaleString()} ${displayUnit}`, name];
   };
 
-  // Get color for regional data
   const getRegionalColor = (region: string) => {
     return regionalPrecipitationColors[region as keyof typeof regionalPrecipitationColors] || '#999999';
   };
 
-  // Get color for vegetation data
   const getVegetationColor = (key: string) => {
     const colorMap: Record<string, string> = {
       'Forest': '#1a9850',
@@ -142,7 +121,6 @@ const ChartCarousel = ({
     return colorMap[key] || '#999999';
   };
 
-  // Map land cover class names for the area chart
   const getLandCoverColor = (classKey: string) => {
     const colorMap: Record<string, string> = {
       'Forests': '#1a9850',
@@ -157,17 +135,50 @@ const ChartCarousel = ({
     return colorMap[classKey] || '#999999';
   };
 
-  // Create properly organized land cover time series data for the area chart
   const prepareLandCoverTimeSeriesData = () => {
     if (dataType !== 'landCover' || !timeSeriesData || timeSeriesData.length === 0) {
       return timeSeriesData;
     }
 
-    // Sort years in ascending order
-    return [...timeSeriesData].sort((a, b) => a.year - b.year);
+    if (!Array.isArray(timeSeriesData)) {
+      console.error("Time series data is not an array:", timeSeriesData);
+      return [];
+    }
+
+    const sortedData = [...timeSeriesData].sort((a, b) => {
+      if (!a || !b || typeof a.year === 'undefined' || typeof b.year === 'undefined') {
+        console.error("Invalid time series data item:", { a, b });
+        return 0;
+      }
+      return a.year - b.year;
+    });
+
+    return sortedData.map(yearData => {
+      const processed: {year: number, [key: string]: number} = { 
+        year: yearData.year 
+      };
+      
+      const landCoverMap: {[key: string]: string} = {
+        'Value_7': 'Forests',
+        'Value_10': 'Grasslands',
+        'Value_12': 'Croplands',
+        'Value_16': 'Barren'
+      };
+      
+      Object.entries(yearData).forEach(([key, value]) => {
+        if (key !== 'year') {
+          if (landCoverMap[key]) {
+            processed[landCoverMap[key]] = Number(value);
+          } else {
+            processed[key] = Number(value);
+          }
+        }
+      });
+      
+      return processed;
+    });
   };
 
-  // Prepare sorted time series data for land cover
   const sortedLandCoverTimeSeriesData = prepareLandCoverTimeSeriesData();
 
   return (
@@ -180,7 +191,6 @@ const ChartCarousel = ({
         className="w-full"
       >
         <CarouselContent>
-          {/* Bar Chart */}
           <CarouselItem className="md:basis-full">
             <div className="h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -232,7 +242,6 @@ const ChartCarousel = ({
             </div>
           </CarouselItem>
 
-          {/* Pie Chart */}
           <CarouselItem className="md:basis-full">
             <div className="h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -257,7 +266,6 @@ const ChartCarousel = ({
             </div>
           </CarouselItem>
 
-          {/* Time Series Chart */}
           <CarouselItem className="md:basis-full">
             <div className="h-[400px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -292,7 +300,6 @@ const ChartCarousel = ({
                     <Tooltip formatter={formatTooltip} />
                     <Legend />
                     
-                    {/* Regional precipitation data shown as lines - without Overall */}
                     <Line 
                       type="monotone" 
                       dataKey="South" 
@@ -349,7 +356,6 @@ const ChartCarousel = ({
                     <Tooltip formatter={formatTooltip} />
                     <Legend />
                     
-                    {/* Vegetation productivity by land cover type */}
                     <Line 
                       type="monotone" 
                       dataKey="Forest" 
@@ -417,7 +423,6 @@ const ChartCarousel = ({
                     <Tooltip formatter={formatTooltip} />
                     <Legend />
                     
-                    {/* Show the key land cover types with area lines */}
                     <Area type="monotone" dataKey="Forests" stroke={getLandCoverColor("Forests")} fill={getLandCoverColor("Forests")} fillOpacity={0.7} />
                     <Area type="monotone" dataKey="Shrublands" stroke={getLandCoverColor("Shrublands")} fill={getLandCoverColor("Shrublands")} fillOpacity={0.7} />
                     <Area type="monotone" dataKey="Grasslands" stroke={getLandCoverColor("Grasslands")} fill={getLandCoverColor("Grasslands")} fillOpacity={0.7} />
@@ -447,7 +452,6 @@ const ChartCarousel = ({
             )}
           </CarouselItem>
 
-          {/* Specialized Chart for Vegetation Productivity Changes */}
           {dataType === 'vegetation' && (
             <CarouselItem className="md:basis-full">
               <div className="h-[400px] w-full">
@@ -492,7 +496,6 @@ const ChartCarousel = ({
                     <Tooltip formatter={formatTooltip} />
                     <Legend />
                     
-                    {/* Annual change as line with right axis */}
                     <Line 
                       yAxisId="right"
                       type="monotone" 
@@ -511,7 +514,6 @@ const ChartCarousel = ({
             </CarouselItem>
           )}
 
-          {/* Specialized Chart for Regional Precipitation - Only for Precipitation */}
           {dataType === 'precipitation' && (
             <CarouselItem className="md:basis-full">
               <div className="h-[400px] w-full">
@@ -545,7 +547,6 @@ const ChartCarousel = ({
                     <Tooltip formatter={formatTooltip} />
                     <Legend />
                     
-                    {/* Comparison of regional precipitation */}
                     <Bar dataKey="South" fill={getRegionalColor('South')} />
                     <Bar dataKey="Center" fill={getRegionalColor('Center')} />
                     <Bar dataKey="North" fill={getRegionalColor('North')} />
