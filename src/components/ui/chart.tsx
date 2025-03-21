@@ -43,16 +43,24 @@ export const ChartContainer = ({
   );
 };
 
-// Fix the type error by changing the content prop type
+// Fixed type error by correctly typing the content prop to accept either ReactNode or a function
 interface ChartTooltipProps {
   content: React.ReactNode | ((props: any) => React.ReactNode);
   className?: string;
 }
 
 export const ChartTooltip = ({ content, className }: ChartTooltipProps) => {
+  // Using type guard to check if content is a function
+  const renderContent = () => {
+    if (typeof content === 'function') {
+      return content({});
+    }
+    return content;
+  };
+
   return (
     <div className={className}>
-      {content}
+      {renderContent()}
     </div>
   );
 };
