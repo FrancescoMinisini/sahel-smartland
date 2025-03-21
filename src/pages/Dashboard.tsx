@@ -25,8 +25,7 @@ import {
   Sprout,
   Trees,
   Expand,
-  Thermometer,
-  Cell
+  Thermometer
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -42,7 +41,7 @@ import {
 import ChartCarousel from '@/components/ChartCarousel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChartContainer } from '@/components/ui/chart';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Cell as RechartsCell } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 
 const Dashboard = () => {
   const generateGDDData = (year: number) => {
@@ -86,49 +85,6 @@ const Dashboard = () => {
   const [previousPopulationStats, setPreviousPopulationStats] = useState<Record<string, number>>({});
   const [gddData, setGddData] = useState(generateGDDData(selectedYear));
   const [gddTimeSeriesData, setGddTimeSeriesData] = useState(generateGDDTimeSeriesData());
-  const [landCoverGradientData, setLandCoverGradientData] = useState<Array<{year: number, improvement_sqm: number, deterioration_sqm: number}>>([]);
-
-  useEffect(() => {
-    const fetchLandCoverGradientData = async () => {
-      try {
-        const response = await fetch('/Datasets_Hackathon/Graph_data/land_cover_gradient.csv');
-        const text = await response.text();
-        
-        const rows = text.split('\n').filter(row => row.trim() !== '');
-        const headers = rows[0].split(',');
-        
-        const parsedData = rows.slice(1).map(row => {
-          const values = row.split(',');
-          return {
-            year: parseInt(values[0], 10),
-            improvement_sqm: parseInt(values[1], 10),
-            deterioration_sqm: parseInt(values[2], 10)
-          };
-        });
-        
-        setLandCoverGradientData(parsedData);
-      } catch (error) {
-        console.error('Error loading land cover gradient data:', error);
-        setLandCoverGradientData([
-          { year: 2010, improvement_sqm: 64, deterioration_sqm: 338 },
-          { year: 2011, improvement_sqm: 351, deterioration_sqm: 51 },
-          { year: 2012, improvement_sqm: 104, deterioration_sqm: 298 },
-          { year: 2013, improvement_sqm: 260, deterioration_sqm: 142 },
-          { year: 2014, improvement_sqm: 141, deterioration_sqm: 261 },
-          { year: 2015, improvement_sqm: 277, deterioration_sqm: 125 },
-          { year: 2016, improvement_sqm: 152, deterioration_sqm: 250 },
-          { year: 2017, improvement_sqm: 213, deterioration_sqm: 189 },
-          { year: 2018, improvement_sqm: 117, deterioration_sqm: 285 },
-          { year: 2019, improvement_sqm: 376, deterioration_sqm: 26 },
-          { year: 2020, improvement_sqm: 12, deterioration_sqm: 390 },
-          { year: 2021, improvement_sqm: 313, deterioration_sqm: 89 },
-          { year: 2022, improvement_sqm: 84, deterioration_sqm: 318 }
-        ]);
-      }
-    };
-    
-    fetchLandCoverGradientData();
-  }, []);
 
   const dataTabs = [
     { id: 'landCover', name: 'Land Cover', icon: <Layers size={16} /> },
@@ -373,45 +329,7 @@ const Dashboard = () => {
     </div>
   );
 
-  const currentYearGradientData = landCoverGradientData.find(d => d.year === selectedYear) || 
-                                landCoverGradientData[landCoverGradientData.length - 1] || 
-                                { year: 2023, improvement_sqm: 100, deterioration_sqm: 300 };
-
-  const totalLandCoverTransition = (currentYearGradientData.improvement_sqm + currentYearGradientData.deterioration_sqm);
-  
-  const netLandCoverChange = currentYearGradientData.improvement_sqm - currentYearGradientData.deterioration_sqm;
-  
-  const previousYearGradientData = landCoverGradientData.find(d => d.year === selectedYear - 1) || 
-                                 landCoverGradientData[landCoverGradientData.length - 2] || 
-                                 { year: selectedYear - 1, improvement_sqm: 90, deterioration_sqm: 250 };
-  
-  const previousNetChange = previousYearGradientData.improvement_sqm - previousYearGradientData.deterioration_sqm;
-  
-  const netChangeTrend = previousNetChange !== 0 
-    ? ((netLandCoverChange - previousNetChange) / Math.abs(previousNetChange)) * 100 
-    : 0;
-
   const keyStats = [
-    { 
-      title: 'Land Cover Gradient Analysis', 
-      value: `${netLandCoverChange >= 0 ? '+' : ''}${netLandCoverChange} km²`, 
-      description: 'Net area of land cover change (improvement minus deterioration)',
-      icon: <Leaf size={20} />,
-      trend: { 
-        value: Math.abs(netChangeTrend), 
-        isPositive: netChangeTrend > 0 
-      },
-      analyticsData: landCoverGradientData.map(item => ({
-        year: item.year,
-        value: item.improvement_sqm - item.deterioration_sqm
-      })),
-      correlations: [
-        { name: "Deforestation", value: 82, correlation: 0.89 },
-        { name: "Urban Expansion", value: 65, correlation: 0.78 },
-        { name: "Agricultural Activity", value: 71, correlation: 0.67 },
-        { name: "Precipitation Decline", value: 55, correlation: -0.45 }
-      ]
-    },
     { 
       title: 'Land Cover Change', 
       value: selectedYear > 2020 ? '27.3M ha' : selectedYear > 2015 ? '23.6M ha' : '18.9M ha', 
