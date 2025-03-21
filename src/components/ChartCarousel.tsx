@@ -266,10 +266,10 @@ const ChartCarousel = ({
             </div>
           </CarouselItem>
 
-          <CarouselItem className="md:basis-full">
-            <div className="h-[400px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                {dataType === 'precipitation' ? (
+          {dataType === 'precipitation' && (
+            <CarouselItem className="md:basis-full">
+              <div className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={convertedTimeSeriesData}
                     margin={{
@@ -325,7 +325,18 @@ const ChartCarousel = ({
                       name="North"
                     />
                   </LineChart>
-                ) : dataType === 'vegetation' ? (
+                </ResponsiveContainer>
+              </div>
+              <div className="text-xs text-center mt-1 text-muted-foreground">
+                Regional Precipitation Trends (2010-2023)
+              </div>
+            </CarouselItem>
+          )}
+
+          {dataType === 'vegetation' && (
+            <CarouselItem className="md:basis-full">
+              <div className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={convertedTimeSeriesData}
                     margin={{
@@ -389,68 +400,13 @@ const ChartCarousel = ({
                       name="Shrubland"
                     />
                   </LineChart>
-                ) : (
-                  <AreaChart
-                    data={sortedLandCoverTimeSeriesData}
-                    margin={{
-                      top: 20,
-                      right: 30,
-                      left: 20,
-                      bottom: 20,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="year" 
-                      type="number"
-                      domain={['dataMin', 'dataMax']}
-                      tickCount={10}
-                      label={{ 
-                        value: 'Year', 
-                        position: 'insideBottom',
-                        offset: -10
-                      }}
-                    />
-                    <YAxis 
-                      domain={[0, 'auto'] as [number, string]}
-                      label={{ 
-                        value: `Area (${displayUnit})`, 
-                        angle: -90, 
-                        position: 'insideLeft',
-                        style: { textAnchor: 'middle' }
-                      }} 
-                    />
-                    <Tooltip formatter={formatTooltip} />
-                    <Legend />
-                    
-                    <Area type="monotone" dataKey="Forests" stroke={getLandCoverColor("Forests")} fill={getLandCoverColor("Forests")} fillOpacity={0.7} />
-                    <Area type="monotone" dataKey="Shrublands" stroke={getLandCoverColor("Shrublands")} fill={getLandCoverColor("Shrublands")} fillOpacity={0.7} />
-                    <Area type="monotone" dataKey="Grasslands" stroke={getLandCoverColor("Grasslands")} fill={getLandCoverColor("Grasslands")} fillOpacity={0.7} />
-                    <Area type="monotone" dataKey="Croplands" stroke={getLandCoverColor("Croplands")} fill={getLandCoverColor("Croplands")} fillOpacity={0.7} />
-                    <Area type="monotone" dataKey="Urban" stroke={getLandCoverColor("Urban")} fill={getLandCoverColor("Urban")} fillOpacity={0.7} />
-                    <Area type="monotone" dataKey="Barren" stroke={getLandCoverColor("Barren")} fill={getLandCoverColor("Barren")} fillOpacity={0.7} />
-                    <Area type="monotone" dataKey="Water" stroke={getLandCoverColor("Water")} fill={getLandCoverColor("Water")} fillOpacity={0.7} />
-                    <Area type="monotone" dataKey="Wetlands" stroke={getLandCoverColor("Wetlands")} fill={getLandCoverColor("Wetlands")} fillOpacity={0.7} />
-                  </AreaChart>
-                )}
-              </ResponsiveContainer>
-            </div>
-            {dataType === 'precipitation' && (
-              <div className="text-xs text-center mt-1 text-muted-foreground">
-                Regional Precipitation Trends (2010-2023)
+                </ResponsiveContainer>
               </div>
-            )}
-            {dataType === 'vegetation' && (
               <div className="text-xs text-center mt-1 text-muted-foreground">
                 Vegetation Productivity by Land Cover Type (2010-2023)
               </div>
-            )}
-            {dataType === 'landCover' && (
-              <div className="text-xs text-center mt-1 text-muted-foreground">
-                Land Cover Changes (2010-2023)
-              </div>
-            )}
-          </CarouselItem>
+            </CarouselItem>
+          )}
 
           {dataType === 'vegetation' && (
             <CarouselItem className="md:basis-full">
