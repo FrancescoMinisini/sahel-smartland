@@ -660,3 +660,160 @@ export const getPrecipitationTimeSeriesData = (): Array<{ [key: string]: number;
 export const loadLandCoverCSVData = async (): Promise<Array<{ year: number, [key: string]: number }>> => {
   try {
     const response = await fetch('/Datasets_Hackathon/Graph_data/land_cover_values.csv');
+    const csvText = await response.text();
+    
+    // Parse CSV manually
+    const lines = csvText.trim().split('\n');
+    const headers = lines[0].split(',');
+    
+    return lines.slice(1).map(line => {
+      const values = line.split(',');
+      const year = parseInt(values[0], 10);
+      
+      // Create an object with all land cover classes
+      const result: { year: number, [key: string]: number } = { year };
+      
+      // Map each column to its corresponding value
+      for (let i = 1; i < headers.length; i++) {
+        const header = headers[i].trim();
+        result[header] = parseFloat(values[i]);
+      }
+      
+      return result;
+    }).sort((a, b) => a.year - b.year); // Sort by year
+  } catch (error) {
+    console.error('Error loading land cover CSV data:', error);
+    
+    // Generate dummy data in case of error
+    return getLandCoverTimeSeriesData();
+  }
+};
+
+// Generate time series data for land cover
+export const getLandCoverTimeSeriesData = (): Array<{ [key: string]: number; year: number }> => {
+  // Sample data trends for different land cover types over years
+  const baseForests = 28;
+  const baseGrasslands = 35;
+  const baseCroplands = 15;
+  const baseUrban = 5;
+  const baseBarren = 17;
+  
+  return [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023].map((year, index) => {
+    // Calculate trends (decreasing forests and grasslands, increasing croplands and urban)
+    const yearOffset = index * 0.5;
+    const forests = Math.max(15, baseForests - yearOffset);
+    const grasslands = Math.max(20, baseGrasslands - yearOffset * 0.7);
+    const croplands = Math.min(30, baseCroplands + yearOffset * 0.8);
+    const urban = Math.min(15, baseUrban + yearOffset * 0.3);
+    const barren = Math.min(25, baseBarren + yearOffset * 0.2);
+    
+    return {
+      year,
+      'Forests': forests,
+      'Grasslands': grasslands,
+      'Croplands': croplands,
+      'Urban': urban,
+      'Barren': barren
+    };
+  });
+};
+
+// Generate time series data for vegetation productivity
+export const getVegetationTimeSeriesData = (): Array<{ [key: string]: number; year: number }> => {
+  const baseForestGPP = 1800;
+  const baseGrasslandGPP = 1200;
+  const baseCroplandGPP = 1400;
+  const baseBarrenGPP = 200;
+  
+  return [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023].map((year, index) => {
+    // Calculate trends with fluctuations and overall decline
+    const yearFactor = 1 - index * 0.015; // Gradual decline
+    const fluctuation = Math.sin(index) * 100; // Add some natural variation
+    
+    const forestGPP = Math.max(1000, baseForestGPP * yearFactor + fluctuation);
+    const grasslandGPP = Math.max(600, baseGrasslandGPP * yearFactor + fluctuation);
+    const croplandGPP = Math.max(800, baseCroplandGPP * yearFactor + fluctuation * 0.8);
+    const barrenGPP = Math.max(100, baseBarrenGPP * yearFactor + fluctuation * 0.2);
+    
+    return {
+      year,
+      'Overall GPP': (forestGPP + grasslandGPP + croplandGPP + barrenGPP) / 4,
+      'Forest': forestGPP,
+      'Grassland': grasslandGPP,
+      'Cropland': croplandGPP,
+      'Barren': barrenGPP
+    };
+  });
+};
+
+// Generate time series data for population
+export const getPopulationTimeSeriesData = (): Array<{ [key: string]: number; year: number }> => {
+  const basePopulation = 380000; // Starting population for 2010
+  const growthRate = 0.027; // 2.7% annual growth
+  
+  return [2010, 2015, 2020].map((year, index) => {
+    const yearsSince2010 = year - 2010;
+    const totalPopulation = basePopulation * Math.pow(1 + growthRate, yearsSince2010);
+    const urbanPopulation = totalPopulation * (0.35 + index * 0.03); // Increasing urbanization
+    const ruralPopulation = totalPopulation - urbanPopulation;
+    const under15 = totalPopulation * (0.39 - index * 0.005); // Slightly decreasing young population
+    const over65 = totalPopulation * (0.042 + index * 0.003); // Slightly increasing elderly population
+    
+    return {
+      year,
+      'Total': Math.round(totalPopulation),
+      'Urban': Math.round(urbanPopulation),
+      'Rural': Math.round(ruralPopulation),
+      'Under 15': Math.round(under15),
+      'Over 65': Math.round(over65),
+      'Working Age': Math.round(totalPopulation - under15 - over65)
+    };
+  });
+};
+
+// Generate correlation data between population and environmental factors
+export const getPopulationEnvironmentCorrelation = (): Array<{ 
+  factor: string; 
+  correlation: number; 
+  impact: 'positive' | 'negative' | 'neutral';
+  description: string;
+}> => {
+  return [
+    {
+      factor: 'Rainfall',
+      correlation: 0.68,
+      impact: 'positive',
+      description: 'Higher rainfall correlates with higher population density in rural areas'
+    },
+    {
+      factor: 'Vegetation Productivity',
+      correlation: 0.72,
+      impact: 'positive',
+      description: 'Areas with higher GPP support larger rural populations'
+    },
+    {
+      factor: 'Cropland Availability',
+      correlation: 0.65,
+      impact: 'positive',
+      description: 'Population clusters around areas suitable for agriculture'
+    },
+    {
+      factor: 'Urban Expansion',
+      correlation: -0.48,
+      impact: 'negative',
+      description: 'Urban growth correlates with decreased natural vegetation'
+    },
+    {
+      factor: 'Water Stress',
+      correlation: -0.57,
+      impact: 'negative',
+      description: 'Increasing water stress correlates with rural-to-urban migration'
+    },
+    {
+      factor: 'Land Degradation',
+      correlation: -0.62,
+      impact: 'negative',
+      description: 'Areas with significant land degradation show population decline'
+    }
+  ];
+};
