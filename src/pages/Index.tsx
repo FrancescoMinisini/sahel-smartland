@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import HeroSection from '@/components/HeroSection';
 import FeatureSection from '@/components/FeatureSection';
@@ -6,48 +7,56 @@ import DataCard from '@/components/DataCard';
 import Footer from '@/components/Footer';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BarChart2, CloudRain, Leaf, Map, Users, Download } from 'lucide-react';
+
 const Index = () => {
   // Scroll to top on page load
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-  const keyStats = [{
-    title: 'Land Cover Change',
-    value: '27.3M ha',
-    description: 'Area affected by land cover change in the past 20 years',
-    icon: <Leaf size={20} />,
-    trend: {
-      value: 15,
-      isPositive: false
+
+  const keyStats = [
+    {
+      title: 'Land Cover Change',
+      value: '27.3M ha',
+      description: 'Area affected by land cover change in the past 20 years',
+      icon: <Leaf size={20} />,
+      trend: {
+        value: 15,
+        isPositive: false
+      }
+    },
+    {
+      title: 'Vegetation Production',
+      value: '+8.2%',
+      description: 'Average increase in gross primary production since 2010',
+      icon: <BarChart2 size={20} />,
+      trend: {
+        value: 8.2,
+        isPositive: true
+      }
+    },
+    {
+      title: 'Annual Precipitation',
+      value: '685 mm',
+      description: 'Average annual rainfall across the Sahel region',
+      icon: <CloudRain size={20} />,
+      trend: {
+        value: 3.5,
+        isPositive: false
+      }
+    },
+    {
+      title: 'Population Growth',
+      value: '4.3%',
+      description: 'Annual population growth rate in urban centers',
+      icon: <Users size={20} />,
+      trend: {
+        value: 4.3,
+        isPositive: true
+      }
     }
-  }, {
-    title: 'Vegetation Production',
-    value: '+8.2%',
-    description: 'Average increase in gross primary production since 2010',
-    icon: <BarChart2 size={20} />,
-    trend: {
-      value: 8.2,
-      isPositive: true
-    }
-  }, {
-    title: 'Annual Precipitation',
-    value: '685 mm',
-    description: 'Average annual rainfall across the Sahel region',
-    icon: <CloudRain size={20} />,
-    trend: {
-      value: 3.5,
-      isPositive: false
-    }
-  }, {
-    title: 'Population Growth',
-    value: '4.3%',
-    description: 'Annual population growth rate in urban centers',
-    icon: <Users size={20} />,
-    trend: {
-      value: 4.3,
-      isPositive: true
-    }
-  }];
+  ];
+
   return <div className="min-h-screen flex flex-col">
       <HeroSection />
       
@@ -131,10 +140,10 @@ const Index = () => {
                 </li>
               </ul>
               
-              <Link to="/map" className="inline-flex items-center justify-center px-6 py-3 bg-sahel-blue text-white font-medium rounded-lg transition-all shadow-md hover:shadow-lg hover:bg-sahel-blue/90">
+              <a href="/sahel_map.html" className="inline-flex items-center justify-center px-6 py-3 bg-sahel-blue text-white font-medium rounded-lg transition-all shadow-md hover:shadow-lg hover:bg-sahel-blue/90">
                 Open Full Map
                 <Map size={16} className="ml-2" />
-              </Link>
+              </a>
             </div>
           </div>
         </div>
@@ -146,4 +155,5 @@ const Index = () => {
       <Footer />
     </div>;
 };
+
 export default Index;
