@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -307,7 +306,7 @@ const PopulationInsightsCharts: React.FC<PopulationInsightsChartsProps> = ({
                   />
                   <Bar 
                     dataKey="correlation" 
-                    fill={(entry: any) => entry.correlation > 0 ? '#22c55e' : '#ef4444'}
+                    fill="#8884d8"
                     label={{ position: 'right', formatter: (entry: any) => entry.value.toFixed(2) }}
                   >
                     {correlationData.map((entry, index) => (
