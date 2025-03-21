@@ -4,6 +4,7 @@ import { ArrowUpRight, X } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerClose, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from "recharts";
+
 interface DataCardProps {
   title: string;
   value: string | number;
@@ -23,6 +24,7 @@ interface DataCardProps {
   }>;
   year?: number;
 }
+
 const DataCard = ({
   title,
   value,
@@ -78,10 +80,12 @@ const DataCard = ({
     correlation: 0.72
   }];
   const correlationData = correlations || defaultCorrelations;
+
   const handleCardClick = () => {
     setIsAnalyticsOpen(true);
     if (onClick) onClick();
   };
+  
   return <>
       <div className={cn("bg-white dark:bg-muted rounded-xl p-5 shadow-sm border border-border/40 hover:shadow-md transition-all duration-300", "cursor-pointer transform hover:-translate-y-1", className)} onClick={handleCardClick}>
         <div className="flex justify-between items-start mb-4">
@@ -239,4 +243,5 @@ const DataCard = ({
       </Drawer>
     </>;
 };
+
 export default DataCard;

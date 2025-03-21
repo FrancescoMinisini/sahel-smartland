@@ -678,7 +678,7 @@ These demographic shifts have important implications for land use planning, reso
     <div className="container py-6 max-w-full px-4 md:px-6">
       <div className="flex justify-between items-center mb-4">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Temporal Analysis</h1>
+          <h1 className="text-3xl font-bold tracking-tight">In-depth Analysis</h1>
           <p className="text-muted-foreground">
             Analyze changes and trends across time periods using satellite imagery and derived environmental indices.
           </p>

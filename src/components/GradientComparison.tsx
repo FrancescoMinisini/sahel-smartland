@@ -1,12 +1,15 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import MapVisualization from '@/components/MapVisualization';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { ArrowLeftRight, ChevronDown, Info } from 'lucide-react';
+import { ArrowLeftRight, ChevronDown, Info, Play, Pause } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
+import { getAvailableYears } from '@/lib/geospatialUtils';
 
 interface GradientComparisonProps {
   year: number;
@@ -57,6 +60,51 @@ const GradientComparison = ({ year, className }: GradientComparisonProps) => {
   const [leftMapType, setLeftMapType] = useState<string>('landCover');
   const [rightMapType, setRightMapType] = useState<string>('vegetation');
   const [showInsights, setShowInsights] = useState(true);
+  const [currentYear, setCurrentYear] = useState(year);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [yearInterval, setYearInterval] = useState<NodeJS.Timeout | null>(null);
+  
+  const availableYears = getAvailableYears();
+  const minYear = availableYears[0];
+  const maxYear = availableYears[availableYears.length - 1];
+  
+  // Handle play/pause animation
+  useEffect(() => {
+    if (isPlaying) {
+      const interval = setInterval(() => {
+        setCurrentYear(prevYear => {
+          if (prevYear >= maxYear) {
+            setIsPlaying(false);
+            return minYear;
+          }
+          return prevYear + 1;
+        });
+      }, 1000);
+      
+      setYearInterval(interval);
+      
+      return () => {
+        if (interval) clearInterval(interval);
+      };
+    } else if (yearInterval) {
+      clearInterval(yearInterval);
+      setYearInterval(null);
+    }
+  }, [isPlaying, maxYear, minYear]);
+  
+  // Toggle play/pause
+  const togglePlayPause = () => {
+    setIsPlaying(!isPlaying);
+  };
+  
+  // Handle year slider change
+  const handleYearChange = (newValue: number[]) => {
+    setCurrentYear(newValue[0]);
+    // Stop animation if user manually changes year
+    if (isPlaying) {
+      setIsPlaying(false);
+    }
+  };
   
   return (
     <Card className={className}>
@@ -74,6 +122,35 @@ const GradientComparison = ({ year, className }: GradientComparisonProps) => {
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-4">
+          {/* Time Slider Controls */}
+          <div className="flex items-center gap-4 mb-2">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={togglePlayPause}
+              className="flex-shrink-0 h-8 w-8"
+            >
+              {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+            </Button>
+            
+            <div className="flex items-center gap-2 flex-1">
+              <span className="text-xs">{minYear}</span>
+              <Slider
+                value={[currentYear]}
+                min={minYear}
+                max={maxYear}
+                step={1}
+                onValueChange={handleYearChange}
+                className="flex-1"
+              />
+              <span className="text-xs">{maxYear}</span>
+            </div>
+            
+            <div className="bg-muted px-2 py-1 rounded text-sm font-medium min-w-16 text-center">
+              {currentYear}
+            </div>
+          </div>
+          
           {/* Insights Panel */}
           {showInsights && (
             <div className="bg-muted/40 border border-border/60 rounded-lg p-4 mb-2 text-sm">
@@ -134,7 +211,7 @@ const GradientComparison = ({ year, className }: GradientComparisonProps) => {
             <div className="h-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800">
               <MapVisualization 
                 className="w-full h-full"
-                year={year}
+                year={currentYear}
                 dataType={leftMapType as any}
               />
             </div>
@@ -142,7 +219,7 @@ const GradientComparison = ({ year, className }: GradientComparisonProps) => {
             <div className="h-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800">
               <MapVisualization 
                 className="w-full h-full"
-                year={year}
+                year={currentYear}
                 dataType={rightMapType as any}
               />
             </div>
