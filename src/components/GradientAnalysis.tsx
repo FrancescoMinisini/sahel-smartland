@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { HelpCircle, Filter, Download, ArrowLeft, ArrowRight } from 'lucide-react';
+import { HelpCircle, Download, ArrowLeft, ArrowRight } from 'lucide-react';
 import MapVisualization from './MapVisualization';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { TooltipProvider, Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
 type GradientData = {
   year: number;
   transitions: {
@@ -29,15 +30,14 @@ type GradientData = {
     mainTransition: string;
   }[];
 };
+
 const COLORS = {
   degradation: '#ef4444',
-  // Red for degradation (bad)
   improvement: '#22c55e',
-  // Green for improvement (good)
   stable: '#3b82f6',
-  // Blue for stable
-  uncertain: '#f59e0b' // Amber for uncertain
+  uncertain: '#f59e0b'
 };
+
 const TRANSITION_TYPES = {
   'Forest to Barren': {
     color: '#ef4444',
@@ -100,6 +100,7 @@ const TRANSITION_TYPES = {
     isNegative: false
   }
 };
+
 const generateGradientData = (): GradientData[] => {
   const years = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023];
   return years.map((year, index) => {
@@ -184,6 +185,7 @@ const generateGradientData = (): GradientData[] => {
     };
   });
 };
+
 const generateVegetationGradientData = (year: number): any[] => {
   return [{
     name: 'Forest Cover Increase',
@@ -212,6 +214,7 @@ const generateVegetationGradientData = (year: number): any[] => {
     isPositive: true
   }];
 };
+
 const generatePrecipitationGradientData = (year: number): any[] => {
   return [{
     name: 'Increased Rainfall Areas',
@@ -240,6 +243,7 @@ const generatePrecipitationGradientData = (year: number): any[] => {
     isPositive: true
   }];
 };
+
 const getProcessedChartData = (gradientData: GradientData[], selectedYear: number) => {
   const yearData = getClosestYearData(gradientData, selectedYear);
   if (!yearData || !yearData.transitions.length) {
@@ -276,6 +280,7 @@ const getProcessedChartData = (gradientData: GradientData[], selectedYear: numbe
     recoveryData
   };
 };
+
 const getClosestYearData = (data: GradientData[], targetYear: number): GradientData | undefined => {
   if (!data || data.length === 0) return undefined;
   const exactMatch = data.find(d => d.year === targetYear);
@@ -286,6 +291,7 @@ const getClosestYearData = (data: GradientData[], targetYear: number): GradientD
     return currDiff < prevDiff ? curr : prev;
   });
 };
+
 const GradientAnalysis: React.FC<{
   year: number;
 }> = ({
@@ -298,6 +304,7 @@ const GradientAnalysis: React.FC<{
   const [vegetationGradientData, setVegetationGradientData] = useState<any[]>([]);
   const [precipitationGradientData, setPrecipitationGradientData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     setIsLoading(true);
     setTimeout(() => {
@@ -310,14 +317,17 @@ const GradientAnalysis: React.FC<{
       setIsLoading(false);
     }, 800);
   }, [year]);
+
   const {
     transitionData,
     degradationData,
     recoveryData
   } = getProcessedChartData(gradientData, year);
+
   const totalDegradationArea = transitionData.filter(t => t.isNegative).reduce((sum, t) => sum + t.value, 0);
   const totalRecoveryArea = transitionData.filter(t => !t.isNegative).reduce((sum, t) => sum + t.value, 0);
   const netChange = totalRecoveryArea - totalDegradationArea;
+
   const getActiveData = () => {
     if (activeTab === 'landCover') {
       if (subTab === 'transitions') return transitionData;
@@ -331,6 +341,7 @@ const GradientAnalysis: React.FC<{
     }
     return [];
   };
+
   const renderBarChart = (data: any[]) => <ResponsiveContainer width="100%" height={300}>
       <BarChart data={data} margin={{
       top: 20,
@@ -348,6 +359,7 @@ const GradientAnalysis: React.FC<{
         </Bar>
       </BarChart>
     </ResponsiveContainer>;
+
   const renderPieChart = (data: any[]) => <ResponsiveContainer width="100%" height={300}>
       <PieChart>
         <Pie data={data} cx="50%" cy="50%" labelLine={false} outerRadius={120} fill="#8884d8" dataKey="value" nameKey="name" label={({
@@ -360,6 +372,7 @@ const GradientAnalysis: React.FC<{
         <Legend />
       </PieChart>
     </ResponsiveContainer>;
+
   const getGradientInsights = () => {
     if (activeTab === 'landCover') {
       if (transitionData.length === 0) return "No land cover gradient data available for analysis.";
@@ -412,12 +425,14 @@ These rainfall gradients correlate strongly with vegetation changes and suggest 
     }
     return "No gradient data available for analysis.";
   };
+
   const getMapDataType = () => {
     if (activeTab === 'landCover') return "landCoverGradient";
     if (activeTab === 'vegetation') return "vegetationGradient";
     if (activeTab === 'precipitation') return "precipitationGradient";
     return "landCoverGradient";
   };
+
   const getLegendItems = () => {
     if (activeTab === 'landCover') {
       return Object.entries(TRANSITION_TYPES).slice(0, 8).map(([name, {
@@ -463,6 +478,7 @@ These rainfall gradients correlate strongly with vegetation changes and suggest 
     }
     return [];
   };
+
   return <section className="py-12 bg-gradient-to-b from-white to-sahel-sandLight/20">
       <div className="container mx-auto px-6">
         <div className="text-center mb-8">
@@ -499,10 +515,6 @@ These rainfall gradients correlate strongly with vegetation changes and suggest 
                   </TooltipContent>
                 </UITooltip>
               </TooltipProvider>
-              
-              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                <Filter className="h-4 w-4" />
-              </Button>
               
               <Button variant="outline" size="sm" className="h-8 w-8 p-0">
                 <Download className="h-4 w-4" />
@@ -646,4 +658,6 @@ These rainfall gradients correlate strongly with vegetation changes and suggest 
       </div>
     </section>;
 };
+
 export default GradientAnalysis;
+

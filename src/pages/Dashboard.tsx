@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -18,7 +19,6 @@ import {
   CloudRain, 
   Users, 
   Clock,
-  Filter,
   Layers,
   ZoomIn,
   HelpCircle,
@@ -134,6 +134,24 @@ const Dashboard = () => {
       setVegetationStats(stats);
     } else if (activeTab === 'population') {
       setPopulationStats(stats);
+    }
+  };
+
+  // Function to get the dataset download URL based on the active tab
+  const getDatasetDownloadUrl = () => {
+    switch (activeTab) {
+      case 'landCover':
+        return `/Datasets_Hackathon/Modis_Land_Cover_Data/${selectedYear}LCT.tif`;
+      case 'vegetation':
+        return `/Datasets_Hackathon/MODIS_Gross_Primary_Production_GPP/${selectedYear}_GP.tif`;
+      case 'precipitation':
+        return `/Datasets_Hackathon/Climate_Precipitation_Data/${selectedYear}R.tif`;
+      case 'population':
+        // For population, we have data only for specific years
+        const popYear = selectedYear <= 2012 ? 2010 : selectedYear <= 2017 ? 2015 : 2020;
+        return `/Datasets_Hackathon/Gridded_Population_Density_Data/Assaba_Pop_${popYear}.tif`;
+      default:
+        return `/Datasets_Hackathon/Graph_data/land_cover_values.csv`;
     }
   };
 
@@ -423,13 +441,22 @@ const Dashboard = () => {
                   <span className="text-sm text-muted-foreground">Year: {selectedYear}</span>
                 </div>
                 
-                <button className="p-2 rounded-md hover:bg-muted transition-colors">
-                  <Filter size={16} className="text-muted-foreground" />
-                </button>
-                
-                <button className="p-2 rounded-md hover:bg-muted transition-colors">
-                  <Download size={16} className="text-muted-foreground" />
-                </button>
+                <a 
+                  href={getDatasetDownloadUrl()} 
+                  download
+                  className="p-2 rounded-md hover:bg-muted transition-colors"
+                >
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Download size={16} className="text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Download dataset for {activeTab} ({selectedYear})</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </a>
                 
                 <Link 
                   to={`/temporal-analysis?tab=${activeTab}&year=${selectedYear}`} 

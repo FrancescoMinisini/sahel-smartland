@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from "@/lib/utils";
-import { Menu, X, Map, BarChart2, FileText, Home, ChevronRight, Clock } from 'lucide-react';
+import { Menu, X, Map, BarChart2, Home, ChevronRight } from 'lucide-react';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -20,9 +21,7 @@ const Navbar = () => {
   const navLinks = [
     { name: 'Home', path: '/', icon: Home },
     { name: 'Dashboard', path: '/dashboard', icon: BarChart2 },
-    { name: 'Temporal Analysis', path: '/temporal-analysis', icon: Clock },
-    { name: 'Map', path: '/map', icon: Map },
-    { name: 'Reports', path: '/reports', icon: FileText },
+    { name: 'Map', path: '/map', isExternal: true, href: '/sahel_map.html', icon: Map },
   ];
 
   const toggleMobileMenu = () => {
@@ -51,24 +50,40 @@ const Navbar = () => {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-6">
-          {navLinks.map((link) => (
-            <Link
-              key={link.path}
-              to={link.path}
-              className={cn(
-                "flex items-center space-x-1 font-medium text-sm transition-colors hover:text-primary",
-                location.pathname === link.path 
-                  ? "text-primary" 
-                  : "text-muted-foreground"
-              )}
-            >
-              <link.icon size={16} />
-              <span>{link.name}</span>
-              {location.pathname === link.path && (
-                <div className="absolute bottom-0 h-0.5 w-full bg-primary mt-6 animate-fade-in" />
-              )}
-            </Link>
-          ))}
+          {navLinks.map((link) => 
+            link.isExternal ? (
+              <a
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  "flex items-center space-x-1 font-medium text-sm transition-colors hover:text-primary",
+                  location.pathname === link.path 
+                    ? "text-primary" 
+                    : "text-muted-foreground"
+                )}
+              >
+                <link.icon size={16} />
+                <span>{link.name}</span>
+              </a>
+            ) : (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={cn(
+                  "flex items-center space-x-1 font-medium text-sm transition-colors hover:text-primary",
+                  location.pathname === link.path 
+                    ? "text-primary" 
+                    : "text-muted-foreground"
+                )}
+              >
+                <link.icon size={16} />
+                <span>{link.name}</span>
+                {location.pathname === link.path && (
+                  <div className="absolute bottom-0 h-0.5 w-full bg-primary mt-6 animate-fade-in" />
+                )}
+              </Link>
+            )
+          )}
         </nav>
 
         {/* Mobile menu button */}
@@ -85,25 +100,45 @@ const Navbar = () => {
       {mobileMenuOpen && (
         <div className="absolute top-full left-0 right-0 bg-background/95 backdrop-blur-lg shadow-md animate-slide-in-right md:hidden">
           <nav className="container mx-auto py-4 px-6 flex flex-col space-y-3">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={cn(
-                  "flex items-center justify-between p-3 rounded-md transition-colors",
-                  location.pathname === link.path 
-                    ? "bg-primary/10 text-primary" 
-                    : "text-foreground hover:bg-muted"
-                )}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <div className="flex items-center space-x-3">
-                  <link.icon size={18} />
-                  <span>{link.name}</span>
-                </div>
-                <ChevronRight size={16} className="text-muted-foreground" />
-              </Link>
-            ))}
+            {navLinks.map((link) => 
+              link.isExternal ? (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    "flex items-center justify-between p-3 rounded-md transition-colors",
+                    location.pathname === link.path 
+                      ? "bg-primary/10 text-primary" 
+                      : "text-foreground hover:bg-muted"
+                  )}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <div className="flex items-center space-x-3">
+                    <link.icon size={18} />
+                    <span>{link.name}</span>
+                  </div>
+                  <ChevronRight size={16} className="text-muted-foreground" />
+                </a>
+              ) : (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={cn(
+                    "flex items-center justify-between p-3 rounded-md transition-colors",
+                    location.pathname === link.path 
+                      ? "bg-primary/10 text-primary" 
+                      : "text-foreground hover:bg-muted"
+                  )}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <div className="flex items-center space-x-3">
+                    <link.icon size={18} />
+                    <span>{link.name}</span>
+                  </div>
+                  <ChevronRight size={16} className="text-muted-foreground" />
+                </Link>
+              )
+            )}
           </nav>
         </div>
       )}
