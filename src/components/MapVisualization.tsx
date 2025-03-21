@@ -201,7 +201,7 @@ const MapVisualization = ({
     let imagePath = '';
     
     if (dataType === 'landCoverGradient') {
-      imagePath = `/lovable-uploads/e5e26823-8aa4-46ee-8550-ea1164d47810.png`;
+      imagePath = `/lovable-uploads/9978991c-2b20-44cb-bc40-432ffee6dd69.png`;
     } else if (dataType === 'vegetationGradient') {
       imagePath = `/lovable-uploads/e5e26823-8aa4-46ee-8550-ea1164d47810.png`;
     } else if (dataType === 'precipitationGradient') {
