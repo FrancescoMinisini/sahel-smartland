@@ -39,12 +39,6 @@ import {
   loadPrecipitationByRegion,
   regionalPrecipitationColors
 } from '@/lib/geospatialUtils';
-import PopulationInsightsCharts from '@/components/PopulationInsightsCharts';
-import TimeWindowSelector from '@/components/TimeWindowSelector';
-import RegionFilter, { Region } from '@/components/RegionFilter';
-import CorrelationAnalysis from '@/components/CorrelationAnalysis';
-import ReportGenerator from '@/components/ReportGenerator';
-import { useToast } from '@/components/ui/use-toast';
 
 const TemporalAnalysis = () => {
   const { toast } = useToast();
@@ -63,7 +57,6 @@ const TemporalAnalysis = () => {
   const [regionalPrecipitationData, setRegionalPrecipitationData] = useState<any[]>([]);
   const [previousStats, setPreviousStats] = useState<Record<string, number>>({});
   
-  // New state for advanced features
   const [timeWindow, setTimeWindow] = useState<[number, number]>([2015, 2023]);
   const [selectedRegions, setSelectedRegions] = useState<string[]>(['north', 'center', 'south']);
   const [analysisView, setAnalysisView] = useState<'temporal' | 'correlation'>('temporal');
@@ -75,7 +68,6 @@ const TemporalAnalysis = () => {
     { id: 'south', name: 'Southern Region', color: regionalPrecipitationColors.South },
   ];
   
-  // Add correlation variables based on data type
   const getCorrelationVariables = () => {
     const variables = [
       { id: 'year', name: 'Year', unit: '' },
@@ -223,7 +215,6 @@ const TemporalAnalysis = () => {
     });
   };
   
-  // Filter data based on time window and selected regions
   const getFilteredData = () => {
     let filteredData: any[] = [];
     
@@ -662,7 +653,6 @@ These demographic shifts have important implications for land use planning, reso
     return null;
   };
   
-  // Get insight text based on active data type
   const getInsightText = () => {
     switch (activeDataType) {
       case 'landCover':
@@ -1011,3 +1001,4 @@ These demographic shifts have important implications for land use planning, reso
 };
 
 export default TemporalAnalysis;
+
