@@ -73,22 +73,40 @@ const MapVisualization = ({
       progress
     };
   }, [year, dataType]);
+
   useEffect(() => {
     if (onStatsChange && Object.keys(currentStats).length > 0) {
       onStatsChange(currentStats);
     }
   }, [currentStats, onStatsChange]);
+
   useEffect(() => {
     setActiveLayer(dataType);
     previousDataTypeRef.current = dataType;
   }, [dataType]);
+
   useEffect(() => {
     const preloadAllYears = async () => {
       setIsLoading(true);
       try {
         const availableYears = getAvailableYears(dataType);
         for (const yearToLoad of availableYears) {
-          if (!mapData[dataType]?.[yearToLoad]) {
+          if (dataType === 'landCoverGradient') {
+            if (yearToLoad >= 2010 && yearToLoad < 2023) {
+              try {
+                const data = await loadTIFF(yearToLoad, 'landCoverGradient');
+                setMapData(prev => ({
+                  ...prev,
+                  [dataType]: {
+                    ...(prev[dataType] || {}),
+                    [yearToLoad]: data
+                  }
+                }));
+              } catch (error) {
+                console.error(`Error loading land cover gradient data for ${yearToLoad}:`, error);
+              }
+            }
+          } else if (!mapData[dataType]?.[yearToLoad]) {
             const data = await loadTIFF(yearToLoad, dataType);
             setMapData(prev => ({
               ...prev,
@@ -121,6 +139,7 @@ const MapVisualization = ({
       }
     };
   }, [dataType, mapData, toast, transitionAnimationId]);
+
   useEffect(() => {
     const handleResize = () => {
       if (isLoading || !canvasRef.current || !containerRef.current) return;
@@ -129,6 +148,7 @@ const MapVisualization = ({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [isLoading]);
+
   const adjustCanvasSize = () => {
     if (!canvasRef.current || !containerRef.current) return;
     const canvas = canvasRef.current;
@@ -158,6 +178,7 @@ const MapVisualization = ({
       renderCurrentData();
     }
   };
+
   useEffect(() => {
     if (isLoading || !canvasRef.current || !containerRef.current) return;
     adjustCanvasSize();
@@ -177,6 +198,7 @@ const MapVisualization = ({
     previousYearRef.current = year;
     previousDataTypeRef.current = dataType;
   }, [mapData, prevYear, nextYear, progress, isLoading, year, dataType, transitionAnimationId]);
+
   const renderCurrentData = () => {
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
@@ -184,13 +206,16 @@ const MapVisualization = ({
     const dataForType = mapData[dataType] || {};
     const prevYearData = dataForType[prevYear];
     const nextYearData = dataForType[nextYear];
+    
     if (!prevYearData || prevYearData.data.length === 0) {
       console.error(`No data for ${dataType} for year ${prevYear}`);
       return;
     }
+    
     let renderData;
     let min = 0;
     let max = 500;
+    
     if (nextYearData && prevYear !== nextYear) {
       renderData = interpolateData(prevYearData.data, nextYearData.data, progress);
       if (dataType === 'precipitation') {
@@ -217,8 +242,12 @@ const MapVisualization = ({
       } else if (dataType === 'population') {
         min = prevYearData.min || 0;
         max = prevYearData.max || 1000;
+      } else if (dataType === 'landCoverGradient') {
+        min = 0;
+        max = 1;
       }
     }
+    
     renderTIFFToCanvas(ctx, renderData, prevYearData.width, prevYearData.height, {
       opacity: 1,
       dataType,
@@ -226,6 +255,7 @@ const MapVisualization = ({
       max,
       smoothing: dataType === 'precipitation' || dataType === 'vegetation' || dataType === 'population'
     });
+    
     if (dataType === 'landCover') {
       const stats = calculateLandCoverStats(renderData);
       setCurrentStats(stats);
@@ -238,8 +268,20 @@ const MapVisualization = ({
     } else if (dataType === 'population') {
       const stats = calculatePopulationStats(renderData);
       setCurrentStats(stats);
+    } else if (dataType === 'landCoverGradient') {
+      const totalPixels = renderData.length;
+      const badTransitions = renderData.filter(value => value === 1).length;
+      const badTransitionPercent = (badTransitions / totalPixels) * 100;
+      
+      setCurrentStats({
+        badTransitions,
+        totalPixels,
+        badTransitionPercent,
+        year: prevYear
+      });
     }
   };
+
   const animateYearTransition = () => {
     const dataForType = mapData[dataType] || {};
     const prevYearData = dataForType[prevYear];
@@ -299,21 +341,27 @@ const MapVisualization = ({
     const animationId = requestAnimationFrame(animateTransition);
     setTransitionAnimationId(animationId);
   };
+
   const handleZoomIn = () => {
     setZoomLevel(prev => Math.min(prev + 0.2, 3));
   };
+
   const handleZoomOut = () => {
     setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
   };
+
   const handleResetView = () => {
     setZoomLevel(1);
   };
+
   const handleLayerChange = (layer: 'landCover' | 'precipitation' | 'vegetation' | 'population' | 'landCoverGradient' | 'vegetationGradient' | 'precipitationGradient') => {
     setActiveLayer(layer);
   };
+
   const getMapDataType = () => {
     return activeLayer;
   };
+
   const mapLayers = [{
     id: 'landCover' as const,
     name: 'Land Cover',
@@ -343,10 +391,12 @@ const MapVisualization = ({
     name: 'Population',
     color: 'bg-sahel-earth'
   }];
+
   const getCurrentLayerName = () => {
     const currentLayer = mapLayers.find(layer => layer.id === activeLayer);
     return currentLayer ? currentLayer.name : 'Layer';
   };
+
   const renderLegend = () => {
     if (dataType === 'landCover') {
       const nonZeroClasses = {
@@ -369,16 +419,17 @@ const MapVisualization = ({
     } else if (dataType === 'landCoverGradient') {
       return <div className="absolute bottom-3 left-3 bg-white/90 rounded-lg p-2 shadow-md">
           <div className="flex flex-col">
-            <span className="text-xs font-medium mb-1">Land Cover Change</span>
+            <span className="text-xs font-medium mb-1">Land Cover Transitions</span>
             <div className="flex h-4 w-full">
-              {['#ef4444', '#f97316', '#3b82f6', '#84cc16', '#22c55e'].map((color, i) => <div key={i} className="h-full flex-1" style={{
-              backgroundColor: color
-            }} />)}
+              <div className="h-full flex-1 bg-green-600"></div>
+              <div className="h-full flex-1 bg-green-300"></div>
+              <div className="h-full flex-1 bg-yellow-400"></div>
+              <div className="h-full flex-1 bg-orange-500"></div>
+              <div className="h-full flex-1 bg-red-600"></div>
             </div>
             <div className="flex justify-between text-xs mt-1">
-              <span>Degradation</span>
-              <span>Stable</span>
-              <span>Improvement</span>
+              <span>No change</span>
+              <span>Problematic transitions</span>
             </div>
           </div>
         </div>;
@@ -462,6 +513,7 @@ const MapVisualization = ({
     }
     return null;
   };
+
   return <div className={cn("relative rounded-xl overflow-hidden w-full h-full flex items-center justify-center", className)} ref={containerRef}>
       <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-10 bg-white/80 dark:bg-muted/80 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium flex items-center gap-1.5 shadow-sm">
         {year}
