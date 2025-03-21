@@ -29,8 +29,6 @@ type GradientData = {
     area: number;
     mainTransition: string;
   }[];
-  improvement_sqm?: number;
-  deterioration_sqm?: number;
 };
 
 const COLORS = {
@@ -103,43 +101,89 @@ const TRANSITION_TYPES = {
   }
 };
 
-const loadLandCoverGradientData = async (): Promise<GradientData[]> => {
-  try {
-    const response = await fetch('/Datasets_Hackathon/Graph_data/land_cover_gradient.csv');
-    const csvText = await response.text();
-    
-    const lines = csvText.split('\n');
-    const headers = lines[0].split(',');
-    
-    const data: GradientData[] = [];
-    
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      
-      const values = line.split(',');
-      const year = parseInt(values[0], 10);
-      
-      if (isNaN(year)) continue;
-      
-      const improvement_sqm = parseFloat(values[1]);
-      const deterioration_sqm = parseFloat(values[2]);
-      
-      data.push({
-        year,
-        improvement_sqm,
-        deterioration_sqm,
-        transitions: [],
-        hotspots: [],
-        recovery: []
-      });
-    }
-    
-    return data;
-  } catch (error) {
-    console.error("Error loading land cover gradient data:", error);
-    return [];
-  }
+const generateGradientData = (): GradientData[] => {
+  const years = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023];
+  return years.map((year, index) => {
+    if (index === 0) return {
+      year,
+      transitions: [],
+      hotspots: [],
+      recovery: []
+    };
+    const prevYear = years[index - 1];
+    return {
+      year,
+      transitions: [{
+        from: 'Forest',
+        to: 'Barren',
+        count: Math.round(100 + Math.random() * 50 + index * 3),
+        area: Math.round(1200 + Math.random() * 500 + index * 30),
+        isNegative: true
+      }, {
+        from: 'Forest',
+        to: 'Cropland',
+        count: Math.round(80 + Math.random() * 40 + index * 2),
+        area: Math.round(950 + Math.random() * 400 + index * 25),
+        isNegative: true
+      }, {
+        from: 'Grassland',
+        to: 'Barren',
+        count: Math.round(120 + Math.random() * 60 - index * 2),
+        area: Math.round(1400 + Math.random() * 600 - index * 40),
+        isNegative: true
+      }, {
+        from: 'Barren',
+        to: 'Grassland',
+        count: Math.round(70 + Math.random() * 30 + index * 5),
+        area: Math.round(850 + Math.random() * 350 + index * 45),
+        isNegative: false
+      }, {
+        from: 'Barren',
+        to: 'Cropland',
+        count: Math.round(50 + Math.random() * 25 + index * 4),
+        area: Math.round(650 + Math.random() * 300 + index * 35),
+        isNegative: false
+      }, {
+        from: 'Grassland',
+        to: 'Forest',
+        count: Math.round(30 + Math.random() * 15 + index * 2),
+        area: Math.round(400 + Math.random() * 200 + index * 20),
+        isNegative: false
+      }],
+      hotspots: [{
+        region: 'Southern Assaba',
+        severity: Math.round(75 + Math.random() * 25),
+        area: Math.round(3500 + Math.random() * 1500),
+        mainTransition: 'Grassland to Barren'
+      }, {
+        region: 'Eastern Districts',
+        severity: Math.round(65 + Math.random() * 20),
+        area: Math.round(2800 + Math.random() * 1200),
+        mainTransition: 'Forest to Cropland'
+      }, {
+        region: 'Central Watershed',
+        severity: Math.round(55 + Math.random() * 15),
+        area: Math.round(2200 + Math.random() * 1000),
+        mainTransition: 'Forest to Barren'
+      }],
+      recovery: [{
+        region: 'Northern Assaba',
+        improvement: Math.round(45 + Math.random() * 30),
+        area: Math.round(1800 + Math.random() * 900),
+        mainTransition: 'Barren to Grassland'
+      }, {
+        region: 'Western Valleys',
+        improvement: Math.round(35 + Math.random() * 25),
+        area: Math.round(1500 + Math.random() * 800),
+        mainTransition: 'Barren to Cropland'
+      }, {
+        region: 'Riverside Areas',
+        improvement: Math.round(55 + Math.random() * 20),
+        area: Math.round(1200 + Math.random() * 600),
+        mainTransition: 'Grassland to Forest'
+      }]
+    };
+  });
 };
 
 const generateVegetationGradientData = (year: number): any[] => {
@@ -202,60 +246,38 @@ const generatePrecipitationGradientData = (year: number): any[] => {
 
 const getProcessedChartData = (gradientData: GradientData[], selectedYear: number) => {
   const yearData = getClosestYearData(gradientData, selectedYear);
-  if (!yearData) {
+  if (!yearData || !yearData.transitions.length) {
     return {
       transitionData: [],
       degradationData: [],
-      recoveryData: [],
-      landCoverGradientData: []
+      recoveryData: []
     };
   }
-  
-  const landCoverGradientData = [];
-  if (yearData.improvement_sqm !== undefined && yearData.deterioration_sqm !== undefined) {
-    landCoverGradientData.push({
-      name: 'Land Cover Improvement',
-      value: yearData.improvement_sqm,
-      color: '#22c55e',
-      isPositive: true
-    });
-    landCoverGradientData.push({
-      name: 'Land Cover Deterioration',
-      value: yearData.deterioration_sqm,
-      color: '#ef4444',
-      isPositive: false
-    });
-  }
-  
-  const transitionData = yearData.transitions?.map(t => ({
+  const transitionData = yearData.transitions.map(t => ({
     name: `${t.from} to ${t.to}`,
     value: t.area,
     count: t.count,
     color: TRANSITION_TYPES[`${t.from} to ${t.to}` as keyof typeof TRANSITION_TYPES]?.color || '#a855f7',
     isNegative: t.isNegative
-  })) || [];
-  
-  const degradationData = yearData.hotspots?.map(h => ({
+  }));
+  const degradationData = yearData.hotspots.map(h => ({
     name: h.region,
     value: h.area,
     severity: h.severity,
     transition: h.mainTransition,
     color: '#ef4444'
-  })) || [];
-  
-  const recoveryData = yearData.recovery?.map(r => ({
+  }));
+  const recoveryData = yearData.recovery.map(r => ({
     name: r.region,
     value: r.area,
     improvement: r.improvement,
     transition: r.mainTransition,
     color: '#22c55e'
-  })) || [];
-  
+  }));
   return {
     transitionData,
     degradationData,
-    recoveryData,
-    landCoverGradientData
+    recoveryData
   };
 };
 
@@ -285,39 +307,33 @@ const GradientAnalysis: React.FC<{
 
   useEffect(() => {
     setIsLoading(true);
-    
-    const fetchData = async () => {
-      const landCoverData = await loadLandCoverGradientData();
+    setTimeout(() => {
+      const landCoverData = generateGradientData();
       const vegetationData = generateVegetationGradientData(year);
       const precipitationData = generatePrecipitationGradientData(year);
-      
       setGradientData(landCoverData);
       setVegetationGradientData(vegetationData);
       setPrecipitationGradientData(precipitationData);
       setIsLoading(false);
-    };
-    
-    fetchData();
+    }, 800);
   }, [year]);
 
   const {
     transitionData,
     degradationData,
-    recoveryData,
-    landCoverGradientData
+    recoveryData
   } = getProcessedChartData(gradientData, year);
 
-  const selectedYearData = getClosestYearData(gradientData, year);
-  const improvementValue = selectedYearData?.improvement_sqm || 0;
-  const deteriorationValue = selectedYearData?.deterioration_sqm || 0;
-  const netChange = improvementValue - deteriorationValue;
+  const totalDegradationArea = transitionData.filter(t => t.isNegative).reduce((sum, t) => sum + t.value, 0);
+  const totalRecoveryArea = transitionData.filter(t => !t.isNegative).reduce((sum, t) => sum + t.value, 0);
+  const netChange = totalRecoveryArea - totalDegradationArea;
 
   const getActiveData = () => {
     if (activeTab === 'landCover') {
-      if (subTab === 'transitions') return landCoverGradientData.length > 0 ? landCoverGradientData : transitionData;
+      if (subTab === 'transitions') return transitionData;
       if (subTab === 'hotspots') return degradationData;
       if (subTab === 'recovery') return recoveryData;
-      return landCoverGradientData.length > 0 ? landCoverGradientData : transitionData;
+      return transitionData;
     } else if (activeTab === 'vegetation') {
       return vegetationGradientData;
     } else if (activeTab === 'precipitation') {
@@ -326,102 +342,40 @@ const GradientAnalysis: React.FC<{
     return [];
   };
 
-  const renderBarChart = (data: any[]) => {
-    const isLandCoverData = activeTab === 'landCover' && subTab === 'transitions' && landCoverGradientData.length > 0;
-    
-    return (
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data} margin={{
-          top: 20,
-          right: 30,
-          left: 20,
-          bottom: 5
-        }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
-          <YAxis domain={isLandCoverData ? [0, 400] : undefined} />
-          <Tooltip 
-            formatter={(value, name, props) => [
-              `${typeof value === 'number' ? value.toLocaleString() : value} ${isLandCoverData ? 'sqm' : 'ha'}`, 
-              props.payload.name
-            ]} 
-            labelFormatter={value => `${value}`} 
-          />
-          <Legend />
-          <Bar dataKey="value" name={isLandCoverData ? "Area (sqm)" : "Area (ha)"}>
-            {data.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    );
-  };
+  const renderBarChart = (data: any[]) => <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={data} margin={{
+      top: 20,
+      right: 30,
+      left: 20,
+      bottom: 5
+    }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip formatter={(value, name, props) => [`${value.toLocaleString()} ha`, props.payload.name]} labelFormatter={value => `${value}`} />
+        <Legend />
+        <Bar dataKey="value" name="Area (ha)">
+          {data.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>;
 
-  const renderPieChart = (data: any[]) => {
-    const isLandCoverData = activeTab === 'landCover' && subTab === 'transitions' && landCoverGradientData.length > 0;
-    
-    return (
-      <ResponsiveContainer width="100%" height={300}>
-        <PieChart>
-          <Pie 
-            data={data} 
-            cx="50%" 
-            cy="50%" 
-            labelLine={false} 
-            outerRadius={120} 
-            fill="#8884d8" 
-            dataKey="value" 
-            nameKey="name" 
-            label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
-          >
-            {data.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color || '#8884d8'} />)}
-          </Pie>
-          <Tooltip formatter={value => `${value.toLocaleString()} ${isLandCoverData ? 'sqm' : 'ha'}`} />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
-    );
-  };
+  const renderPieChart = (data: any[]) => <ResponsiveContainer width="100%" height={300}>
+      <PieChart>
+        <Pie data={data} cx="50%" cy="50%" labelLine={false} outerRadius={120} fill="#8884d8" dataKey="value" nameKey="name" label={({
+        name,
+        percent
+      }) => `${name}: ${(percent * 100).toFixed(0)}%`}>
+          {data.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color || '#8884d8'} />)}
+        </Pie>
+        <Tooltip formatter={value => `${value.toLocaleString()} ha`} />
+        <Legend />
+      </PieChart>
+    </ResponsiveContainer>;
 
   const getGradientInsights = () => {
     if (activeTab === 'landCover') {
-      if (landCoverGradientData.length === 0 && transitionData.length === 0) {
-        return "No land cover gradient data available for analysis.";
-      }
-      
-      if (landCoverGradientData.length > 0) {
-        const yearData = getClosestYearData(gradientData, year);
-        if (!yearData) return "No data available for the selected year.";
-        
-        const improvementValue = yearData.improvement_sqm || 0;
-        const deteriorationValue = yearData.deterioration_sqm || 0;
-        const netChangeValue = improvementValue - deteriorationValue;
-        const netChangeText = netChangeValue > 0 
-          ? `improving with a net gain of ${netChangeValue.toLocaleString()} sqm` 
-          : `degrading with a net loss of ${Math.abs(netChangeValue).toLocaleString()} sqm`;
-        
-        const ratio = improvementValue / (deteriorationValue || 1);
-        let trendDescription;
-        if (ratio > 1.5) {
-          trendDescription = "significant improvement";
-        } else if (ratio > 1.0) {
-          trendDescription = "moderate improvement";
-        } else if (ratio > 0.75) {
-          trendDescription = "slight degradation";
-        } else {
-          trendDescription = "significant degradation";
-        }
-        
-        return `Based on real land cover gradient analysis for ${year}:
-        
-• The ecosystem is currently ${netChangeText}.
-• Land cover improvement was measured at ${improvementValue.toLocaleString()} sqm.
-• Land cover deterioration was measured at ${deteriorationValue.toLocaleString()} sqm.
-• The improvement to deterioration ratio is ${ratio.toFixed(2)}, indicating ${trendDescription}.
-• This data shows the actual measured changes in land cover, with values normalized to a 0-1 scale.
-
-These gradient patterns indicate areas that require intervention to prevent further land degradation, as well as successful restoration models that could be replicated in other regions.`;
-      }
-      
+      if (transitionData.length === 0) return "No land cover gradient data available for analysis.";
       const degradationTypes = transitionData.filter(t => t.isNegative);
       const recoveryTypes = transitionData.filter(t => !t.isNegative);
       const mostCommonDegradation = degradationTypes.sort((a, b) => b.value - a.value)[0];
@@ -481,12 +435,6 @@ These rainfall gradients correlate strongly with vegetation changes and suggest 
 
   const getLegendItems = () => {
     if (activeTab === 'landCover') {
-      if (landCoverGradientData.length > 0) {
-        return [
-          { name: 'Land Cover Improvement', color: '#22c55e' },
-          { name: 'Land Cover Deterioration', color: '#ef4444' }
-        ];
-      }
       return Object.entries(TRANSITION_TYPES).slice(0, 8).map(([name, {
         color
       }]) => ({
@@ -550,7 +498,7 @@ These rainfall gradients correlate strongly with vegetation changes and suggest 
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="px-3 py-1">Year: {year}</Badge>
               <Badge variant="outline" className="px-3 py-1 bg-sahel-earth/10">
-                Net Change: {netChange > 0 ? '+' : ''}{netChange.toLocaleString()} {landCoverGradientData.length > 0 ? 'sqm' : 'ha'}
+                Net Change: {netChange > 0 ? '+' : ''}{netChange.toLocaleString()} ha
               </Badge>
             </div>
             
@@ -609,14 +557,13 @@ These rainfall gradients correlate strongly with vegetation changes and suggest 
                           <p className="text-sm text-muted-foreground">Loading data...</p>
                         </div>
                       </div> : <>
-                        {chartType === 'bar' ? renderBarChart(getActiveData()) : renderPieChart(getActiveData())}
+                        {chartType === 'bar' ? renderBarChart(transitionData) : renderPieChart(transitionData)}
                         
                         <div className="flex items-start gap-2 mt-4 text-sm text-muted-foreground">
                           <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
                           <p>
-                            {landCoverGradientData.length > 0 
-                              ? "This chart shows real land cover data with improvement and deterioration values measured in square meters." 
-                              : "Transitions show how land cover has changed between consecutive years. Negative transitions (red/orange) indicate degradation, while positive transitions (green) indicate recovery."}
+                            Transitions show how land cover has changed between consecutive years.
+                            Negative transitions (red/orange) indicate degradation, while positive transitions (green) indicate recovery.
                           </p>
                         </div>
                       </>}
@@ -713,3 +660,4 @@ These rainfall gradients correlate strongly with vegetation changes and suggest 
 };
 
 export default GradientAnalysis;
+
