@@ -1,6 +1,8 @@
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ChartConfig {
   [key: string]: {
@@ -11,6 +13,8 @@ interface ChartConfig {
 
 interface ChartContextType {
   config: ChartConfig;
+  showInsights?: boolean;
+  toggleInsights?: () => void;
 }
 
 const ChartContext = createContext<ChartContextType | undefined>(undefined);
@@ -27,16 +31,65 @@ interface ChartContainerProps {
   children: ReactNode;
   config: ChartConfig;
   className?: string;
+  insights?: ReactNode;
 }
 
 export const ChartContainer = ({
   children,
   config,
   className,
+  insights,
 }: ChartContainerProps) => {
+  const [showInsights, setShowInsights] = useState(false);
+  
+  const toggleInsights = () => {
+    setShowInsights((prev) => !prev);
+  };
+
   return (
-    <ChartContext.Provider value={{ config }}>
-      <div className={cn("w-full h-full", className)}>
+    <ChartContext.Provider value={{ config, showInsights, toggleInsights }}>
+      <div className={cn("w-full h-full relative", className)}>
+        {insights && (
+          <div className="absolute top-2 right-2 z-10">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button 
+                    onClick={toggleInsights}
+                    className={cn(
+                      "p-1.5 rounded-full transition-colors", 
+                      showInsights 
+                        ? "bg-primary text-primary-foreground" 
+                        : "bg-muted hover:bg-muted/80"
+                    )}
+                  >
+                    <Info size={16} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Toggle insights</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
+        
+        {showInsights && insights ? (
+          <div className="absolute inset-0 bg-card/95 backdrop-blur-sm z-[5] p-4 overflow-auto rounded-lg border">
+            <div className="space-y-2">
+              <h4 className="font-medium">Chart Insights</h4>
+              {insights}
+            </div>
+            <button 
+              onClick={toggleInsights} 
+              className="absolute top-2 right-2 p-1 rounded-full hover:bg-muted"
+            >
+              <span className="sr-only">Close</span>
+              ×
+            </button>
+          </div>
+        ) : null}
+        
         {children}
       </div>
     </ChartContext.Provider>
