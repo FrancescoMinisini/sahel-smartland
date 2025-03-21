@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -41,6 +40,14 @@ import {
 import ChartCarousel from '@/components/ChartCarousel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+interface LandCoverGradientData {
+  year: number;
+  improvement_sqm: number;
+  deterioration_sqm: number;
+  ratio?: number;
+  net?: number;
+}
+
 const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('landCover');
@@ -54,6 +61,7 @@ const Dashboard = () => {
   const [regionalPrecipitationData, setRegionalPrecipitationData] = useState<Array<{year: number, Overall: number, South: number, Center: number, North: number}>>([]);
   const [populationStats, setPopulationStats] = useState<Record<string, number>>({});
   const [previousPopulationStats, setPreviousPopulationStats] = useState<Record<string, number>>({});
+  const [gradientData, setGradientData] = useState<LandCoverGradientData[]>([]);
   
   const dataTabs = [
     { id: 'landCover', name: 'Land Cover', icon: <Layers size={16} /> },
@@ -61,6 +69,40 @@ const Dashboard = () => {
     { id: 'precipitation', name: 'Precipitation', icon: <CloudRain size={16} /> },
     { id: 'population', name: 'Population', icon: <Users size={16} /> },
   ];
+  
+  const fetchGradientData = async () => {
+    try {
+      const response = await fetch('/Datasets_Hackathon/Graph_data/land_cover_gradient.csv');
+      const csvText = await response.text();
+      
+      const lines = csvText.split('\n');
+      const headers = lines[0].split(',');
+      
+      const parsedData: LandCoverGradientData[] = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        
+        const values = lines[i].split(',');
+        const dataObj: LandCoverGradientData = {
+          year: parseInt(values[0]),
+          improvement_sqm: parseInt(values[1]),
+          deterioration_sqm: parseInt(values[2]),
+        };
+        
+        dataObj.net = dataObj.improvement_sqm - dataObj.deterioration_sqm;
+        dataObj.ratio = dataObj.improvement_sqm / (dataObj.improvement_sqm + dataObj.deterioration_sqm);
+        
+        parsedData.push(dataObj);
+      }
+      
+      setGradientData(parsedData);
+      return parsedData;
+    } catch (error) {
+      console.error('Error loading gradient data:', error);
+      return [];
+    }
+  };
   
   useEffect(() => {
     const loadData = async () => {
@@ -88,6 +130,13 @@ const Dashboard = () => {
         } catch (vegError) {
           console.error("Error loading vegetation data:", vegError);
         }
+        
+        try {
+          const gradientData = await fetchGradientData();
+          console.log("Loaded land cover gradient data:", gradientData);
+        } catch (gradError) {
+          console.error("Error loading gradient data:", gradError);
+        }
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
@@ -112,7 +161,6 @@ const Dashboard = () => {
   };
 
   const handleYearChange = (year: number) => {
-    // Only update previous stats if the year has actually changed
     if (year !== selectedYear) {
       setPreviousYearStats({...landCoverStats});
       setPreviousVegetationStats({...vegetationStats});
@@ -120,7 +168,6 @@ const Dashboard = () => {
       setIsLoading(true);
       setSelectedYear(year);
       
-      // Shorter loading time for smoother animation
       setTimeout(() => {
         setIsLoading(false);
       }, 150);
@@ -137,7 +184,6 @@ const Dashboard = () => {
     }
   };
 
-  // Function to get the dataset download URL based on the active tab
   const getDatasetDownloadUrl = () => {
     switch (activeTab) {
       case 'landCover':
@@ -147,7 +193,6 @@ const Dashboard = () => {
       case 'precipitation':
         return `/Datasets_Hackathon/Climate_Precipitation_Data/${selectedYear}R.tif`;
       case 'population':
-        // For population, we have data only for specific years
         const popYear = selectedYear <= 2012 ? 2010 : selectedYear <= 2017 ? 2015 : 2020;
         return `/Datasets_Hackathon/Gridded_Population_Density_Data/Assaba_Pop_${popYear}.tif`;
       default:
@@ -215,28 +260,28 @@ const Dashboard = () => {
       {
         name: 'Forest',
         value: currentYear.Forest || 1200,
-        color: '#1a9850', // Dark green
+        color: '#1a9850',
         change: 1.2,
         rawChange: 15
       },
       {
         name: 'Grassland',
         value: currentYear.Grassland || 800,
-        color: '#fee08b', // Light yellow
+        color: '#fee08b',
         change: -0.5,
         rawChange: -4
       },
       {
         name: 'Cropland',
         value: currentYear.Cropland || 900,
-        color: '#fc8d59', // Orange
+        color: '#fc8d59',
         change: 0.8,
         rawChange: 7
       },
       {
         name: 'Shrubland',
         value: currentYear.Shrubland || 600,
-        color: '#91cf60', // Medium green
+        color: '#91cf60',
         change: -0.3,
         rawChange: -2
       }
@@ -274,28 +319,35 @@ const Dashboard = () => {
     }
   ];
 
+  const selectedYearGradientData = gradientData.find(d => d.year === selectedYear) || 
+                                   gradientData.sort((a, b) => Math.abs(a.year - selectedYear) - Math.abs(b.year - selectedYear))[0] || 
+                                   { year: 2010, improvement_sqm: 0, deterioration_sqm: 0, ratio: 0, net: 0 };
+
+  const avgImprovement = gradientData.reduce((acc, curr) => acc + curr.improvement_sqm, 0) / (gradientData.length || 1);
+  const avgDeterioration = gradientData.reduce((acc, curr) => acc + curr.deterioration_sqm, 0) / (gradientData.length || 1);
+  
+  const isImprovementPositive = selectedYearGradientData.improvement_sqm > avgImprovement;
+  const isImprovementBetterThanDet = selectedYearGradientData.improvement_sqm > selectedYearGradientData.deterioration_sqm;
+
   const keyStats = [
     { 
       title: 'Land Cover Change', 
-      value: selectedYear > 2020 ? '27.3M ha' : selectedYear > 2015 ? '23.6M ha' : '18.9M ha', 
-      description: 'Area affected by land cover change in the past 20 years',
+      value: `${selectedYearGradientData.improvement_sqm + selectedYearGradientData.deterioration_sqm} sq.km`, 
+      description: 'Total area affected by land cover change in a year',
       icon: <Leaf size={20} />,
-      trend: { value: selectedYear > 2020 ? 15 : selectedYear > 2015 ? 12 : 8, isPositive: false },
-      analyticsData: [
-        { year: 2010, value: 8.2 },
-        { year: 2012, value: 10.4 },
-        { year: 2014, value: 12.7 },
-        { year: 2016, value: 16.1 },
-        { year: 2018, value: 19.5 },
-        { year: 2020, value: 23.6 },
-        { year: 2022, value: 25.8 },
-        { year: 2023, value: 27.3 }
-      ],
+      trend: { 
+        value: selectedYearGradientData.net || 0, 
+        isPositive: (selectedYearGradientData.net || 0) >= 0 
+      },
+      analyticsData: gradientData.map(item => ({ 
+        year: item.year, 
+        value: item.improvement_sqm + item.deterioration_sqm 
+      })),
       correlations: [
-        { name: "Deforestation", value: 82, correlation: 0.89 },
-        { name: "Urban Expansion", value: 65, correlation: 0.78 },
-        { name: "Agricultural Activity", value: 71, correlation: 0.67 },
-        { name: "Precipitation Decline", value: 55, correlation: -0.45 }
+        { name: "Deforestation", value: Math.round(selectedYearGradientData.deterioration_sqm / 5), correlation: -0.78 },
+        { name: "Urban Expansion", value: Math.round(selectedYearGradientData.improvement_sqm / 3), correlation: 0.65 },
+        { name: "Agricultural Activity", value: Math.round((selectedYearGradientData.improvement_sqm + selectedYearGradientData.deterioration_sqm) / 8), correlation: 0.45 },
+        { name: "Precipitation", value: Math.round(selectedYearGradientData.ratio ? selectedYearGradientData.ratio * 100 : 50), correlation: 0.82 }
       ]
     },
     { 
@@ -345,26 +397,25 @@ const Dashboard = () => {
       ]
     },
     { 
-      title: 'Population Growth', 
-      value: selectedYear > 2020 ? '4.3%' : selectedYear > 2015 ? '3.8%' : '3.1%', 
-      description: 'Annual population growth rate in urban centers',
-      icon: <Users size={20} />,
-      trend: { value: selectedYear > 2020 ? 4.3 : selectedYear > 2015 ? 3.8 : 3.1, isPositive: true },
-      analyticsData: [
-        { year: 2010, value: 2.3 },
-        { year: 2012, value: 2.5 },
-        { year: 2014, value: 2.8 },
-        { year: 2016, value: 3.2 },
-        { year: 2018, value: 3.5 },
-        { year: 2020, value: 3.8 },
-        { year: 2022, value: 4.1 },
-        { year: 2023, value: 4.3 }
-      ],
+      title: 'Land Improvement Ratio', 
+      value: `${(selectedYearGradientData.ratio || 0).toFixed(2)}`, 
+      description: 'Ratio of improved to total changed land cover',
+      icon: <Trees size={20} />,
+      trend: { 
+        value: isImprovementBetterThanDet ? 
+          Math.round((selectedYearGradientData.improvement_sqm / selectedYearGradientData.deterioration_sqm - 1) * 100) : 
+          -Math.round((selectedYearGradientData.deterioration_sqm / selectedYearGradientData.improvement_sqm - 1) * 100), 
+        isPositive: isImprovementBetterThanDet 
+      },
+      analyticsData: gradientData.map(item => ({ 
+        year: item.year, 
+        value: item.ratio || 0 
+      })),
       correlations: [
-        { name: "Urban Expansion", value: 85, correlation: 0.92 },
-        { name: "Rural Migration", value: 78, correlation: 0.84 },
-        { name: "Agricultural Land Loss", value: 65, correlation: 0.58 },
-        { name: "Water Stress", value: 72, correlation: 0.62 }
+        { name: "Conservation Policies", value: Math.round((selectedYearGradientData.ratio || 0) * 100), correlation: 0.75 },
+        { name: "Climate Adaptation", value: Math.round((selectedYearGradientData.improvement_sqm / avgImprovement) * 50), correlation: 0.82 },
+        { name: "Community Engagement", value: isImprovementPositive ? 78 : 45, correlation: 0.64 },
+        { name: "Research Investment", value: isImprovementBetterThanDet ? 88 : 32, correlation: 0.71 }
       ]
     }
   ];
