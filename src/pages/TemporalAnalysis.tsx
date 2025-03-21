@@ -19,6 +19,33 @@ import RegionFilter from "@/components/RegionFilter";
 import MapVisualization from "@/components/MapVisualization";
 import CorrelationAnalysis from "@/components/CorrelationAnalysis";
 
+// Sample region data for RegionFilter
+const SAMPLE_REGIONS = [
+  { id: "region1", name: "Northern Region", color: "#4CAF50" },
+  { id: "region2", name: "Central Region", color: "#2196F3" },
+  { id: "region3", name: "Southern Region", color: "#FF9800" },
+  { id: "region4", name: "Eastern Region", color: "#9C27B0" },
+  { id: "region5", name: "Western Region", color: "#F44336" },
+];
+
+// Sample variable data for CorrelationAnalysis
+const VARIABLES = [
+  { id: "landcover", name: "Land Cover Change", unit: "km²" },
+  { id: "rainfall", name: "Annual Rainfall", unit: "mm" },
+  { id: "temperature", name: "Average Temperature", unit: "°C" },
+  { id: "population", name: "Population Density", unit: "people/km²" },
+];
+
+// Sample correlation data
+const CORRELATION_DATA = Array.from({ length: 50 }, (_, i) => ({
+  id: `data-${i}`,
+  year: 2010 + Math.floor(i / 4),
+  landcover: Math.random() * 100,
+  rainfall: 200 + Math.random() * 800,
+  temperature: 20 + Math.random() * 15,
+  population: 50 + Math.random() * 200,
+}));
+
 const TemporalAnalysis = () => {
   const [selectedDatasets, setSelectedDatasets] = useState<string[]>([]);
   const [startYear, setStartYear] = useState(2010);
@@ -29,11 +56,17 @@ const TemporalAnalysis = () => {
   const [includeMetadata, setIncludeMetadata] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const isMobile = useIsMobile();
 
   const handleTimeWindowChange = (start: number, end: number) => {
     setStartYear(start);
     setEndYear(end);
+  };
+
+  const handleRegionChange = (regions: string[]) => {
+    setSelectedRegions(regions);
+    console.log("Selected regions updated:", regions);
   };
 
   const handleDatasetSelection = (dataset: string, checked: boolean) => {
@@ -82,7 +115,10 @@ const TemporalAnalysis = () => {
             <TimeWindowSelector
               startYear={startYear}
               endYear={endYear}
-              onTimeWindowChange={handleTimeWindowChange}
+              minYear={2010}
+              maxYear={2023}
+              onChange={handleTimeWindowChange}
+              className="w-full"
             />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -91,7 +127,11 @@ const TemporalAnalysis = () => {
                   <CardTitle>Region Selection</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <RegionFilter />
+                  <RegionFilter 
+                    regions={SAMPLE_REGIONS}
+                    selectedRegions={selectedRegions}
+                    onChange={handleRegionChange}
+                  />
                 </CardContent>
               </Card>
               
@@ -110,7 +150,10 @@ const TemporalAnalysis = () => {
                 <CardTitle>Correlation Analysis</CardTitle>
               </CardHeader>
               <CardContent>
-                <CorrelationAnalysis startYear={startYear} endYear={endYear} />
+                <CorrelationAnalysis 
+                  data={CORRELATION_DATA} 
+                  variables={VARIABLES}
+                />
               </CardContent>
             </Card>
           </div>
