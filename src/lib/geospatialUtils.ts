@@ -1,3 +1,4 @@
+
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -678,4 +679,8 @@ export const loadPrecipitationByRegion = async (): Promise<Array<{
       { year: 2011, Overall: 504, South: 512, Center: 505, North: 496 },
       { year: 2012, Overall: 496, South: 497, Center: 497, North: 494 },
       { year: 2013, Overall: 498, South: 503, Center: 499, North: 494 },
-      { year: 2014, Overall: 506, South: 501, Center: 505, North: 512 },
+      { year: 2014, Overall: 506, South: 501, Center: 505, North: 512 }
+    ]; // Added closing bracket and semicolon here to fix the error
+  }
+};
+
