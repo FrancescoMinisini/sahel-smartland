@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,7 +9,7 @@ import { Badge } from './ui/badge';
 import { TooltipProvider, Tooltip as UITooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Import the land cover gradient data
-import landCoverGradientData from '../../Datasets_Hackathon/Graph_data/land_cover_gradient.csv';
+import landCoverGradientData from '../../../Datasets_Hackathon/Graph_data/land_cover_gradient.csv';
 
 type GradientData = {
   year: number;
@@ -105,7 +104,6 @@ const TRANSITION_TYPES = {
   }
 };
 
-// Function to parse and prepare the land cover gradient data
 const prepareLandCoverGradientData = () => {
   const parsedData = landCoverGradientData.map(item => ({
     year: parseInt(item.year),
@@ -116,7 +114,6 @@ const prepareLandCoverGradientData = () => {
   return parsedData;
 };
 
-// Function to create histogram data from the land cover gradient data for a specific year
 const createHistogramData = (year: number) => {
   const gradientData = prepareLandCoverGradientData();
   const yearData = gradientData.find(item => item.year === year);
@@ -366,10 +363,8 @@ const GradientAnalysis: React.FC<{
     recoveryData
   } = getProcessedChartData(gradientData, year);
 
-  // Get the current year's histogram data
   const currentYearHistogramData = createHistogramData(year);
   
-  // Calculate totals for the insights
   const yearData = landCoverData.find(item => item.year === year);
   const totalDegradationArea = yearData ? yearData.deterioration_sqm : 0;
   const totalRecoveryArea = yearData ? yearData.improvement_sqm : 0;
@@ -780,3 +775,4 @@ These rainfall gradients correlate strongly with vegetation changes and suggest 
 };
 
 export default GradientAnalysis;
+
