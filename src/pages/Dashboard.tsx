@@ -41,9 +41,36 @@ import {
 import ChartCarousel from '@/components/ChartCarousel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChartContainer } from '@/components/ui/chart';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 
 const Dashboard = () => {
+  const generateGDDData = (year: number) => {
+    const baseNorth = 1200 + Math.floor(Math.random() * 150);
+    const baseCenter = 1800 + Math.floor(Math.random() * 200);
+    const baseSouth = 2300 + Math.floor(Math.random() * 250);
+    
+    const yearFactor = Math.max(0, (year - 2010) * 15);
+    
+    return [
+      { region: 'North', value: baseNorth + yearFactor, color: '#94d2bd' },
+      { region: 'Center', value: baseCenter + yearFactor, color: '#e9d8a6' }, 
+      { region: 'South', value: baseSouth + yearFactor, color: '#ee9b00' }
+    ];
+  };
+
+  const generateGDDTimeSeriesData = () => {
+    return Array.from({ length: 14 }, (_, i) => {
+      const year = 2010 + i;
+      const gddData = generateGDDData(year);
+      return {
+        year,
+        North: gddData[0].value,
+        Center: gddData[1].value,
+        South: gddData[2].value
+      };
+    });
+  };
+
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('landCover');
   const [selectedYear, setSelectedYear] = useState(2023);
@@ -275,33 +302,6 @@ const Dashboard = () => {
       rawChange: selectedYear > 2020 ? 143000 : selectedYear > 2015 ? 130000 : 118000
     }
   ];
-
-  const generateGDDData = (year: number) => {
-    const baseNorth = 1200 + Math.floor(Math.random() * 150);
-    const baseCenter = 1800 + Math.floor(Math.random() * 200);
-    const baseSouth = 2300 + Math.floor(Math.random() * 250);
-    
-    const yearFactor = Math.max(0, (year - 2010) * 15);
-    
-    return [
-      { region: 'North', value: baseNorth + yearFactor, color: '#94d2bd' },
-      { region: 'Center', value: baseCenter + yearFactor, color: '#e9d8a6' }, 
-      { region: 'South', value: baseSouth + yearFactor, color: '#ee9b00' }
-    ];
-  };
-
-  const generateGDDTimeSeriesData = () => {
-    return Array.from({ length: 14 }, (_, i) => {
-      const year = 2010 + i;
-      const gddData = generateGDDData(year);
-      return {
-        year,
-        North: gddData[0].value,
-        Center: gddData[1].value,
-        South: gddData[2].value
-      };
-    });
-  };
 
   const vegetationGDDInsights = (
     <div className="space-y-3 text-sm">
