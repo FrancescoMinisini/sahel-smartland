@@ -654,7 +654,7 @@ const Dashboard = () => {
             ))}
           </div>
           
-          <GradientAnalysis year={selectedYear} dataType="landCover" />
+          <GradientAnalysis year={selectedYear} />
         </div>
       </main>
       
