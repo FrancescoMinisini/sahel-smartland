@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -299,7 +298,7 @@ const PopulationInsightsCharts: React.FC<PopulationInsightsChartsProps> = ({
                   margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" domain={[-1, 1]} /> {/* Set domain to -1 to 1 */}
+                  <XAxis type="number" domain={[-1, 1]} />
                   <YAxis type="category" dataKey="factor" />
                   <Tooltip
                     formatter={(value: number) => [value.toFixed(2), 'Correlation']}
@@ -307,12 +306,13 @@ const PopulationInsightsCharts: React.FC<PopulationInsightsChartsProps> = ({
                   />
                   <Bar 
                     dataKey="correlation" 
-                    fill="#8884d8" // Default fill color
+                    fill="#8884d8"
+                    label={{ position: 'right', formatter: (entry: any) => entry.value.toFixed(2) }}
                   >
                     {correlationData.map((entry, index) => (
                       <Cell 
                         key={`cell-${index}`} 
-                        fill={entry.correlation > 0 ? '#22c55e' : '#ef4444'}
+                        fill={entry.correlation > 0 ? '#22c55e' : '#ef4444'} 
                       />
                     ))}
                   </Bar>
