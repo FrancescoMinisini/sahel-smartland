@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -74,6 +73,10 @@ const CorrelationAnalysis = ({ data, variables, className }: CorrelationAnalysis
   };
 
   const correlation = calculateCorrelation(xVariable, yVariable);
+  const correlationStrength = 
+    Math.abs(correlation) < 0.3 ? 'Weak' :
+    Math.abs(correlation) < 0.7 ? 'Moderate' : 'Strong';
+  
   const correlationDirection = 
     correlation > 0.1 ? 'Positive' :
     correlation < -0.1 ? 'Negative' : 'Neutral';
@@ -226,7 +229,7 @@ const CorrelationAnalysis = ({ data, variables, className }: CorrelationAnalysis
             <div>
               <div className="font-medium mb-1">Correlation: {correlation.toFixed(2)}</div>
               <p className="text-muted-foreground">
-                There is a <strong>{correlationDirection}</strong> correlation between {xName} and {yName}.
+                There is a <strong>{correlationStrength} {correlationDirection}</strong> correlation between {xName} and {yName}.
                 {Math.abs(correlation) > 0.5 && 
                   ` This suggests that changes in one variable may be ${correlation > 0 ? 'accompanied by similar' : 'inversely related to'} changes in the other.`}
                 {Math.abs(correlation) < 0.3 && 
