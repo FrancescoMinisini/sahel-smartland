@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ZAxis, Legend } from 'recharts';
-import { InfoCircle, Shuffle, TrendingUp } from 'lucide-react';
+import { Info, Shuffle, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface CorrelationAnalysisProps {
@@ -24,11 +23,9 @@ const CorrelationAnalysis = ({ data, variables, className }: CorrelationAnalysis
   const [confidenceLevel, setConfidenceLevel] = useState(90);
   const [sampleSize, setSampleSize] = useState(50);
 
-  // Calculate correlation coefficient (Pearson's r)
   const calculateCorrelation = (x: string, y: string) => {
     if (!data.length || !x || !y) return 0;
 
-    // Extract values for the selected variables
     const values = data.map(item => ({
       x: item[x],
       y: item[y]
@@ -36,11 +33,9 @@ const CorrelationAnalysis = ({ data, variables, className }: CorrelationAnalysis
 
     if (values.length < 2) return 0;
 
-    // Calculate means
     const xMean = values.reduce((sum, val) => sum + val.x, 0) / values.length;
     const yMean = values.reduce((sum, val) => sum + val.y, 0) / values.length;
 
-    // Calculate correlation coefficient
     let numerator = 0;
     let xDenominator = 0;
     let yDenominator = 0;
@@ -68,11 +63,9 @@ const CorrelationAnalysis = ({ data, variables, className }: CorrelationAnalysis
     correlation > 0.1 ? 'Positive' :
     correlation < -0.1 ? 'Negative' : 'Neutral';
 
-  // Generate scatter plot data
   const generateScatterData = () => {
     if (!data.length || !xVariable || !yVariable) return [];
     
-    // Sample the data based on sampleSize
     const sampledData = [...data]
       .sort(() => 0.5 - Math.random())
       .slice(0, sampleSize)
@@ -93,7 +86,6 @@ const CorrelationAnalysis = ({ data, variables, className }: CorrelationAnalysis
   const yName = variables.find(v => v.id === yVariable)?.name || '';
 
   const randomizeSampling = () => {
-    // This will trigger a re-render with a new random sample
     setSampleSize(prev => prev);
   };
 
@@ -215,7 +207,7 @@ const CorrelationAnalysis = ({ data, variables, className }: CorrelationAnalysis
         
         <div className="bg-muted p-3 rounded-md text-sm">
           <div className="flex items-start gap-2">
-            <InfoCircle size={16} className="mt-0.5 text-muted-foreground" />
+            <Info size={16} className="mt-0.5 text-muted-foreground" />
             <div>
               <div className="font-medium mb-1">Correlation: {correlation.toFixed(2)}</div>
               <p className="text-muted-foreground">
