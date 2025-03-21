@@ -381,53 +381,47 @@ const GradientAnalysis: React.FC<{
       const mostCommonDegradation = degradationTypes.sort((a, b) => b.value - a.value)[0];
       const mostCommonRecovery = recoveryTypes.sort((a, b) => b.value - a.value)[0];
       const netChangeText = netChange > 0 ? `improving with a net gain of ${netChange.toLocaleString()} ha` : `degrading with a net loss of ${Math.abs(netChange).toLocaleString()} ha`;
-      
       return `Based on land cover transition gradient analysis for ${year}:
       
 • The ecosystem is currently ${netChangeText}.
 • The most significant degradation process is "${mostCommonDegradation?.name}", affecting ${mostCommonDegradation?.value.toLocaleString()} hectares.
 • The most significant recovery process is "${mostCommonRecovery?.name}", affecting ${mostCommonRecovery?.value.toLocaleString()} hectares.
-• Degradation hotspots are concentrated in the central and eastern parts of Assaba region, with significant conversion from grassland to barren land (as shown in the gradient map).
-• The northern region shows relatively lower rates of degradation, while the southern areas exhibit mixed patterns of land cover change.
-• The 2017-2018 period shows a critical transition with grassland areas converting to barren land, indicating desertification processes.
+• Degradation hotspots are concentrated in the Southern Assaba region, primarily due to conversion from grassland to barren land.
+• Recovery is strongest in riverside areas, where restoration efforts have successfully converted barren land to vegetation.
 
-These gradient patterns reveal areas requiring immediate intervention to prevent further land degradation, particularly in the eastern districts where the transition rate is accelerating.`;
+These gradient patterns indicate areas that require immediate intervention to prevent further land degradation, as well as successful restoration models that could be replicated in other regions.`;
     } else if (activeTab === 'vegetation') {
       const positiveChanges = vegetationGradientData.filter(d => d.isPositive);
       const negativeChanges = vegetationGradientData.filter(d => !d.isPositive);
       const totalPositive = positiveChanges.reduce((sum, d) => sum + d.value, 0);
       const totalNegative = negativeChanges.reduce((sum, d) => sum + d.value, 0);
       const netVegChange = totalPositive - totalNegative;
-      const vegChangeText = netVegChange > 0 ? `improving with a net vegetation gain of ${netVegChange.toLocaleString()} ha` : `declining with a net vegetation loss of ${Math.abs(netVegChange).toLocaleString()} ha`;
-      
+      const vegChangeText = netVegChange > 0 ? `improving with a net vegetation gain of ${netVegChange.toLocaleString()} ha` : `degrading with a net vegetation loss of ${Math.abs(netVegChange).toLocaleString()} ha`;
       return `Based on vegetation productivity gradient analysis for ${year}:
       
-• The overall vegetation health is ${vegChangeText}.
-• Vegetation productivity has declined significantly in the eastern and northeastern parts of the region.
-• Areas near water bodies and seasonal streams show better vegetation resilience compared to upland areas.
-• The spatial pattern of vegetation decline correlates strongly with rainfall patterns, suggesting climate change impacts.
-• Vegetation degradation forms a distinct pattern following topographic features, with lowland areas showing greater resilience.
-• Agricultural areas show mixed responses, with irrigated zones maintaining productivity while rainfed areas show significant decline.
+• The overall vegetation status is ${vegChangeText}.
+• Forest cover is declining in more areas than it is increasing, particularly in the southern regions.
+• Grassland transitions show mixed patterns with both gains and losses across the region.
+• Areas with stable vegetation are primarily concentrated in protected areas and along water bodies.
+• Climate change and human activities appear to be the primary drivers of vegetation degradation.
 
-The vegetation gradient analysis highlights the importance of water access for maintaining ecosystem health in this semi-arid region. Interventions should focus on water conservation and sustainable land management practices in the most vulnerable eastern districts.`;
+Long-term vegetation monitoring indicates a persistent trend of degradation with localized areas of recovery that could be expanded through conservation interventions.`;
     } else if (activeTab === 'precipitation') {
       const positiveChanges = precipitationGradientData.filter(d => d.isPositive);
       const negativeChanges = precipitationGradientData.filter(d => !d.isPositive);
       const totalPositive = positiveChanges.reduce((sum, d) => sum + d.value, 0);
       const totalNegative = negativeChanges.reduce((sum, d) => sum + d.value, 0);
       const netPrecipChange = totalPositive - totalNegative;
-      const precipChangeText = netPrecipChange > 0 ? `showing a positive trend with increased rainfall in ${netPrecipChange.toLocaleString()} ha` : `showing a negative trend with decreased rainfall in ${Math.abs(netPrecipChange).toLocaleString()} ha`;
-      
+      const precipChangeText = netPrecipChange > 0 ? `improving with increased rainfall in ${netPrecipChange.toLocaleString()} ha` : `worsening with decreased rainfall in ${Math.abs(netPrecipChange).toLocaleString()} ha`;
       return `Based on precipitation gradient analysis for ${year}:
       
-• The regional rainfall pattern is ${precipChangeText}.
-• A clear north-south precipitation gradient is visible, with southern areas receiving more consistent rainfall.
-• Eastern districts show the most significant decline in rainfall, with up to 35% reduction since 2010.
-• Rainfall variability has increased across all districts, particularly affecting the central watershed areas.
-• Temporal patterns show a shift in the rainy season, with delayed onset and more erratic distribution.
-• Areas experiencing the greatest precipitation decline correspond closely with regions showing vegetation stress and land cover degradation.
+• The overall precipitation pattern is ${precipChangeText}.
+• Drought conditions are intensifying in the eastern and southern regions.
+• Stable rainfall areas are primarily concentrated in the central highlands.
+• Water availability has improved in some northern watersheds due to increased seasonal precipitation.
+• The gradient analysis reveals an increasing variability in rainfall patterns, with longer dry spells interrupted by more intense rain events.
 
-The precipitation gradient analysis reveals changing climate patterns that directly impact ecosystem health and agricultural productivity. Water harvesting and drought-resistant farming practices should be prioritized in the eastern and central parts of the region to build resilience against increasing rainfall variability.`;
+These rainfall gradients correlate strongly with vegetation changes and suggest a need for improved water management infrastructure to buffer against increasing climate variability.`;
     }
     return "No gradient data available for analysis.";
   };
