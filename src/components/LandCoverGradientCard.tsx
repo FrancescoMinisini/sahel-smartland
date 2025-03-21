@@ -12,6 +12,14 @@ type LandCoverGradientData = {
   deterioration_sqm: number;
 };
 
+type InsightsType = {
+  summary: string;
+  netChange: string;
+  bestYear: string;
+  worstYear: string;
+  trend: string;
+} | string;
+
 const LandCoverGradientCard = () => {
   const [data, setData] = useState<LandCoverGradientData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +100,7 @@ const LandCoverGradientCard = () => {
     fetchData();
   }, []);
 
-  const getInsights = () => {
+  const getInsights = (): InsightsType => {
     if (data.length === 0) return "No data available";
     
     // Calculate total improvements and deteriorations
@@ -227,9 +235,15 @@ const LandCoverGradientCard = () => {
             </div>
             
             <div className="space-y-2 mt-4 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">{insights.summary}</p>
-              <p>{insights.netChange}</p>
-              <p>{insights.trend}</p>
+              {typeof insights === 'string' ? (
+                <p>{insights}</p>
+              ) : (
+                <>
+                  <p className="font-medium text-foreground">{insights.summary}</p>
+                  <p>{insights.netChange}</p>
+                  <p>{insights.trend}</p>
+                </>
+              )}
             </div>
           </>
         )}

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserPlus, CircleUserRound, Sprout, BarChart3, Activity, ArrowDownRight, ArrowUpRight, CloudRain, HelpCircle, Share2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { TooltipProvider, Tooltip } from "@/components/ui/tooltip";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import DataCard from "@/components/DataCard";
 import ChartCarousel from '@/components/ChartCarousel';
 import YearSlider from '@/components/YearSlider';
@@ -58,7 +58,7 @@ const Dashboard = () => {
         
         <div className="w-full lg:w-auto flex flex-col xs:flex-row gap-4">
           <YearSlider 
-            year={selectedYear} 
+            initialValue={selectedYear} 
             onChange={(newYear) => setSelectedYear(newYear)} 
             min={2010}
             max={2023}
@@ -127,17 +127,17 @@ const Dashboard = () => {
                 
                 <TooltipProvider>
                   <Tooltip>
-                    <Tooltip.Trigger asChild>
+                    <TooltipTrigger asChild>
                       <Button variant="outline" size="icon" className="h-8 w-8">
                         <HelpCircle className="h-4 w-4" />
                         <span className="sr-only">Help</span>
                       </Button>
-                    </Tooltip.Trigger>
-                    <Tooltip.Content>
+                    </TooltipTrigger>
+                    <TooltipContent>
                       <p className="max-w-xs">
                         This map shows the spatial distribution of land cover, vegetation health, and precipitation across the Assaba region.
                       </p>
-                    </Tooltip.Content>
+                    </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </CardHeader>
@@ -188,7 +188,7 @@ const Dashboard = () => {
           </div>
           
           <div>
-            <ChartCarousel year={selectedYear} />
+            <ChartCarousel />
           </div>
         </TabsContent>
         
