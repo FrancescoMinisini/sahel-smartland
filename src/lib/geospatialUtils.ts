@@ -1,3 +1,4 @@
+
 import * as GeoTIFF from 'geotiff';
 
 // Land cover type colors - using more distinctive colors for better visualization
@@ -101,7 +102,14 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
     if (dataType === 'landCover') {
       filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
     } else if (dataType === 'landCoverGradient') {
-      filePath = `/Datasets_Hackathon/land_cover_gradient/${year}GRAD.tif`;
+      // For land cover gradient, we use the transition files from previous year to current year
+      if (year > 2010 && year <= 2023) {
+        const prevYear = year - 1;
+        filePath = `/Datasets_Hackathon/land_cover_gradient/bad_transition_${prevYear}LCT_to_${year}LCT.tif`;
+      } else {
+        // Fallback to standard land cover if gradient not available
+        filePath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
+      }
     } else if (dataType === 'precipitation') {
       filePath = `/Datasets_Hackathon/Climate_Precipitation_Data/${year}R.tif`;
     } else if (dataType === 'precipitationGradient') {
@@ -170,7 +178,48 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
     } catch (error) {
       console.error(`Error loading specific file ${filePath}, falling back to standard data:`, error);
       
-      // Fallback to standard files if gradient files don't exist
+      // Fallback for land cover gradient specifically - try a different year's transition
+      if (dataType === 'landCoverGradient') {
+        // Try to find an available year near the requested one
+        const availableYears = [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023];
+        let closestYear = null;
+        let minDiff = Infinity;
+        
+        for (const availYear of availableYears) {
+          const diff = Math.abs(year - availYear);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestYear = availYear;
+          }
+        }
+        
+        if (closestYear && closestYear > 2010) {
+          // Try to load the closest year's transition file
+          try {
+            const prevYear = closestYear - 1;
+            const fallbackPath = `/Datasets_Hackathon/land_cover_gradient/bad_transition_${prevYear}LCT_to_${closestYear}LCT.tif`;
+            console.log(`Trying fallback gradient file: ${fallbackPath}`);
+            
+            const response = await fetch(fallbackPath);
+            const arrayBuffer = await response.arrayBuffer();
+            const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
+            const image = await tiff.getImage();
+            const width = image.getWidth();
+            const height = image.getHeight();
+            const values = await image.readRasters();
+            
+            // Convert the TypedArray to a regular Array
+            const data = Array.from(values[0] as Uint8Array | Float32Array);
+            
+            console.log(`Successfully loaded fallback gradient file for ${closestYear}`);
+            return { data, width, height };
+          } catch (fallbackError) {
+            console.error(`Failed to load fallback gradient file for ${closestYear}:`, fallbackError);
+          }
+        }
+      }
+      
+      // General fallback to standard files
       let fallbackPath;
       if (dataType.includes('landCover')) {
         fallbackPath = `/Datasets_Hackathon/Modis_Land_Cover_Data/${year}LCT.tif`;
@@ -222,12 +271,14 @@ export const loadTIFF = async (year: number, dataType = 'landCover'): Promise<{
 // Get color for gradient data
 export const getGradientColor = (value: number, dataType: string): string => {
   if (dataType === 'landCoverGradient') {
-    // Map values to our gradient colors
-    if (value <= -2) return landCoverGradientColors['-2'];
-    if (value < 0) return landCoverGradientColors['-1'];
-    if (value === 0) return landCoverGradientColors['0'];
-    if (value <= 1) return landCoverGradientColors['1'];
-    return landCoverGradientColors['2'];
+    // Based on the land cover gradient files (bad_transition_XXXX_to_YYYY.tif)
+    // value 1 = bad transition (degradation), value 0 = no bad transition (stable or improvement)
+    if (value === 1) {
+      // Bad transition is shown as red
+      return '#ef4444';
+    }
+    // No bad transition (0) is shown as green
+    return '#10b981';
   } else if (dataType === 'vegetationGradient') {
     // For vegetation gradient, use the vegetation scale but invert for degradation
     if (value < -20) return '#ef4444'; // Significant decrease
@@ -417,6 +468,9 @@ export const renderTIFFToCanvas = (
 export const getAvailableYears = (dataType = 'landCover'): number[] => {
   if (dataType === 'population' || dataType.includes('population')) {
     return [2010, 2015, 2020]; // Only these years are available for population data
+  } else if (dataType === 'landCoverGradient') {
+    // For land cover gradient, we have transitions from 2010-2011 through 2022-2023
+    return Array.from({ length: 13 }, (_, i) => 2011 + i);
   }
   return Array.from({ length: 14 }, (_, i) => 2010 + i);
 };
@@ -800,37 +854,43 @@ export const getPopulationTimeSeriesData = (): Array<{ year: number, [key: strin
 };
 
 // Function to get population correlation with environment data
-export const getPopulationEnvironmentCorrelation = (): Array<{ category: string, correlation: number, impact: string }> => {
+export const getPopulationEnvironmentCorrelation = (): Array<{ factor: string, correlation: number, impact: "positive" | "negative" | "neutral", description: string }> => {
   return [
     { 
-      category: 'Precipitation', 
+      factor: 'Precipitation', 
       correlation: 0.82, 
-      impact: 'Strong positive correlation shows population centers follow water availability' 
+      impact: "positive", 
+      description: 'Strong positive correlation shows population centers follow water availability' 
     },
     { 
-      category: 'Vegetation', 
+      factor: 'Vegetation', 
       correlation: 0.78, 
-      impact: 'Strong association between vegetation productivity and settlement patterns' 
+      impact: "positive", 
+      description: 'Strong association between vegetation productivity and settlement patterns' 
     },
     { 
-      category: 'Cropland', 
+      factor: 'Cropland', 
       correlation: 0.64, 
-      impact: 'Moderate correlation indicating agricultural activities support population' 
+      impact: "positive", 
+      description: 'Moderate correlation indicating agricultural activities support population' 
     },
     { 
-      category: 'Land Degradation', 
+      factor: 'Land Degradation', 
       correlation: -0.58, 
-      impact: 'Moderate negative correlation showing population avoids degraded lands' 
+      impact: "negative", 
+      description: 'Moderate negative correlation showing population avoids degraded lands' 
     },
     { 
-      category: 'Urbanization', 
+      factor: 'Urbanization', 
       correlation: 0.91, 
-      impact: 'Very strong correlation with increasing population density in urban centers' 
+      impact: "positive", 
+      description: 'Very strong correlation with increasing population density in urban centers' 
     },
     { 
-      category: 'Road Networks', 
+      factor: 'Road Networks', 
       correlation: 0.85, 
-      impact: 'Strong relationship between accessibility and population centers' 
+      impact: "positive", 
+      description: 'Strong relationship between accessibility and population centers' 
     }
   ];
 };

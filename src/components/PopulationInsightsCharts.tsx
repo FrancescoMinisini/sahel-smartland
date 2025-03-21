@@ -1,426 +1,371 @@
 
-import React from 'react';
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  AreaChart,
-  Area
-} from 'recharts';
-import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
+import React, { useState, useMemo } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Info } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, LineChart, Line, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import { getPopulationTimeSeriesData, getPopulationEnvironmentCorrelation } from '@/lib/geospatialUtils';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
-// Custom colors for charts
-const COLORS = {
-  urban: '#1E88E5',
-  rural: '#43A047',
-  under15: '#7E57C2',
-  over65: '#E53935',
-  working: '#FB8C00',
-  male: '#5C6BC0',
-  female: '#EC407A',
-  population: '#26A69A',
-  growth: '#FFA726',
-  positive: '#66BB6A',
-  negative: '#EF5350',
-  neutral: '#78909C'
-};
+interface PopulationInsightsChartsProps {
+  className?: string;
+  year?: number;
+}
 
-// Custom ToolTip for PopulationPyramid
-const PyramidTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white p-2 border border-gray-200 rounded shadow-sm text-xs">
-        <p className="font-medium">{payload[0].name === 'Male' ? '♂' : '♀'} {payload[0].name}</p>
-        <p className="text-sahel-earth">
-          {Math.abs(payload[0].value).toLocaleString()} people
-        </p>
-        <p className="text-sahel-earthLight">
-          {Math.abs(payload[0].payload.percentage).toFixed(1)}% of population
-        </p>
-      </div>
-    );
-  }
-  return null;
-};
-
-const CustomizedDot = (props: any) => {
-  const { cx, cy, value } = props;
+const PopulationInsightsCharts: React.FC<PopulationInsightsChartsProps> = ({
+  className,
+  year = 2023
+}) => {
+  const [activeTab, setActiveTab] = useState('demographics');
   
-  return (
-    <circle 
-      cx={cx} 
-      cy={cy} 
-      r={4} 
-      fill="#FFF" 
-      stroke={COLORS.growth} 
-      strokeWidth={2}
-    />
-  );
-};
-
-const PopulationInsightsCharts: React.FC = () => {
-  const populationData = getPopulationTimeSeriesData();
-  const environmentCorrelation = getPopulationEnvironmentCorrelation();
+  // Get population data for the selected year or the closest available
+  const populationData = useMemo(() => {
+    const allYears = getPopulationTimeSeriesData();
+    
+    // Find the closest year if the selected year is not available
+    return allYears.find(d => d.year === year) || allYears[allYears.length - 1];
+  }, [year]);
   
-  // Prepare data for population pyramid (latest year only)
-  const latestYearData = populationData[populationData.length - 1];
-  const totalPopulation = latestYearData.Total;
+  // Get all years of population data for the trends tab
+  const populationTrendData = useMemo(() => {
+    return getPopulationTimeSeriesData();
+  }, []);
   
-  const pyramidData = [
-    { 
-      name: 'Under 15',
-      Male: -(latestYearData['Under 15'] * (latestYearData.Male / latestYearData.Total)),
-      Female: latestYearData['Under 15'] * (latestYearData.Female / latestYearData.Total),
-      percentage: (latestYearData['Under 15'] / totalPopulation) * 100
-    },
-    { 
-      name: 'Working Age',
-      Male: -(latestYearData['Working Age'] * (latestYearData.Male / latestYearData.Total)),
-      Female: latestYearData['Working Age'] * (latestYearData.Female / latestYearData.Total),
-      percentage: (latestYearData['Working Age'] / totalPopulation) * 100
-    },
-    { 
-      name: 'Over 65',
-      Male: -(latestYearData['Over 65'] * (latestYearData.Male / latestYearData.Total)),
-      Female: latestYearData['Over 65'] * (latestYearData.Female / latestYearData.Total),
-      percentage: (latestYearData['Over 65'] / totalPopulation) * 100
-    },
-  ];
+  // Get correlation data for the relationships tab
+  const correlationData = useMemo(() => {
+    return getPopulationEnvironmentCorrelation();
+  }, []);
   
-  // Prepare data for urban/rural pie chart
-  const urbanRuralData = [
-    { name: 'Urban', value: latestYearData.Urban, color: COLORS.urban },
-    { name: 'Rural', value: latestYearData.Rural, color: COLORS.rural }
-  ];
-  
-  // Format numbers with commas for thousands
-  const formatNumber = (num: number) => {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  // Format for the tooltip
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-2 border border-neutral-200 shadow-sm rounded-md text-xs">
+          <p className="font-medium">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} style={{ color: entry.color }}>
+              {entry.name}: {entry.value.toLocaleString()}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
   };
   
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Card className="col-span-1 md:col-span-2">
-        <CardContent className="pt-6">
-          <CardTitle className="text-xl mb-2 flex items-center gap-2">
-            Population Growth Trends
-            <span className="text-xs font-normal text-muted-foreground">
-              (2010-2023)
-            </span>
-          </CardTitle>
-          <CardDescription className="mb-4">
-            Analysis of population growth in the Assaba region of Mauritania with key demographic indicators
-          </CardDescription>
-          
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart
-              data={populationData}
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis 
-                dataKey="year"
-                tickFormatter={(year) => `${year}`}
-              />
-              <YAxis 
-                yAxisId="left" 
-                tickFormatter={(value) => `${value / 1000}k`}
-                domain={['auto', 'auto']}
-              />
-              <YAxis 
-                yAxisId="right" 
-                orientation="right" 
-                tickFormatter={(value) => `${value}%`}
-                domain={[2, 3]}
-              />
-              <Tooltip 
-                formatter={(value, name) => [
-                  name === 'Growth Rate' ? `${value}%` : formatNumber(value as number), 
-                  name
-                ]}
-              />
-              <Legend />
-              <Line 
-                yAxisId="left"
-                type="monotone" 
-                dataKey="Total" 
-                stroke={COLORS.population} 
-                strokeWidth={3}
-                name="Total Population"
-              />
-              <Line 
-                yAxisId="right"
-                type="monotone" 
-                dataKey="Growth Rate" 
-                stroke={COLORS.growth} 
-                strokeWidth={2}
-                dot={<CustomizedDot />}
-                name="Growth Rate"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="pt-6">
-          <CardTitle className="text-lg mb-2">Urban vs Rural Population</CardTitle>
-          <CardDescription className="mb-4">
-            Distribution between urban and rural areas in {latestYearData.year}
-          </CardDescription>
-          
-          <div className="flex flex-col md:flex-row items-center">
-            <div className="w-48 h-48">
+  const renderDemographicsContent = () => {
+    const demographicData = [
+      { name: 'Under 15', value: populationData['Under 15'] },
+      { name: 'Working Age', value: populationData['Working Age'] },
+      { name: 'Over 65', value: populationData['Over 65'] }
+    ];
+    
+    const genderData = [
+      { name: 'Male', value: populationData['Male'] },
+      { name: 'Female', value: populationData['Female'] }
+    ];
+    
+    const locationData = [
+      { name: 'Urban', value: populationData['Urban'] },
+      { name: 'Rural', value: populationData['Rural'] }
+    ];
+    
+    const COLORS = ['#6f6af8', '#22c55e', '#f97316', '#3b82f6', '#ef4444'];
+    
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Age Distribution</CardTitle>
+            <CardDescription>Demographic breakdown by age group</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={urbanRuralData}
+                    data={demographicData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
                     outerRadius={80}
-                    paddingAngle={2}
+                    fill="#8884d8"
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
                   >
-                    {urbanRuralData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    {demographicData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => formatNumber(value as number)} />
+                  <Tooltip formatter={(value: number) => value.toLocaleString()} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
             
-            <div className="flex-1 mt-4 md:mt-0 md:ml-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-blue-50 p-3 rounded-lg">
-                  <div className="text-xs text-muted-foreground">Urban Population</div>
-                  <div className="text-lg font-semibold">{formatNumber(latestYearData.Urban)}</div>
-                  <div className="text-xs text-blue-600">
-                    {((latestYearData.Urban / latestYearData.Total) * 100).toFixed(1)}% of total
-                  </div>
-                </div>
-                
-                <div className="bg-green-50 p-3 rounded-lg">
-                  <div className="text-xs text-muted-foreground">Rural Population</div>
-                  <div className="text-lg font-semibold">{formatNumber(latestYearData.Rural)}</div>
-                  <div className="text-xs text-green-600">
-                    {((latestYearData.Rural / latestYearData.Total) * 100).toFixed(1)}% of total
-                  </div>
-                </div>
-                
-                <div className="col-span-2 flex items-center text-xs text-muted-foreground">
-                  <Info size={14} className="mr-1" />
-                  Urbanization has increased by approximately 8% since 2010
-                </div>
+            <div className="mt-2 grid grid-cols-3 gap-2 text-center text-xs">
+              <div>
+                <div className="text-sahel-blue font-medium">{populationData['Under 15'].toLocaleString()}</div>
+                <div className="text-neutral-500">Under 15</div>
+              </div>
+              <div>
+                <div className="text-sahel-green font-medium">{populationData['Working Age'].toLocaleString()}</div>
+                <div className="text-neutral-500">Working Age</div>
+              </div>
+              <div>
+                <div className="text-sahel-earthLight font-medium">{populationData['Over 65'].toLocaleString()}</div>
+                <div className="text-neutral-500">Over 65</div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="pt-6">
-          <CardTitle className="text-lg mb-2">Population Structure</CardTitle>
-          <CardDescription className="mb-4">
-            Age and gender distribution pyramid for {latestYearData.year}
-          </CardDescription>
-          
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart
-              data={pyramidData}
-              layout="vertical"
-              margin={{ top: 5, right: 20, left: 30, bottom: 5 }}
-              barGap={0}
-              barSize={20}
-            >
-              <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-              <XAxis 
-                type="number" 
-                tickFormatter={(value) => `${Math.abs(value / 1000)}k`}
-                domain={[
-                  (dataMin: number) => Math.floor(dataMin * 1.05),
-                  (dataMax: number) => Math.ceil(dataMax * 1.05)
-                ]}
-              />
-              <YAxis type="category" dataKey="name" />
-              <Tooltip content={<PyramidTooltip />} />
-              <Legend />
-              <Bar dataKey="Male" fill={COLORS.male} name="Male" />
-              <Bar dataKey="Female" fill={COLORS.female} name="Female" />
-            </BarChart>
-          </ResponsiveContainer>
-          
-          <div className="flex justify-between mt-4 text-xs text-muted-foreground">
-            <div className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-purple-400 mr-1"></div>
-              Under 15: {((latestYearData['Under 15'] / totalPopulation) * 100).toFixed(1)}%
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Distribution</CardTitle>
+            <CardDescription>Urban vs. rural population</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="aspect-square rounded-full border-8 border-sahel-blue flex items-center justify-center">
+                  <div>
+                    <div className="text-center font-semibold text-lg">{Math.round((populationData['Urban'] / populationData['Total']) * 100)}%</div>
+                    <div className="text-center text-xs">Urban</div>
+                  </div>
+                </div>
+                <div className="mt-2 text-center text-sm font-medium">{populationData['Urban'].toLocaleString()}</div>
+              </div>
+              <div>
+                <div className="aspect-square rounded-full border-8 border-sahel-earth flex items-center justify-center">
+                  <div>
+                    <div className="text-center font-semibold text-lg">{Math.round((populationData['Rural'] / populationData['Total']) * 100)}%</div>
+                    <div className="text-center text-xs">Rural</div>
+                  </div>
+                </div>
+                <div className="mt-2 text-center text-sm font-medium">{populationData['Rural'].toLocaleString()}</div>
+              </div>
             </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-orange-400 mr-1"></div>
-              Working Age: {((latestYearData['Working Age'] / totalPopulation) * 100).toFixed(1)}%
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-red-400 mr-1"></div>
-              Over 65: {((latestYearData['Over 65'] / totalPopulation) * 100).toFixed(1)}%
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="col-span-1 md:col-span-2">
-        <CardContent className="pt-6">
-          <CardTitle className="text-lg mb-2">Population Demographics & Density</CardTitle>
-          <CardDescription className="mb-4">
-            Historical trends of key population metrics over time
-          </CardDescription>
-          
-          <Tabs defaultValue="demographics">
-            <TabsList className="mb-4">
-              <TabsTrigger value="demographics">Demographics</TabsTrigger>
-              <TabsTrigger value="density">Population Density</TabsTrigger>
-            </TabsList>
             
-            <TabsContent value="demographics">
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart
-                  data={populationData}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+            <div className="mt-4">
+              <div className="flex justify-between text-xs text-neutral-500 mb-1">
+                <span>Population Density</span>
+                <span>{populationData['Population Density']} people/km²</span>
+              </div>
+              <div className="w-full bg-neutral-100 rounded-full h-2">
+                <div 
+                  className="bg-sahel-blue h-2 rounded-full" 
+                  style={{ width: `${Math.min(populationData['Population Density'] / 20 * 100, 100)}%` }}
+                ></div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="md:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Key Statistics</CardTitle>
+            <CardDescription>Population metrics for {year}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-neutral-50 p-3 rounded-lg">
+                <div className="text-sahel-blue font-semibold text-lg">{populationData['Total'].toLocaleString()}</div>
+                <div className="text-neutral-500 text-xs">Total Population</div>
+              </div>
+              <div className="bg-neutral-50 p-3 rounded-lg">
+                <div className="text-sahel-earth font-semibold text-lg">{populationData['Growth Rate']}%</div>
+                <div className="text-neutral-500 text-xs">Annual Growth</div>
+              </div>
+              <div className="bg-neutral-50 p-3 rounded-lg">
+                <div className="text-sahel-green font-semibold text-lg">{(populationData['Male'] / populationData['Total'] * 100).toFixed(1)}%</div>
+                <div className="text-neutral-500 text-xs">Male Population</div>
+              </div>
+              <div className="bg-neutral-50 p-3 rounded-lg">
+                <div className="text-sahel-greenLight font-semibold text-lg">{(populationData['Female'] / populationData['Total'] * 100).toFixed(1)}%</div>
+                <div className="text-neutral-500 text-xs">Female Population</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+  
+  const renderTrendsContent = () => {
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="md:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Population Growth Trend</CardTitle>
+            <CardDescription>Total population by year (2010-2023)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={populationTrendData}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="year" />
-                  <YAxis tickFormatter={(value) => `${value / 1000}k`} />
-                  <Tooltip formatter={(value) => formatNumber(value as number)} />
+                  <YAxis />
+                  <Tooltip content={<CustomTooltip />} />
                   <Legend />
-                  <Area 
-                    type="monotone" 
-                    dataKey="Under 15" 
-                    stackId="1" 
-                    stroke={COLORS.under15} 
-                    fill={COLORS.under15} 
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="Working Age" 
-                    stackId="1" 
-                    stroke={COLORS.working} 
-                    fill={COLORS.working} 
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="Over 65" 
-                    stackId="1" 
-                    stroke={COLORS.over65} 
-                    fill={COLORS.over65} 
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-              <div className="text-xs text-muted-foreground mt-2">
-                Note: Age distribution shows the working-age population is increasing as a proportion of the total.
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="density">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart
-                  data={populationData}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="year" />
-                  <YAxis yAxisId="left" orientation="left" />
-                  <YAxis 
-                    yAxisId="right" 
-                    orientation="right" 
-                    domain={['auto', 'auto']}
-                  />
-                  <Tooltip />
-                  <Legend />
-                  <Bar 
-                    yAxisId="left"
-                    dataKey="Population Density" 
-                    fill={COLORS.population} 
-                    name="Population Density (people/km²)" 
-                  />
                   <Line 
-                    yAxisId="right"
                     type="monotone" 
-                    dataKey="Growth Rate" 
-                    stroke={COLORS.growth} 
+                    dataKey="Total" 
+                    stroke="#6f6af8" 
+                    activeDot={{ r: 8 }}
                     strokeWidth={2}
-                    name="Annual Growth Rate (%)" 
                   />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Urban/Rural Trend</CardTitle>
+            <CardDescription>Population distribution over time</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={populationTrendData.filter(d => d.year % 2 === 0)} // Show every other year to avoid crowding
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="year" />
+                  <YAxis />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Bar dataKey="Urban" stackId="a" fill="#3b82f6" />
+                  <Bar dataKey="Rural" stackId="a" fill="#22c55e" />
                 </BarChart>
               </ResponsiveContainer>
-              <div className="text-xs text-muted-foreground mt-2">
-                Note: Population density is increasing but the growth rate is slowly declining over time.
-              </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-
-      <Card className="col-span-1 md:col-span-2">
-        <CardContent className="pt-6">
-          <CardTitle className="text-lg mb-2">Population & Environmental Correlation</CardTitle>
-          <CardDescription className="mb-4">
-            Relationships between population patterns and environmental factors
-          </CardDescription>
-          
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart
-              data={environmentCorrelation}
-              layout="vertical"
-              margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                type="number" 
-                domain={[-1, 1]} 
-                tickCount={11}
-                tickFormatter={(value) => value.toFixed(1)}
-              />
-              <YAxis type="category" dataKey="category" />
-              <Tooltip 
-                formatter={(value, name, props) => [
-                  `${parseFloat(value as string).toFixed(2)} correlation`, 
-                  props.payload.category
-                ]}
-                labelFormatter={() => 'Correlation Strength'}
-              />
-              <Bar dataKey="correlation">
-                {environmentCorrelation.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={entry.correlation > 0 ? COLORS.positive : COLORS.negative} 
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Growth Rate Trend</CardTitle>
+            <CardDescription>Annual population growth rate (%)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={populationTrendData}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="year" />
+                  <YAxis />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="Growth Rate" 
+                    stroke="#f97316" 
+                    activeDot={{ r: 8 }}
+                    strokeWidth={2}
                   />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
-            {environmentCorrelation.map((item, index) => (
-              <div key={index} className="text-xs bg-gray-50 p-2 rounded">
-                <span className="font-medium">{item.category}:</span> {item.impact}
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+  
+  const renderEnvironmentContent = () => {
+    // Render correlation between population and environmental factors
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="md:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Population-Environment Correlations</CardTitle>
+            <CardDescription>Relationship between population and environmental factors</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={correlationData}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" domain={[-1, 1]} />
+                  <YAxis type="category" dataKey="factor" />
+                  <Tooltip
+                    formatter={(value: number) => [value.toFixed(2), 'Correlation']}
+                    labelFormatter={(label: string) => `Factor: ${label}`}
+                  />
+                  <Bar 
+                    dataKey="correlation" 
+                    fill={(entry: any) => entry.correlation > 0 ? '#22c55e' : '#ef4444'}
+                    label={{ position: 'right', formatter: (entry: any) => entry.value.toFixed(2) }}
+                  >
+                    {correlationData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={entry.correlation > 0 ? '#22c55e' : '#ef4444'} 
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="md:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Environmental Impacts</CardTitle>
+            <CardDescription>How environmental factors affect population distribution</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3">
+              {correlationData.map((item, index) => (
+                <div key={index} className="flex items-start gap-2 p-2 rounded-lg bg-neutral-50">
+                  <Badge variant={item.impact === "positive" ? "default" : (item.impact === "negative" ? "destructive" : "outline")} className="mt-0.5">
+                    {item.correlation.toFixed(2)}
+                  </Badge>
+                  <div>
+                    <div className="font-medium text-sm">{item.factor}</div>
+                    <div className="text-xs text-neutral-600">{item.description}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+  
+  return (
+    <div className={cn("", className)}>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="demographics">Demographics</TabsTrigger>
+          <TabsTrigger value="trends">Historical Trends</TabsTrigger>
+          <TabsTrigger value="environment">Environmental Factors</TabsTrigger>
+        </TabsList>
+        <TabsContent value="demographics" className="mt-4">
+          {renderDemographicsContent()}
+        </TabsContent>
+        <TabsContent value="trends" className="mt-4">
+          {renderTrendsContent()}
+        </TabsContent>
+        <TabsContent value="environment" className="mt-4">
+          {renderEnvironmentContent()}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
