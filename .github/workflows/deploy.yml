@@ -4,7 +4,10 @@ on:
   push:
     branches:
       - main
-
+permissions:
+  contents: write # Necessario per il deploy su GitHub Pages
+  pages: write
+  id-token: write 
 jobs:
   build:
     runs-on: ubuntu-latest
