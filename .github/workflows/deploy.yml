@@ -36,7 +36,8 @@ jobs:
       - name: List contents of dist folder
         run: ls -la dist/
 
-    
+      - name: Disable Jekyll
+        run: touch ./docs/html/.nojekyll
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
 
