@@ -1,56 +1,56 @@
 
-name: Generate and Deploy Website
+# name: Generate and Deploy Website
 
-on:
-  push:
-    branches:
-      - main  # Cambia se vuoi eseguire l'azione su un'altra branch
+# on:
+#   push:
+#     branches:
+#       - main  # Cambia se vuoi eseguire l'azione su un'altra branch
 
-permissions:
-  contents: write # Necessario per il deploy su GitHub Pages
-  pages: write
-  id-token: write 
+# permissions:
+#   contents: write # Necessario per il deploy su GitHub Pages
+#   pages: write
+#   id-token: write 
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '18'
+#       - name: Set up Node.js
+#         uses: actions/setup-node@v2
+#         with:
+#           node-version: '18'
 
-      - name: Install dependencies
-        run: npm install
+#       - name: Install dependencies
+#         run: npm install
 
-      - name: Build project
-        run: npm run build
+#       - name: Build project
+#         run: npm run build
 
-      - name: Copy Datasets_Hackathon into dist
-        run: cp -r Datasets_Hackathon dist/
+#       - name: Copy Datasets_Hackathon into dist
+#         run: cp -r Datasets_Hackathon dist/
 
-      - name: List contents of dist folder
-        run: ls -la dist/
+#       - name: List contents of dist folder
+#         run: ls -la dist/
 
-      - name: Disable Jekyll
-        run: touch dist/.nojekyll
+#       - name: Disable Jekyll
+#         run: touch dist/.nojekyll
 
-      - name: Setup GitHub Pages
-        uses: actions/configure-pages@v4
+#       - name: Setup GitHub Pages
+#         uses: actions/configure-pages@v4
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist  # Modifica se il percorso della documentazione è diverso
+#       - name: Upload artifact
+#         uses: actions/upload-pages-artifact@v3
+#         with:
+#           path: ./dist  # Modifica se il percorso della documentazione è diverso
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
+#   deploy:
+#     needs: build
+#     runs-on: ubuntu-latest
 
-    steps:
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4
+#     steps:
+#       - name: Deploy to GitHub Pages
+#         uses: actions/deploy-pages@v4
