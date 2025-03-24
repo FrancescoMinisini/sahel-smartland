@@ -37,7 +37,8 @@ jobs:
         run: ls -la dist/
 
       - name: Disable Jekyll
-        run: touch ./docs/html/.nojekyll
+        run: touch dist/.nojekyll
+
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
 
