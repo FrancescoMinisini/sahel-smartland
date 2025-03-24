@@ -1,5 +1,5 @@
 
-name: Generate and Deploy Weebsite
+name: Generate and Deploy Website
 
 on:
   push:
@@ -32,6 +32,10 @@ jobs:
 
       - name: Copy Datasets_Hackathon into dist
         run: cp -r Datasets_Hackathon dist/
+
+      - name: List contents of dist folder
+        run: ls -la dist/
+
     
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
