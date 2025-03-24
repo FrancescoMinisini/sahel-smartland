@@ -1,20 +1,21 @@
-name: Deploy Website
+
+name: Generate and Deploy Weebsite
 
 on:
   push:
     branches:
-      - main
+      - main  # Cambia se vuoi eseguire l'azione su un'altra branch
 
 permissions:
-  contents: write
+  contents: write # Necessario per il deploy su GitHub Pages
   pages: write
-  id-token: write
+  id-token: write 
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
-    steps:
+  steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
@@ -31,9 +32,19 @@ jobs:
 
       - name: Copy Datasets_Hackathon into dist
         run: cp -r Datasets_Hackathon dist/
+    
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v4
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
+          path: ./dist  # Modifica se il percorso della documentazione è diverso
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
