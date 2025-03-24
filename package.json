@@ -10,8 +10,6 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "postbuild": "cp-r Datasets_Hackathon dist/"
-}
-
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
